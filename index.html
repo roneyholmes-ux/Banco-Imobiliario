@@ -1,32 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banco Imobiliário</title>
-
     <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
-    <h1>Banco Imobiliário</h1>
+    <header>
+        <h1>Banco Imobiliário</h1>
+    </header>
 
-    <main>
-
-        <div id="tabuleiro">
-
+    <main class="game-container">
+        <!-- O Tabuleiro será gerado aqui dentro pelo JavaScript -->
+        <div id="board" class="monopoly-board">
+            <div class="board-center">
+                <h2>BANCO IMOBILIÁRIO</h2>
+                <div class="game-controls">
+                    <button id="rollDice">🎲 Jogar Dado</button>
+                    <p id="game-status">Clique no botão para começar!</p>
+                </div>
+            </div>
         </div>
-
-        <button id="jogarDado">
-            🎲 Jogar dado
-        </button>
-
     </main>
 
     <script src="js/script.js"></script>
-
 </body>
-
 </html>
