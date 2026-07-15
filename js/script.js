@@ -62,3 +62,69 @@ function initializeGame() {
 
 // Iniciar tudo ao carregar a página
 window.onload = initializeGame;
+
+// NOVO BLOCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
+
+// 4. Função para posicionar cada casa no Grid CSS (Mapeamento de 0 a 39)
+function getGridPosition(index) {
+    // Tabuleiro tem 11x11 posições. Index de 0 a 39 rodeia as bordas.
+    if (index >= 0 && index <= 10) {
+        // Linha inferior (Direita para Esquerda - de 0 a 10)
+        return { row: 11, col: 11 - index };
+    } else if (index > 10 && index <= 20) {
+        // Coluna esquerda (Baixo para Cima - de 11 a 20)
+        return { row: 21 - index, col: 1 };
+    } else if (index > 20 && index <= 30) {
+        // Linha superior (Esquerda para Direita - de 21 a 30)
+        return { row: 1, col: index - 19 };
+    } else if (index > 30 && index <= 39) {
+        // Coluna direita (Cima para Baixo - de 31 a 39)
+        return { row: index - 29, col: 11 };
+    }
+}
+
+// 5. Atualização da função de inicialização para renderizar visualmente
+function renderBoard() {
+    const board = document.getElementById("board");
+    
+    BOARD_DATA.forEach((space, index) => {
+        const spaceElement = document.createElement("div");
+        const position = getGridPosition(index);
+        
+        // Aplica o grid do CSS correspondente à posição lógica da casa
+        spaceElement.style.gridRow = position.row;
+        spaceElement.style.gridColumn = position.col;
+        
+        // Verifica se é uma casa de canto (0, 10, 20, 30)
+        if (index % 10 === 0) {
+            spaceElement.className = "space corner-space";
+            spaceElement.innerHTML = `<div>${space.name}</div>`;
+        } else {
+            spaceElement.className = "space";
+            
+            // Se for propriedade comercial, adiciona a barra de cor correspondente
+            if (space.type === "property") {
+                spaceElement.innerHTML = `
+                    <div class="color-bar" style="background-color: ${space.color}"></div>
+                    <div>${space.name}</div>
+                    <div style="font-size: 0.55rem; margin-top: auto;">R$ ${space.price}</div>
+                `;
+            } else {
+                spaceElement.innerHTML = `
+                    <div style="margin-top: 5px;">${space.name}</div>
+                    ${space.price ? `<div style="font-size: 0.55rem; margin-top: auto;">R$ ${space.price}</div>` : ''}
+                `;
+            }
+        }
+        
+        board.appendChild(spaceElement);
+    });
+}
+
+// Sobrescrevendo a inicialização anterior para incluir a renderização visual
+function initializeGame() {
+    console.log("🎲 Banco Imobiliário carregado com sucesso!");
+    renderBoard();
+}
+
+window.onload = initializeGame;
