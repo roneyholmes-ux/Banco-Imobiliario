@@ -1,1 +1,130 @@
-/* Estilos do Banco Imobiliário */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #121212;
+    color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    margin: 20px 0;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    color: #ff4d4d;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+}
+
+.game-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 40px;
+}
+
+/* Tabuleiro usando Grid CSS - 11 colunas e 11 linhas para formar as bordas */
+.monopoly-board {
+    display: grid;
+    grid-template-columns: repeat(11, 75px);
+    grid-template-rows: repeat(11, 75px);
+    width: 825px;
+    height: 825px;
+    background: #cce0d0; /* Fundo clássico esverdeado */
+    border: 5px solid #000;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+/* O centro vazio do tabuleiro */
+.board-center {
+    grid-column: 2 / 11;
+    grid-row: 2 / 11;
+    background: #f0fbf4;
+    color: #121212;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 3px solid #000;
+    padding: 20px;
+    text-align: center;
+}
+
+.board-center h2 {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #d32f2f;
+    transform: rotate(-35deg); /* Inclinação clássica da logo */
+    margin-bottom: 50px;
+    letter-spacing: 1px;
+}
+
+/* Controles do Jogo no Centro */
+.game-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+button {
+    padding: 12px 30px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: white;
+    background-color: #d32f2f;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(211,47,47,0.3);
+    transition: all 0.2s ease;
+}
+
+button:hover {
+    background-color: #b71c1c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(211,47,47,0.4);
+}
+
+/* Estilo Individual das Casas */
+.space {
+    border: 1px solid #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: bold;
+    color: #121212;
+    padding: 4px;
+    text-align: center;
+    background: #f9f9f9;
+    overflow: hidden;
+}
+
+/* Faixa de cor para propriedades */
+.space .color-bar {
+    width: 100%;
+    height: 15px;
+    border-bottom: 1px solid #000;
+    margin-bottom: 2px;
+}
+
+/* Estilo para casas de canto (que são maiores e não têm faixa de cor) */
+.corner-space {
+    background: #e8f5e9;
+    font-weight: 800;
+    font-size: 0.75rem;
+    justify-content: center !important;
+}
