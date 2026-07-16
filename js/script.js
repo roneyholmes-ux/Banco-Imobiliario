@@ -1,60 +1,70 @@
+// ==========================================
+// CONFIGURAÇÕES GERAIS DO JOGO (Altere aqui facilmente no futuro!)
+// ==========================================
+const GAME_CONFIG = {
+    startingMoney: 25000,       // Dinheiro inicial de cada jogador
+    goBonus: 2000,              // Quanto ganha ao passar pela PARTIDA
+    rentMultiplier: 1.0,        // Multiplicador global de aluguéis (se quiser inflacionar o jogo)
+};
+
 // Lista oficial de todas as 40 casas do Banco Imobiliário clássico
+// Para alterar preços ou aluguéis no futuro, basta mexer aqui!
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100 },
+    { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Av. Novo Estado", type: "property", color: "cor-rosa", price: 100 },
+    { id: 3, name: "Av. Novo Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
     { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Estação Carioca", type: "station", price: 200 },
-    { id: 6, name: "Av. Brigadeiro", type: "property", color: "cor-azul-claro", price: 120 },
+    { id: 5, name: "Estação Carioca", type: "station", price: 200, rent: 20, owner: null },
+    { id: 6, name: "Av. Brigadeiro", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null },
     { id: 7, name: "Sorte ou Revés", type: "special" },
-    { id: 8, name: "Av. Rebouças", type: "property", color: "cor-azul-claro", price: 140 },
-    { id: 9, name: "Av. 9 de Julho", type: "property", color: "cor-azul-claro", price: 140 },
+    { id: 8, name: "Av. Rebouças", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
+    { id: 9, name: "Av. 9 de Julho", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
     
     { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Av. Europa", type: "property", color: "cor-roxo", price: 160 },
-    { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150 },
-    { id: 13, name: "Rua Augusta", type: "property", color: "cor-roxo", price: 160 },
-    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-roxo", price: 180 },
-    { id: 15, name: "Estação da Luz", type: "station", price: 200 },
-    { id: 16, name: "Av. S. João", type: "property", color: "cor-laranja", price: 200 },
+    { id: 11, name: "Av. Europa", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null },
+    { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
+    { id: 13, name: "Rua Augusta", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null },
+    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-roxo", price: 180, rent: 18, owner: null },
+    { id: 15, name: "Estação da Luz", type: "station", price: 200, rent: 20, owner: null },
+    { id: 16, name: "Av. S. João", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
     { id: 17, name: "Sorte ou Revés", type: "special" },
-    { id: 18, name: "Av. Ipiranga", type: "property", color: "cor-laranja", price: 200 },
-    { id: 19, name: "Av. Rio Branco", type: "property", color: "cor-laranja", price: 220 },
+    { id: 18, name: "Av. Ipiranga", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
+    { id: 19, name: "Av. Rio Branco", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null },
     
     { id: 20, name: "PARADA LIVRE", type: "special", cssClass: "corner-space" },
-    { id: 21, name: "Av. Paulista", type: "property", color: "cor-vermelho", price: 240 },
+    { id: 21, name: "Av. Paulista", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
     { id: 22, name: "Sorte ou Revés", type: "special" },
-    { id: 23, name: "Av. Brasil", type: "property", color: "cor-vermelho", price: 240 },
-    { id: 24, name: "Av. Brigadeiro", type: "property", color: "cor-vermelho", price: 260 },
-    { id: 25, name: "Estação Barra Funda", type: "station", price: 200 },
-    { id: 26, name: "Copacabana", type: "property", color: "cor-amarelo", price: 280 },
-    { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150 },
-    { id: 28, name: "Av. Vieira Souto", type: "property", color: "cor-amarelo", price: 280 },
-    { id: 29, name: "Ipanema", type: "property", color: "cor-amarelo", price: 300 },
+    { id: 23, name: "Av. Brasil", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
+    { id: 24, name: "Av. Brigadeiro", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null },
+    { id: 25, name: "Estação Barra Funda", type: "station", price: 200, rent: 20, owner: null },
+    { id: 26, name: "Copacabana", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
+    { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150, rent: 15, owner: null },
+    { id: 28, name: "Av. Vieira Souto", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
+    { id: 29, name: "Ipanema", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
     
     { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Jardim Europa", type: "property", color: "cor-verde", price: 320 },
-    { id: 32, name: "Jardim América", type: "property", color: "cor-verde", price: 320 },
+    { id: 31, name: "Jardim Europa", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 32, name: "Jardim América", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
     { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Av. Interlagos", type: "property", color: "cor-verde", price: 350 },
-    { id: 35, name: "Estação Brás", type: "station", price: 200 },
+    { id: 34, name: "Av. Interlagos", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
+    { id: 35, name: "Estação Brás", type: "station", price: 200, rent: 20, owner: null },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Av. Morumbi", type: "property", color: "cor-azul-escuro", price: 400 },
+    { id: 37, name: "Av. Morumbi", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400 }
+    { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
 // Dados dos Jogadores
 let players = [
-    { id: 0, name: "Jogador 1 (Azul)", money: 25000, position: 0, color: "#1e90ff" },
-    { id: 1, name: "Jogador 2 (Vermelho)", money: 25000, position: 0, color: "#ff4757" }
+    { id: 0, name: "Jogador 1 (Azul)", money: GAME_CONFIG.startingMoney, position: 0, color: "#1e90ff" },
+    { id: 1, name: "Jogador 2 (Vermelho)", money: GAME_CONFIG.startingMoney, position: 0, color: "#ff4757" }
 ];
 
-let currentPlayerIndex = 0; // Começa com o Jogador 1 (índice 0)
-let isMoving = false; // Bloqueia cliques repetidos enquanto o peão anda
+let currentPlayerIndex = 0; 
+let isMoving = false; 
+let awaitingDecision = false; // Bloqueia o dado enquanto o jogador decide uma compra
 
-// Função para calcular a posição visual de cada casa no Grid do tabuleiro (11x11)
 function getGridPosition(index) {
     if (index >= 0 && index <= 10) {
         return { row: 11, col: 11 - index };
@@ -67,9 +77,11 @@ function getGridPosition(index) {
     }
 }
 
-// Renderiza o tabuleiro e cria os recipientes para os peões
 function renderBoard() {
     const boardElement = document.getElementById("board");
+    
+    // Evita duplicar elementos na reinicialização
+    document.querySelectorAll(".space").forEach(e => e.remove());
     
     boardSpaces.forEach((space) => {
         const spaceDiv = document.createElement("div");
@@ -80,9 +92,11 @@ function renderBoard() {
         spaceDiv.style.gridRow = pos.row;
         spaceDiv.style.gridColumn = pos.col;
         
-        if (space.type === "property") {
+        if (space.type === "property" || space.type === "station" || space.type === "utility") {
             const tag = document.createElement("div");
-            tag.className = `property-tag ${space.color}`;
+            // Se tiver cor usa a classe de cor, senão usa cinza para estações/serviços
+            tag.className = `property-tag ${space.color || 'cor-cinza'}`;
+            tag.id = `tag-${space.id}`;
             spaceDiv.appendChild(tag);
         }
         
@@ -93,12 +107,12 @@ function renderBoard() {
         
         if (space.price) {
             const priceText = document.createElement("div");
+            priceText.id = `price-label-${space.id}`;
             priceText.innerText = `$${space.price}`;
             priceText.style.marginTop = "auto";
             spaceDiv.appendChild(priceText);
         }
 
-        // Recipiente onde os peões ficarão dentro desta casa
         const tokensContainer = document.createElement("div");
         tokensContainer.className = "tokens-container";
         tokensContainer.id = `tokens-space-${space.id}`;
@@ -108,12 +122,9 @@ function renderBoard() {
     });
 }
 
-// Coloca os peões na tela nas posições atuais dos jogadores
 function renderPawns() {
-    // Primeiro limpamos os peões de todas as casas
     document.querySelectorAll(".tokens-container").forEach(container => container.innerHTML = "");
 
-    // Desenhamos o peão de cada jogador na sua respectiva casa
     players.forEach(player => {
         const container = document.getElementById(`tokens-space-${player.position}`);
         if (container) {
@@ -126,7 +137,6 @@ function renderPawns() {
     });
 }
 
-// Atualiza as informações do painel lateral (quem joga, saldos)
 function updateUI() {
     const playersList = document.getElementById("players-list");
     playersList.innerHTML = "";
@@ -136,7 +146,7 @@ function updateUI() {
         row.className = "player-row";
         if (idx === currentPlayerIndex) {
             row.style.fontWeight = "bold";
-            row.style.backgroundColor = "rgba(255,255,255,0.1)";
+            row.style.backgroundColor = "rgba(255,255,255,0.15)";
             row.style.borderRadius = "5px";
         }
         row.style.borderLeft = `5px solid ${p.color}`;
@@ -144,26 +154,35 @@ function updateUI() {
         row.innerHTML = `<span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span> <span>$${p.money}</span>`;
         playersList.appendChild(row);
     });
+
+    // Controla a ativação do botão de dado
+    const rollButton = document.getElementById("rollDice");
+    if (isMoving || awaitingDecision) {
+        rollButton.disabled = true;
+        rollButton.style.opacity = "0.5";
+        rollButton.style.cursor = "not-allowed";
+    } else {
+        rollButton.disabled = false;
+        rollButton.style.opacity = "1";
+        rollButton.style.cursor = "pointer";
+    }
 }
 
-// Função para mover o peão passo a passo de forma animada
 async function movePlayer(playerIndex, steps) {
     isMoving = true;
+    updateUI();
     let player = players[playerIndex];
     
     for (let i = 0; i < steps; i++) {
-        // Incrementa a posição (se passar de 39, volta ao 0 e ganha bônus de partida)
         player.position = (player.position + 1) % 40;
         
         if (player.position === 0) {
-            player.money += 2000; // Bônus clássico ao passar pela partida
-            document.getElementById("game-status").innerText = `${player.name} passou pelo início e ganhou $2000!`;
+            player.money += GAME_CONFIG.goBonus;
+            document.getElementById("game-status").innerText = `${player.name} passou pelo início e ganhou $${GAME_CONFIG.goBonus}!`;
             updateUI();
         }
 
         renderPawns();
-        
-        // Pequena pausa para dar o efeito de caminhada no tabuleiro
         await new Promise(resolve => setTimeout(resolve, 250));
     }
     
@@ -171,25 +190,91 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
-// Função executada quando o jogador cai em uma casa
+// Lógica de Compra de Propriedade
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
-    let statusMsg = `${player.name} caiu em ${currentSpace.name}.`;
+    
+    // Tipos de casa que podem ser comprados
+    const purchaseableTypes = ["property", "station", "utility"];
 
-    if (currentSpace.type === "property") {
-        statusMsg += ` Custa $${currentSpace.price}. (Compra automática será adicionada na próxima etapa!)`;
+    if (purchaseableTypes.includes(currentSpace.type)) {
+        if (currentSpace.owner === null) {
+            // Casa está livre para compra!
+            awaitingDecision = true;
+            updateUI();
+            showPurchaseModal(player, currentSpace);
+            return; // Interrompe a passagem de turno automática para esperar a decisão
+        } else {
+            // A casa já tem dono (Isso será tratado no passo 2 de Aluguel!)
+            const owner = players.find(p => p.id === currentSpace.owner);
+            document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}, que pertence a ${owner.name}.`;
+        }
+    } else {
+        // Casas especiais (Sorte, Prisão, etc)
+        document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}.`;
     }
 
-    document.getElementById("game-status").innerText = statusMsg;
+    // Passa o turno se não houve tomada de decisão pendente
+    nextTurn();
+}
 
-    // Passa a vez para o próximo jogador
+// Exibe as opções de compra na tela
+function showPurchaseModal(player, space) {
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            ${player.name} caiu em <strong>${space.name}</strong>!<br>
+            Preço de compra: <strong>$${space.price}</strong>. Deseja comprar?
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-buy-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Sim, Comprar</button>
+            <button id="btn-buy-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828;">Não, Passar Vez</button>
+        </div>
+    `;
+
+    document.getElementById("btn-buy-yes").addEventListener("click", () => buyProperty(player, space));
+    document.getElementById("btn-buy-no").addEventListener("click", () => skipProperty(player, space));
+}
+
+function buyProperty(player, space) {
+    if (player.money >= space.price) {
+        player.money -= space.price;
+        space.owner = player.id;
+        
+        // Atualiza a cor visual da casa no tabuleiro para mostrar o dono
+        const spaceDiv = document.getElementById(`space-${space.id}`);
+        spaceDiv.style.border = `3px dashed ${player.color}`;
+        
+        const priceLabel = document.getElementById(`price-label-${space.id}`);
+        if (priceLabel) {
+            priceLabel.innerText = "COMPRADO";
+            priceLabel.style.color = player.color;
+        }
+
+        document.getElementById("game-status").innerText = `${player.name} comprou ${space.name} por $${space.price}!`;
+    } else {
+        alert("Dinheiro insuficiente para realizar a compra!");
+        return; // Não sai do estado de decisão se ele tentou comprar sem dinheiro
+    }
+
+    awaitingDecision = false;
+    nextTurn();
+}
+
+function skipProperty(player, space) {
+    document.getElementById("game-status").innerText = `${player.name} decidiu não comprar ${space.name}.`;
+    awaitingDecision = false;
+    nextTurn();
+}
+
+function nextTurn() {
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
     updateUI();
 }
 
 // Ação de rolar o dado
 function rollDice() {
-    if (isMoving) return; // Evita rolar enquanto o peão se move
+    if (isMoving || awaitingDecision) return;
 
     const diceValue1 = Math.floor(Math.random() * 6) + 1;
     const diceValue2 = Math.floor(Math.random() * 6) + 1;
@@ -205,19 +290,5 @@ window.onload = () => {
     renderBoard();
     renderPawns();
     updateUI();
-    
-    // Configura o evento do botão de rolar dados
     document.getElementById("rollDice").addEventListener("click", rollDice);
 };
-
-
-
-
-
-
-
-
-
-
-
-
