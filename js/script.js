@@ -502,11 +502,19 @@ function initializePlayers(quantity) {
             name: PLAYER_PRESETS[i].name,
             money: GAME_CONFIG.startingMoney,
             position: 0,
-            color: PLAYER_PRESETS[i].color
+            color: PLAYER_PRESETS[i].color,
+            inJail: false,       // Indica se o jogador está preso
+            jailTurns: 0         // Conta há quantos turnos ele está preso
         });
     }
     
-    // Agora que temos os jogadores, iniciamos o tabuleiro de fato!
+    // Adiciona automaticamente o campo 'houses' zerado para todas as propriedades
+    boardSpaces.forEach(space => {
+        if (space.type === "property") {
+            space.houses = 0;
+        }
+    });
+    
     renderBoard();
     renderPawns();
     updateUI();
