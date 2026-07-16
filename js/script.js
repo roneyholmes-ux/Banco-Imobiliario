@@ -412,7 +412,7 @@ function skipProperty(player, space) {
     nextTurn();
 }
 
-// FUNÇÃO TROCA DE TURNO
+// FUNÇÃO TROCA DE TURNO ................................................................................................................................................................................................... FUNÇÃO TROCA DE TURNO 
 
 function nextTurn() {
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
@@ -423,7 +423,105 @@ function nextTurn() {
     updateUI();
 }
 
-// Ação de rolar o dado
+// Verifica se o jogador está preso e gerencia suas opções ................................................................................................................................................................. Verifica se o jogador está preso e gerencia suas opções
+function checkJailTurn(player) {
+    const statusDiv = document.getElementById("game-status");
+    
+    // Se ele já completou 3 turnos preso, é obrigado a pagar
+    if (player.jailTurns >= 3) {
+        player.money -= GAME_CONFIG.fiancaPrisao;
+        player.inJail = false;
+        player.jailTurns = 0;
+        
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px; color: #c62828;">
+                🚨 <strong>Fim do Prazo!</strong><br>
+                ${player.name} completou 3 turnos na prisão e foi obrigado a pagar a fiança de <strong>$${GAME_CONFIG.fiancaPrisao}</strong> para ser liberado!
+            </div>
+            <button id="btn-forced-jail-free" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Rolar Dados</button>
+        `;
+        awaitingDecision = true;
+        updateUI();
+        
+        document.getElementById("btn-forced-jail-free").addEventListener("click", () => {
+            awaitingDecision = false;
+            updateUI();
+            // Permite rolar os dados normalmente agora que está livre
+        });
+        return true;
+    }
+
+    // Mostra as opções: Tentar dados duplos ou pagar fiança ............................................................................................................................................................... Mostra as opções: Tentar dados duplos ou pagar fiança
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px; color: #ffb300; background: #2e2e2e; padding: 10px; border-radius: 8px; border: 1px solid #ffb300;">
+            ⛓️ <strong>${player.name} está na Prisão (Turno ${player.jailTurns + 1}/3)</strong><br>
+            O que deseja fazer para sair?
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-jail-roll" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; border: 1px solid #555;">Tentar Dados Duplos 🎲</button>
+            <button id="btn-jail-pay" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Pagar $${GAME_CONFIG.fiancaPrisao} 💸</button>
+        </div>
+    `;
+    
+    awaitingDecision = true;
+    updateUI();
+
+    // Opção 1: Tentar dados duplos
+    document.getElementById("btn-jail-roll").addEventListener("click", () => {
+        document.getElementById("btn-jail-roll").disabled = true;
+        document.getElementById("btn-jail-pay").disabled = true;
+        
+        const d1 = Math.floor(Math.random() * 6) + 1;
+        const d2 = Math.floor(Math.random() * 6) + 1;
+        
+        if (d1 === d2) {
+            // Sucesso!
+            player.inJail = false;
+            player.jailTurns = 0;
+            awaitingDecision = false;
+            statusDiv.innerHTML = `🎲 Você tirou dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
+            
+            // Move o jogador imediatamente com o valor tirado
+            setTimeout(() => {
+                movePlayer(currentPlayerIndex, d1 + d2);
+            }, 1500);
+        } else {
+            // Falhou
+            player.jailTurns += 1;
+            awaitingDecision = false;
+            statusDiv.innerHTML = `🎲 Você tirou ${d1} e ${d2} (Não foi duplo). Continua preso!`;
+            
+            setTimeout(() => {
+                nextTurn();
+            }, 2000);
+        }
+    });
+
+    // Opção 2: Pagar fiança
+    document.getElementById("btn-jail-pay").addEventListener("click", () => {
+        document.getElementById("btn-jail-roll").disabled = true;
+        document.getElementById("btn-jail-pay").disabled = true;
+        
+        if (player.money >= GAME_CONFIG.fiancaPrisao) {
+            player.money -= GAME_CONFIG.fiancaPrisao;
+            player.inJail = false;
+            player.jailTurns = 0;
+            awaitingDecision = false;
+            updateUI();
+            
+            statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
+            // Deixa o botão de jogar dados ativo para ele rodar neste turno ainda
+        } else {
+            alert("Você não tem dinheiro suficiente para pagar a fiança!");
+            document.getElementById("btn-jail-roll").disabled = false;
+            document.getElementById("btn-jail-pay").disabled = false;
+        }
+    });
+
+    return true; // Bloqueou a rodada padrão
+}
+
+// Ação de rolar o dado ..................................................................................................................................................................................................... Ação de rolar o dado
 function rollDice() {
     if (isMoving || awaitingDecision) return;
 
@@ -436,7 +534,7 @@ function rollDice() {
     movePlayer(currentPlayerIndex, totalSteps);
 }
 
-// Cria a tela de seleção de jogadores ao iniciar a página
+// Cria a tela de seleção de jogadores ao iniciar a página ................................................................................................................................................................. Cria a tela de seleção de jogadores ao iniciar a página
 function startPlayerSetup() {
     // Cria um fundo escuro (overlay) para o setup
     const overlay = document.createElement("div");
