@@ -342,8 +342,14 @@ function skipProperty(player, space) {
     nextTurn();
 }
 
+// FUNÇÃO TROCA DE TURNO
+
 function nextTurn() {
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    
+    // Limpa o botão antigo do HTML para que ninguém possa clicar nele de novo!
+    document.getElementById("game-status").innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
+    
     updateUI();
 }
 
