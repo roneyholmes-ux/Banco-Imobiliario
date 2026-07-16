@@ -67,11 +67,17 @@ const boardSpaces = [
     { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
-// Dados dos Jogadores
-let players = [
-    { id: 0, name: "Jogador 1 (Azul)", money: GAME_CONFIG.startingMoney, position: 0, color: "#1e90ff" },
-    { id: 1, name: "Jogador 2 (Vermelho)", money: GAME_CONFIG.startingMoney, position: 0, color: "#ff4757" }
+// Paleta de cores oficial para até 6 jogadores
+const PLAYER_PRESETS = [
+    { name: "Jogador 1 (Azul)", color: "#1e90ff" },
+    { name: "Jogador 2 (Vermelho)", color: "#ff4757" },
+    { name: "Jogador 3 (Verde)", color: "#2ed573" },
+    { name: "Jogador 4 (Amarelo)", color: "#ffa502" },
+    { name: "Jogador 5 (Roxo)", color: "#9b59b6" },
+    { name: "Jogador 6 (Laranja)", color: "#e67e22" }
 ];
+
+let players = []; // Começa vazio e será preenchido no setup
 
 let currentPlayerIndex = 0; 
 let isMoving = false; 
@@ -429,11 +435,84 @@ function rollDice() {
     movePlayer(currentPlayerIndex, totalSteps);
 }
 
+// Cria a tela de seleção de jogadores ao iniciar a página
+function startPlayerSetup() {
+    // Cria um fundo escuro (overlay) para o setup
+    const overlay = document.createElement("div");
+    overlay.id = "setup-overlay";
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center;
+        align-items: center; z-index: 9999; font-family: 'Montserrat', sans-serif;
+    `;
 
-// Inicialização
-window.onload = () => {
+    // Cria a caixa de seleção de quantidade
+    const setupBox = document.createElement("div");
+    setupBox.style = `
+        background: #1e1e1e; border: 3px solid #ff4757; border-radius: 12px;
+        padding: 30px; text-align: center; color: white; max-width: 400px; width: 90%;
+        box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
+    `;
+    setupBox.innerHTML = `
+        <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 20px;">BANCO IMOBILIÁRIO</h2>
+        <p style="font-size: 1.1rem; margin-bottom: 25px;">Quantos jogadores vão participar?</p>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px;">
+            <button class="setup-btn" data-qty="2">2</button>
+            <button class="setup-btn" data-qty="3">3</button>
+            <button class="setup-btn" data-qty="4">4</button>
+            <button class="setup-btn" data-qty="5">5</button>
+            <button class="setup-btn" data-qty="6">6</button>
+        </div>
+    `;
+
+    overlay.appendChild(setupBox);
+    document.body.appendChild(overlay);
+
+    // Adiciona estilo básico para os botões do setup
+    const style = document.createElement("style");
+    style.innerHTML = `
+        .setup-btn {
+            background: #2e2e2e; color: white; border: 2px solid #555;
+            padding: 12px 20px; font-size: 1.2rem; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s ease; font-weight: bold; width: 55px;
+        }
+        .setup-btn:hover {
+            background: #ff4757; border-color: #ff4757; transform: scale(1.1);
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Escuta o clique nos botões de quantidade
+    setupBox.querySelectorAll(".setup-btn").forEach(button => {
+        button.addEventListener("click", (e) => {
+            const qty = parseInt(e.target.getAttribute("data-qty"));
+            initializePlayers(qty);
+            document.body.removeChild(overlay); // Remove o menu de configuração
+        });
+    });
+}
+
+// Configura os jogadores selecionados e inicia a partida
+function initializePlayers(quantity) {
+    players = [];
+    for (let i = 0; i < quantity; i++) {
+        players.push({
+            id: i,
+            name: PLAYER_PRESETS[i].name,
+            money: GAME_CONFIG.startingMoney,
+            position: 0,
+            color: PLAYER_PRESETS[i].color
+        });
+    }
+    
+    // Agora que temos os jogadores, iniciamos o tabuleiro de fato!
     renderBoard();
     renderPawns();
     updateUI();
+}
+
+// Inicialização
+window.onload = () => {
+    startPlayerSetup();
     document.getElementById("rollDice").addEventListener("click", rollDice);
 };
