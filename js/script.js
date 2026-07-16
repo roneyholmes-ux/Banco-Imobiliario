@@ -1,130 +1,223 @@
-// ====== MOTOR DO JOGO - BANCO IMOBILIÁRIO ======
-
-// 1. Definição das Casas do Tabuleiro (Tabuleiro Oficial Simplificado para a V1)
-const BOARD_DATA = [
-    { id: 0, name: "PONTO DE PARTIDA", type: "special", color: "#ffffff" },
-    { id: 1, name: "Avenida Paulista", type: "property", price: 100, rent: 6, color: "#9c27b0" },
-    { id: 2, name: "Cofre de Comunidade", type: "special", color: "#ffffff" },
-    { id: 3, name: "Avenida Brigadeiro Luís Antônio", type: "property", price: 120, rent: 8, color: "#9c27b0" },
-    { id: 4, name: "Imposto de Renda", type: "tax", price: 200, color: "#ffffff" },
-    { id: 5, name: "Ferrovia Viação Rio-Doce", type: "railroad", price: 200, rent: 25, color: "#e0e0e0" },
-    { id: 6, name: "Rua Conselheiro Crispiniano", type: "property", price: 140, rent: 10, color: "#03a9f4" },
-    { id: 7, name: "Sorte ou Revés", type: "lucky", color: "#ffffff" },
-    { id: 8, name: "Avenida São João", type: "property", price: 140, rent: 10, color: "#03a9f4" },
-    { id: 9, name: "Avenida Ipiranga", type: "property", price: 160, rent: 12, color: "#03a9f4" },
-    { id: 10, name: "PRISÃO (VISITA)", type: "special", color: "#ffffff" },
-    { id: 11, name: "Avenida Nossa Senhora de Copacabana", type: "property", price: 180, rent: 14, color: "#e91e63" },
-    { id: 12, name: "Companhia de Força e Luz", type: "utility", price: 150, color: "#e0e0e0" },
-    { id: 13, name: "Avenida Atlântica", type: "property", price: 180, rent: 14, color: "#e91e63" },
-    { id: 14, name: "Avenida República do Líbano", type: "property", price: 200, rent: 16, color: "#e91e63" },
-    { id: 15, name: "Viação Anhanguera", type: "railroad", price: 200, rent: 25, color: "#e0e0e0" },
-    { id: 16, name: "Rua Padre João Manuel", type: "property", price: 220, rent: 18, color: "#ff9800" },
-    { id: 17, name: "Cofre de Comunidade", type: "special", color: "#ffffff" },
-    { id: 18, name: "Avenida Paulista (Recife)", type: "property", price: 220, rent: 18, color: "#ff9800" },
-    { id: 19, name: "Avenida Boa Viagem", type: "property", price: 240, rent: 20, color: "#ff9800" },
-    { id: 20, name: "PARADA LIVRE", type: "special", color: "#ffffff" },
-    { id: 21, name: "Avenida Bento Gonçalves", type: "property", price: 260, rent: 22, color: "#f44336" },
-    { id: 22, name: "Sorte ou Revés", type: "lucky", color: "#ffffff" },
-    { id: 23, name: "Avenida 24 de Outubro", type: "property", price: 260, rent: 22, color: "#f44336" },
-    { id: 24, name: "Avenida Independência", type: "property", price: 280, rent: 24, color: "#f44336" },
-    { id: 25, name: "Viação Cometa", type: "railroad", price: 200, rent: 25, color: "#e0e0e0" },
-    { id: 26, name: "Avenida Afonso Pena", type: "property", price: 300, rent: 26, color: "#ffeb3b" },
-    { id: 27, name: "Avenida Amazonas", type: "property", price: 300, rent: 26, color: "#ffeb3b" },
-    { id: 28, name: "Companhia de Água e Saneamento", type: "utility", price: 150, color: "#e0e0e0" },
-    { id: 29, name: "Avenida Afonso Pena (RS)", type: "property", price: 320, rent: 28, color: "#ffeb3b" },
-    { id: 30, name: "VÁ PARA A PRISÃO", type: "special", color: "#ffffff" },
-    { id: 31, name: "Rua Jereissati", type: "property", price: 350, rent: 35, color: "#4caf50" },
-    { id: 32, name: "Cofre de Comunidade", type: "special", color: "#ffffff" },
-    { id: 33, name: "Avenida Beira Mar", type: "property", price: 400, rent: 50, color: "#4caf50" },
-    { id: 34, name: "Taxa de Luxo", type: "tax", price: 100, color: "#ffffff" },
-    { id: 35, name: "Interbairros", type: "railroad", price: 200, rent: 25, color: "#e0e0e0" },
-    { id: 36, name: "Sorte ou Revés", type: "lucky", color: "#ffffff" },
-    { id: 37, name: "Avenida Rebouças", type: "property", price: 350, rent: 35, color: "#3f51b5" },
-    { id: 38, name: "Avenida Brigadeiro Faria Lima", type: "property", price: 400, rent: 50, color: "#3f51b5" }
+// Lista oficial de todas as 40 casas do Banco Imobiliário clássico
+const boardSpaces = [
+    { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
+    { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100 },
+    { id: 2, name: "Sorte ou Revés", type: "special" },
+    { id: 3, name: "Av. Novo Estado", type: "property", color: "cor-rosa", price: 100 },
+    { id: 4, name: "Imposto de Renda", type: "special" },
+    { id: 5, name: "Estação Carioca", type: "station", price: 200 },
+    { id: 6, name: "Av. Brigadeiro", type: "property", color: "cor-azul-claro", price: 120 },
+    { id: 7, name: "Sorte ou Revés", type: "special" },
+    { id: 8, name: "Av. Rebouças", type: "property", color: "cor-azul-claro", price: 140 },
+    { id: 9, name: "Av. 9 de Julho", type: "property", color: "cor-azul-claro", price: 140 },
+    
+    { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
+    { id: 11, name: "Av. Europa", type: "property", color: "cor-roxo", price: 160 },
+    { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150 },
+    { id: 13, name: "Rua Augusta", type: "property", color: "cor-roxo", price: 160 },
+    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-roxo", price: 180 },
+    { id: 15, name: "Estação da Luz", type: "station", price: 200 },
+    { id: 16, name: "Av. S. João", type: "property", color: "cor-laranja", price: 200 },
+    { id: 17, name: "Sorte ou Revés", type: "special" },
+    { id: 18, name: "Av. Ipiranga", type: "property", color: "cor-laranja", price: 200 },
+    { id: 19, name: "Av. Rio Branco", type: "property", color: "cor-laranja", price: 220 },
+    
+    { id: 20, name: "PARADA LIVRE", type: "special", cssClass: "corner-space" },
+    { id: 21, name: "Av. Paulista", type: "property", color: "cor-vermelho", price: 240 },
+    { id: 22, name: "Sorte ou Revés", type: "special" },
+    { id: 23, name: "Av. Brasil", type: "property", color: "cor-vermelho", price: 240 },
+    { id: 24, name: "Av. Brigadeiro", type: "property", color: "cor-vermelho", price: 260 },
+    { id: 25, name: "Estação Barra Funda", type: "station", price: 200 },
+    { id: 26, name: "Copacabana", type: "property", color: "cor-amarelo", price: 280 },
+    { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150 },
+    { id: 28, name: "Av. Vieira Souto", type: "property", color: "cor-amarelo", price: 280 },
+    { id: 29, name: "Ipanema", type: "property", color: "cor-amarelo", price: 300 },
+    
+    { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
+    { id: 31, name: "Jardim Europa", type: "property", color: "cor-verde", price: 320 },
+    { id: 32, name: "Jardim América", type: "property", color: "cor-verde", price: 320 },
+    { id: 33, name: "Sorte ou Revés", type: "special" },
+    { id: 34, name: "Av. Interlagos", type: "property", color: "cor-verde", price: 350 },
+    { id: 35, name: "Estação Brás", type: "station", price: 200 },
+    { id: 36, name: "Sorte ou Revés", type: "special" },
+    { id: 37, name: "Av. Morumbi", type: "property", color: "cor-azul-escuro", price: 400 },
+    { id: 38, name: "Taxa de Luxo", type: "special" },
+    { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400 }
 ];
 
-// 2. Inicialização do Estado do Jogo
-const gameState = {
-    players: [
-        { id: 1, name: "Jogador Vermelho", position: 0, money: 1500, color: "#ff4d4d" },
-        { id: 2, name: "Jogador Azul", position: 0, money: 1500, color: "#4d79ff" }
-    ],
-    currentPlayerIndex: 0,
-    propertiesOwners: {} // Armazenará { houseId: playerId }
-};
+// Dados dos Jogadores
+let players = [
+    { id: 0, name: "Jogador 1 (Azul)", money: 25000, position: 0, color: "#1e90ff" },
+    { id: 1, name: "Jogador 2 (Vermelho)", money: 25000, position: 0, color: "#ff4757" }
+];
 
-// 3. Função para Renderizar o Tabuleiro na Tela (Log em texto por enquanto)
-function initializeGame() {
-    console.log("🎲 Banco Imobiliário carregado com sucesso!");
-    console.log("Casas configuradas no motor:", BOARD_DATA.length);
-    console.log("Jogadores prontos no Ponto de Partida com R$ 1500 cada!");
-}
+let currentPlayerIndex = 0; // Começa com o Jogador 1 (índice 0)
+let isMoving = false; // Bloqueia cliques repetidos enquanto o peão anda
 
-// Iniciar tudo ao carregar a página
-window.onload = initializeGame;
-
-// NOVO BLOCOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO
-
-// 4. Função para posicionar cada casa no Grid CSS (Mapeamento de 0 a 39)
+// Função para calcular a posição visual de cada casa no Grid do tabuleiro (11x11)
 function getGridPosition(index) {
-    // Tabuleiro tem 11x11 posições. Index de 0 a 39 rodeia as bordas.
     if (index >= 0 && index <= 10) {
-        // Linha inferior (Direita para Esquerda - de 0 a 10)
         return { row: 11, col: 11 - index };
     } else if (index > 10 && index <= 20) {
-        // Coluna esquerda (Baixo para Cima - de 11 a 20)
-        return { row: 21 - index, col: 1 };
+        return { row: 11 - (index - 10), col: 1 };
     } else if (index > 20 && index <= 30) {
-        // Linha superior (Esquerda para Direita - de 21 a 30)
         return { row: 1, col: index - 19 };
     } else if (index > 30 && index <= 39) {
-        // Coluna direita (Cima para Baixo - de 31 a 39)
         return { row: index - 29, col: 11 };
     }
 }
 
-// 5. Atualização da função de inicialização para renderizar visualmente
+// Renderiza o tabuleiro e cria os recipientes para os peões
 function renderBoard() {
-    const board = document.getElementById("board");
+    const boardElement = document.getElementById("board");
     
-    BOARD_DATA.forEach((space, index) => {
-        const spaceElement = document.createElement("div");
-        const position = getGridPosition(index);
+    boardSpaces.forEach((space) => {
+        const spaceDiv = document.createElement("div");
+        spaceDiv.className = `space ${space.cssClass || ''}`;
+        spaceDiv.id = `space-${space.id}`;
         
-        // Aplica o grid do CSS correspondente à posição lógica da casa
-        spaceElement.style.gridRow = position.row;
-        spaceElement.style.gridColumn = position.col;
+        const pos = getGridPosition(space.id);
+        spaceDiv.style.gridRow = pos.row;
+        spaceDiv.style.gridColumn = pos.col;
         
-        // Verifica se é uma casa de canto (0, 10, 20, 30)
-        if (index % 10 === 0) {
-            spaceElement.className = "space corner-space";
-            spaceElement.innerHTML = `<div>${space.name}</div>`;
-        } else {
-            spaceElement.className = "space";
-            
-            // Se for propriedade comercial, adiciona a barra de cor correspondente
-            if (space.type === "property") {
-                spaceElement.innerHTML = `
-                    <div class="color-bar" style="background-color: ${space.color}"></div>
-                    <div>${space.name}</div>
-                    <div style="font-size: 0.55rem; margin-top: auto;">R$ ${space.price}</div>
-                `;
-            } else {
-                spaceElement.innerHTML = `
-                    <div style="margin-top: 5px;">${space.name}</div>
-                    ${space.price ? `<div style="font-size: 0.55rem; margin-top: auto;">R$ ${space.price}</div>` : ''}
-                `;
-            }
+        if (space.type === "property") {
+            const tag = document.createElement("div");
+            tag.className = `property-tag ${space.color}`;
+            spaceDiv.appendChild(tag);
         }
         
-        board.appendChild(spaceElement);
+        const nameText = document.createElement("div");
+        nameText.className = "space-name";
+        nameText.innerText = space.name;
+        spaceDiv.appendChild(nameText);
+        
+        if (space.price) {
+            const priceText = document.createElement("div");
+            priceText.innerText = `$${space.price}`;
+            priceText.style.marginTop = "auto";
+            spaceDiv.appendChild(priceText);
+        }
+
+        // Recipiente onde os peões ficarão dentro desta casa
+        const tokensContainer = document.createElement("div");
+        tokensContainer.className = "tokens-container";
+        tokensContainer.id = `tokens-space-${space.id}`;
+        spaceDiv.appendChild(tokensContainer);
+        
+        boardElement.appendChild(spaceDiv);
     });
 }
 
-// Sobrescrevendo a inicialização anterior para incluir a renderização visual
-function initializeGame() {
-    console.log("🎲 Banco Imobiliário carregado com sucesso!");
-    renderBoard();
+// Coloca os peões na tela nas posições atuais dos jogadores
+function renderPawns() {
+    // Primeiro limpamos os peões de todas as casas
+    document.querySelectorAll(".tokens-container").forEach(container => container.innerHTML = "");
+
+    // Desenhamos o peão de cada jogador na sua respectiva casa
+    players.forEach(player => {
+        const container = document.getElementById(`tokens-space-${player.position}`);
+        if (container) {
+            const pawn = document.createElement("div");
+            pawn.className = "pawn";
+            pawn.id = `pawn-player-${player.id}`;
+            pawn.style.backgroundColor = player.color;
+            container.appendChild(pawn);
+        }
+    });
 }
 
-window.onload = initializeGame;
+// Atualiza as informações do painel lateral (quem joga, saldos)
+function updateUI() {
+    const playersList = document.getElementById("players-list");
+    playersList.innerHTML = "";
+    
+    players.forEach((p, idx) => {
+        const row = document.createElement("div");
+        row.className = "player-row";
+        if (idx === currentPlayerIndex) {
+            row.style.fontWeight = "bold";
+            row.style.backgroundColor = "rgba(255,255,255,0.1)";
+            row.style.borderRadius = "5px";
+        }
+        row.style.borderLeft = `5px solid ${p.color}`;
+        row.style.padding = "8px";
+        row.innerHTML = `<span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span> <span>$${p.money}</span>`;
+        playersList.appendChild(row);
+    });
+}
+
+// Função para mover o peão passo a passo de forma animada
+async function movePlayer(playerIndex, steps) {
+    isMoving = true;
+    let player = players[playerIndex];
+    
+    for (let i = 0; i < steps; i++) {
+        // Incrementa a posição (se passar de 39, volta ao 0 e ganha bônus de partida)
+        player.position = (player.position + 1) % 40;
+        
+        if (player.position === 0) {
+            player.money += 2000; // Bônus clássico ao passar pela partida
+            document.getElementById("game-status").innerText = `${player.name} passou pelo início e ganhou $2000!`;
+            updateUI();
+        }
+
+        renderPawns();
+        
+        // Pequena pausa para dar o efeito de caminhada no tabuleiro
+        await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    
+    isMoving = false;
+    handleLanding(player);
+}
+
+// Função executada quando o jogador cai em uma casa
+function handleLanding(player) {
+    const currentSpace = boardSpaces[player.position];
+    let statusMsg = `${player.name} caiu em ${currentSpace.name}.`;
+
+    if (currentSpace.type === "property") {
+        statusMsg += ` Custa $${currentSpace.price}. (Compra automática será adicionada na próxima etapa!)`;
+    }
+
+    document.getElementById("game-status").innerText = statusMsg;
+
+    // Passa a vez para o próximo jogador
+    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    updateUI();
+}
+
+// Ação de rolar o dado
+function rollDice() {
+    if (isMoving) return; // Evita rolar enquanto o peão se move
+
+    const diceValue1 = Math.floor(Math.random() * 6) + 1;
+    const diceValue2 = Math.floor(Math.random() * 6) + 1;
+    const totalSteps = diceValue1 + diceValue2;
+
+    document.getElementById("game-status").innerText = `🎲 ${players[currentPlayerIndex].name} tirou ${diceValue1} + ${diceValue2} = ${totalSteps}!`;
+
+    movePlayer(currentPlayerIndex, totalSteps);
+}
+
+// Inicialização
+window.onload = () => {
+    renderBoard();
+    renderPawns();
+    updateUI();
+    
+    // Configura o evento do botão de rolar dados
+    document.getElementById("rollDice").addEventListener("click", rollDice);
+};
+
+
+
+
+
+
+
+
+
+
+
+
