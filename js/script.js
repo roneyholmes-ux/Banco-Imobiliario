@@ -6,7 +6,8 @@ const GAME_CONFIG = {
     goBonus: 2000,              // Quanto ganha ao passar pela PARTIDA
     rentMultiplier: 1.0,        // Multiplicador global de aluguéis
     impostoRenda: 2000,         // Valor cobrado na casa Imposto de Renda
-    taxaLuxo: 1000              // Valor cobrado na casa Taxa de Luxo
+    taxaLuxo: 1000,             // Valor cobrado na casa Taxa de Luxo
+    fiancaPrisao: 500           // Valor para pagar e sair da prisão
 };
 
 // ==========================================
