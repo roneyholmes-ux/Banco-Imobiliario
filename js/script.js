@@ -7,6 +7,16 @@ const GAME_CONFIG = {
     rentMultiplier: 1.0,        // Multiplicador global de aluguéis (se quiser inflacionar o jogo)
 };
 
+// ==========================================
+// CARTAS DE SORTE OU REVÉS
+// ==========================================
+const CARDS = [
+    { text: "Sorte! Você tirou o 1º lugar no torneio de xadrez. Receba $100", type: "earn", value: 100 },
+    { text: "Revés! Pague a mensalidade da escola. Pague $50", type: "pay", value: 50 },
+    { text: "Sorte! Receba os dividendos de suas ações. Receba $200", type: "earn", value: 200 },
+    { text: "Revés! Multa por excesso de velocidade. Pague $30", type: "pay", value: 30 }
+];
+
 // Lista oficial de todas as 40 casas do Banco Imobiliário clássico
 // Para alterar preços ou aluguéis no futuro, basta mexer aqui!
 const boardSpaces = [
@@ -190,36 +200,64 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
-// Lógica de Compra de Propriedade
-// Lógica de Compra e Aluguel de Propriedade
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
-    
-    // Tipos de casa que podem ser comprados
     const purchaseableTypes = ["property", "station", "utility"];
 
     if (purchaseableTypes.includes(currentSpace.type)) {
         if (currentSpace.owner === null) {
-            // Casa está livre para compra!
             awaitingDecision = true;
             updateUI();
             showPurchaseModal(player, currentSpace);
-            return; // Interrompe a passagem de turno automática para esperar a decisão
+            return; 
         } else if (currentSpace.owner !== player.id) {
-            // A casa tem dono E o dono é o OUTRO jogador! (Hora de pagar aluguel)
             payRent(player, currentSpace);
-            return; // payRent já vai gerenciar a transição de turno após mostrar a mensagem
+            return; 
         } else {
-            // O dono da casa é o próprio jogador que caiu nela
             document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${currentSpace.name}.`;
         }
+    } else if (currentSpace.name === "Sorte ou Revés") {
+        // O jogador caiu na casa de carta! Puxa uma carta do baralho.
+        drawCard(player);
+        return; // drawCard vai controlar a passagem de turno
     } else {
-        // Casas especiais (Sorte, Prisão, etc)
+        // Outras casas especiais (Partida, Prisão, etc)
         document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}.`;
     }
 
-    // Passa o turno se não houver pagamentos ou decisões pendentes
     nextTurn();
+}
+
+// Função para puxar e aplicar a carta
+function drawCard(player) {
+    // Sorteia uma carta aleatória do nosso baralho
+    const randomIndex = Math.floor(Math.random() * CARDS.length);
+    const card = CARDS[randomIndex];
+    
+    // Aplica o efeito no dinheiro do jogador
+    if (card.type === "earn") {
+        player.money += card.value;
+    } else if (card.type === "pay") {
+        player.money -= card.value;
+    }
+
+    // Mostra a carta na tela com um botão de OK
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px; background: #fff8e1; color: #333; padding: 10px; border-radius: 5px; border: 2px solid #ffb300;">
+            🃏 <strong>Carta Sorte ou Revés</strong><br><br>
+            <em>"${card.text}"</em>
+        </div>
+        <button id="btn-confirm-card" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
+    `;
+    
+    awaitingDecision = true; 
+    updateUI();
+    
+    document.getElementById("btn-confirm-card").addEventListener("click", () => {
+        awaitingDecision = false;
+        nextTurn();
+    });
 }
 
 // Nova Função para processar o pagamento do aluguel
