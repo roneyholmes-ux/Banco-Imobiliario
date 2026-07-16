@@ -641,6 +641,10 @@ function initializePlayers(quantity) {
     updateUI();
 }
 
+// ==========================================
+// SISTEMA DE MONOPÓLIO E CONSTRUÇÃO DE CASAS
+// ==========================================
+
 // Verifica se o jogador possui TODAS as propriedades de uma determinada cor ............................................................................................................................Verifica se o jogador possui TODAS as propriedades de uma determinada cor
 function hasMonopoly(player, colorClass) {
     if (!colorClass) return false;
