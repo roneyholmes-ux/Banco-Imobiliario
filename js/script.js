@@ -202,8 +202,7 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
-// Lógica de Compra, Aluguel e Cartas
-
+// Lógica de Compra, Aluguel, Cartas e Casas Especiais
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     const purchaseableTypes = ["property", "station", "utility"];
@@ -221,17 +220,79 @@ function handleLanding(player) {
             document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${currentSpace.name}.`;
         }
     } else if (currentSpace.name === "Sorte ou Revés") {
-        // O jogador caiu na casa de carta! Puxa uma carta do baralho.
         drawCard(player);
-        return; // drawCard vai controlar a passagem de turno
+        return; 
+    } else if (currentSpace.name === "VÁ PARA A PRISÃO") {
+        // REGRA DA PRISÃO: Teleporta o jogador para a casa 10 (PRISÃO)
+        player.position = 10;
+        renderPawns(); // Atualiza a posição visual do peão no tabuleiro
+        
+        const statusDiv = document.getElementById("game-status");
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px; color: #c62828;">
+                🚨 <strong>Vá para a Prisão!</strong><br>
+                ${player.name} foi enviado diretamente para a Prisão sem passar pelo início!
+            </div>
+            <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
+        `;
+        
+        awaitingDecision = true;
+        updateUI();
+        
+        document.getElementById("btn-confirm-jail").addEventListener("click", () => {
+            awaitingDecision = false;
+            nextTurn();
+        });
+        return;
+    } else if (currentSpace.name === "Imposto de Renda") {
+        // COBRANÇA: Imposto de Renda
+        player.money -= GAME_CONFIG.impostoRenda;
+        
+        const statusDiv = document.getElementById("game-status");
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px; color: #c62828;">
+                💸 <strong>Imposto de Renda!</strong><br>
+                ${player.name} pagou <strong>$${GAME_CONFIG.impostoRenda}</strong> de impostos ao Leão!
+            </div>
+            <button id="btn-confirm-tax" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, pagar</button>
+        `;
+        
+        awaitingDecision = true;
+        updateUI();
+        
+        document.getElementById("btn-confirm-tax").addEventListener("click", () => {
+            awaitingDecision = false;
+            nextTurn();
+        });
+        return;
+    } else if (currentSpace.name === "Taxa de Luxo") {
+        // COBRANÇA: Taxa de Luxo
+        player.money -= GAME_CONFIG.taxaLuxo;
+        
+        const statusDiv = document.getElementById("game-status");
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px; color: #c62828;">
+                💎 <strong>Taxa de Luxo!</strong><br>
+                ${player.name} pagou <strong>$${GAME_CONFIG.taxaLuxo}</strong> de taxa de luxo!
+            </div>
+            <button id="btn-confirm-luxury" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, pagar</button>
+        `;
+        
+        awaitingDecision = true;
+        updateUI();
+        
+        document.getElementById("btn-confirm-luxury").addEventListener("click", () => {
+            awaitingDecision = false;
+            nextTurn();
+        });
+        return;
     } else {
-        // Outras casas especiais (Partida, Prisão, etc)
+        // Outras casas sem ações financeiras automáticas (Partida, Prisão apenas visitando, Parada Livre)
         document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}.`;
     }
 
     nextTurn();
 }
-
 // Função para puxar e aplicar a carta
 function drawCard(player) {
     // Sorteia uma carta aleatória do nosso baralho
