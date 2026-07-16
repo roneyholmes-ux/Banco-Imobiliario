@@ -4,7 +4,9 @@
 const GAME_CONFIG = {
     startingMoney: 25000,       // Dinheiro inicial de cada jogador
     goBonus: 2000,              // Quanto ganha ao passar pela PARTIDA
-    rentMultiplier: 1.0,        // Multiplicador global de aluguéis (se quiser inflacionar o jogo)
+    rentMultiplier: 1.0,        // Multiplicador global de aluguéis
+    impostoRenda: 2000,         // Valor cobrado na casa Imposto de Renda
+    taxaLuxo: 1000              // Valor cobrado na casa Taxa de Luxo
 };
 
 // ==========================================
