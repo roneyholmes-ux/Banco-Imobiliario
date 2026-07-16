@@ -191,6 +191,7 @@ async function movePlayer(playerIndex, steps) {
 }
 
 // Lógica de Compra de Propriedade
+// Lógica de Compra e Aluguel de Propriedade
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     
@@ -204,18 +205,52 @@ function handleLanding(player) {
             updateUI();
             showPurchaseModal(player, currentSpace);
             return; // Interrompe a passagem de turno automática para esperar a decisão
+        } else if (currentSpace.owner !== player.id) {
+            // A casa tem dono E o dono é o OUTRO jogador! (Hora de pagar aluguel)
+            payRent(player, currentSpace);
+            return; // payRent já vai gerenciar a transição de turno após mostrar a mensagem
         } else {
-            // A casa já tem dono (Isso será tratado no passo 2 de Aluguel!)
-            const owner = players.find(p => p.id === currentSpace.owner);
-            document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}, que pertence a ${owner.name}.`;
+            // O dono da casa é o próprio jogador que caiu nela
+            document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${currentSpace.name}.`;
         }
     } else {
         // Casas especiais (Sorte, Prisão, etc)
         document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}.`;
     }
 
-    // Passa o turno se não houve tomada de decisão pendente
+    // Passa o turno se não houver pagamentos ou decisões pendentes
     nextTurn();
+}
+
+// Nova Função para processar o pagamento do aluguel
+function payRent(player, space) {
+    const owner = players.find(p => p.id === space.owner);
+    
+    // Calcula o aluguel usando o multiplicador global da nossa configuração de regras
+    const rentAmount = Math.round(space.rent * GAME_CONFIG.rentMultiplier);
+    
+    // Transfere o dinheiro
+    player.money -= rentAmount;
+    owner.money += rentAmount;
+    
+    // Atualiza a tela de status com o valor pago e o botão para avançar
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px; color: #c62828;">
+            💸 <strong>Pedágio!</strong><br>
+            ${player.name} caiu em <strong>${space.name}</strong> e pagou <strong>$${rentAmount}</strong> de aluguel para ${owner.name}!
+        </div>
+        <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
+    `;
+    
+    awaitingDecision = true; // Trava o dado enquanto o jogador lê o recibo do aluguel
+    updateUI();
+    
+    // Quando clicar no botão "Ok, continuar", destrava o dado e passa a vez
+    document.getElementById("btn-confirm-rent").addEventListener("click", () => {
+        awaitingDecision = false;
+        nextTurn();
+    });
 }
 
 // Exibe as opções de compra na tela
