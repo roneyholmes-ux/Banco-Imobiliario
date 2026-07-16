@@ -307,18 +307,22 @@ function nextTurn() {
     updateUI();
 }
 
-// Ação de rolar o dado
+// Ação de rolar o dado (COM CHEAT TEMPORÁRIO PARA TESTE)
 function rollDice() {
     if (isMoving || awaitingDecision) return;
 
-    const diceValue1 = Math.floor(Math.random() * 6) + 1;
-    const diceValue2 = Math.floor(Math.random() * 6) + 1;
-    const totalSteps = diceValue1 + diceValue2;
+    // Comentamos o dado real temporariamente
+    // const diceValue1 = Math.floor(Math.random() * 6) + 1;
+    // const diceValue2 = Math.floor(Math.random() * 6) + 1;
+    
+    // Forçamos o peão a andar apenas 1 casa por vez!
+    const totalSteps = 1;
 
-    document.getElementById("game-status").innerText = `🎲 ${players[currentPlayerIndex].name} tirou ${diceValue1} + ${diceValue2} = ${totalSteps}!`;
+    document.getElementById("game-status").innerText = `🎲 ${players[currentPlayerIndex].name} andou ${totalSteps} casa(s) (Modo Teste)!`;
 
     movePlayer(currentPlayerIndex, totalSteps);
 }
+
 
 // Inicialização
 window.onload = () => {
