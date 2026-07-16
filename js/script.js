@@ -630,6 +630,40 @@ function initializePlayers(quantity) {
     updateUI();
 }
 
+// Verifica se o jogador possui TODAS as propriedades de uma determinada cor ............................................................................................................................Verifica se o jogador possui TODAS as propriedades de uma determinada cor
+function hasMonopoly(player, colorClass) {
+    if (!colorClass) return false;
+    
+    // Filtra todas as propriedades do tabuleiro que têm essa cor
+    const sameColorSpaces = boardSpaces.filter(space => space.color === colorClass);
+    
+    // Verifica se todas elas pertencem a este jogador
+    return sameColorSpaces.every(space => space.owner === player.id);
+}
+
+// Calcula o aluguel final considerando Monopólio e Casas construídas
+function calculateCurrentRent(space) {
+    if (space.type !== "property") {
+        return space.rent; // Estações e utilitários cobram aluguel base normal
+    }
+
+    const owner = players.find(p => p.id === space.owner);
+    let finalRent = space.rent;
+
+    // Se tem casas construídas, aplica o multiplicador de casas
+    if (space.houses === 1) finalRent = space.rent * 5;
+    else if (space.houses === 2) finalRent = space.rent * 15;
+    else if (space.houses === 3) finalRent = space.rent * 40;
+    else if (space.houses === 4) finalRent = space.rent * 80;
+    else if (space.houses === 5) finalRent = space.rent * 120; // 5 casas = Hotel
+    // Se não tem casas, mas o dono possui o monopólio da cor, o aluguel dobra!
+    else if (hasMonopoly(owner, space.color)) {
+        finalRent = space.rent * 2;
+    }
+
+    return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
+}
+
 // Inicialização
 window.onload = () => {
     startPlayerSetup();
