@@ -200,6 +200,8 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
+// Lógica de Compra, Aluguel e Cartas
+
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     const purchaseableTypes = ["property", "station", "utility"];
