@@ -525,14 +525,23 @@ function checkJailTurn(player) {
 }
 
 // Ação de rolar o dado ..................................................................................................................................................................................................... Ação de rolar o dado
+
 function rollDice() {
     if (isMoving || awaitingDecision) return;
+
+    const player = players[currentPlayerIndex];
+
+    // Se o jogador está preso, interceptamos a rolagem normal
+    if (player.inJail) {
+        checkJailTurn(player);
+        return;
+    }
 
     const diceValue1 = Math.floor(Math.random() * 6) + 1;
     const diceValue2 = Math.floor(Math.random() * 6) + 1;
     const totalSteps = diceValue1 + diceValue2;
 
-    document.getElementById("game-status").innerText = `🎲 ${players[currentPlayerIndex].name} tirou ${diceValue1} + ${diceValue2} = ${totalSteps}!`;
+    document.getElementById("game-status").innerText = `🎲 ${player.name} tirou ${diceValue1} + ${diceValue2} = ${totalSteps}!`;
 
     movePlayer(currentPlayerIndex, totalSteps);
 }
