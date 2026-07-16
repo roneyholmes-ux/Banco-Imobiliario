@@ -209,7 +209,7 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
-// Lógica de Compra, Aluguel, Cartas e Casas Especiais
+// Lógica de Compra, Aluguel, Cartas e Casas Especiais .......................................................................................................................... Lógica de Compra, Aluguel, Cartas e Casas Especiais
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     const purchaseableTypes = ["property", "station", "utility"];
@@ -230,15 +230,17 @@ function handleLanding(player) {
         drawCard(player);
         return; 
     } else if (currentSpace.name === "VÁ PARA A PRISÃO") {
-        // REGRA DA PRISÃO: Teleporta o jogador para a casa 10 (PRISÃO)
+        // REGRA DA PRISÃO: Teleporta e prende o jogador
         player.position = 10;
-        renderPawns(); // Atualiza a posição visual do peão no tabuleiro
+        player.inJail = true;
+        player.jailTurns = 0;
+        renderPawns();
         
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
             <div style="margin-bottom: 10px; color: #c62828;">
                 🚨 <strong>Vá para a Prisão!</strong><br>
-                ${player.name} foi enviado diretamente para a Prisão sem passar pelo início!
+                ${player.name} foi enviado diretamente para a Prisão e está preso!
             </div>
             <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
         `;
@@ -251,6 +253,7 @@ function handleLanding(player) {
             nextTurn();
         });
         return;
+        
     } else if (currentSpace.name === "Imposto de Renda") {
         // COBRANÇA: Imposto de Renda
         player.money -= GAME_CONFIG.impostoRenda;
