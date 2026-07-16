@@ -223,8 +223,19 @@ function handleLanding(player) {
         } else if (currentSpace.owner !== player.id) {
             payRent(player, currentSpace);
             return; 
-        } else {
-            document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${currentSpace.name}.`;
+       } else {
+            // O dono da casa é o próprio jogador que caiu nela.
+            // Se for do tipo 'property' e ele tiver o monopólio da cor, ele pode construir!
+            if (currentSpace.type === "property" && hasMonopoly(player, currentSpace.color)) {
+                if (currentSpace.houses < 5) {
+                    showBuildModal(player, currentSpace);
+                    return;
+                } else {
+                    document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name} (Hotel completo!).`;
+                }
+            } else {
+                document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${currentSpace.name}.`;
+            }
         }
     } else if (currentSpace.name === "Sorte ou Revés") {
         drawCard(player);
@@ -335,12 +346,12 @@ function drawCard(player) {
     });
 }
 
-// Nova Função para processar o pagamento do aluguel
+// Nova Função para processar o pagamento do aluguel ........................................................................................................................................................ Nova Função para processar o pagamento do aluguel
 function payRent(player, space) {
     const owner = players.find(p => p.id === space.owner);
     
     // Calcula o aluguel usando o multiplicador global da nossa configuração de regras
-    const rentAmount = Math.round(space.rent * GAME_CONFIG.rentMultiplier);
+    const rentAmount = calculateCurrentRent(space);
     
     // Transfere o dinheiro
     player.money -= rentAmount;
@@ -664,7 +675,91 @@ function calculateCurrentRent(space) {
     return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
 }
 
-// Inicialização
+// Exibe o painel de compra de casas.................................................................................................................................................................Exibe o painel de compra de casas
+function showBuildModal(player, space) {
+    const housePrice = Math.round(space.price / 2);
+    const isHotel = space.houses === 4;
+    const itemText = isHotel ? "um Hotel" : "uma Casa";
+    
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            🏰 <strong>Monopólio!</strong> Você caiu em <strong>${space.name}</strong> (${space.houses} casa(s)).<br>
+            Deseja construir ${itemText} por <strong>$${housePrice}</strong>?<br>
+            <small>Aluguel atual: $${calculateCurrentRent(space)} | Próximo aluguel: $${calculateUpcomingRent(space)}</small>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-build-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Sim, Construir</button>
+            <button id="btn-build-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828;">Não, Passar Vez</button>
+        </div>
+    `;
+
+    const btnYes = document.getElementById("btn-build-yes");
+    const btnNo = document.getElementById("btn-build-no");
+
+    btnYes.addEventListener("click", () => {
+        btnYes.disabled = true;
+        btnNo.disabled = true;
+        
+        if (player.money >= housePrice) {
+            player.money -= housePrice;
+            space.houses += 1;
+            
+            // Atualiza o visual da casa no tabuleiro
+            updateSpaceVisualWithHouses(space);
+            
+            document.getElementById("game-status").innerText = `${player.name} construiu ${itemText} em ${space.name}!`;
+            awaitingDecision = false;
+            updateUI();
+            
+            setTimeout(() => { nextTurn(); }, 1500);
+        } else {
+            alert("Dinheiro insuficiente para construir!");
+            btnYes.disabled = false;
+            btnNo.disabled = false;
+        }
+    });
+
+    btnNo.addEventListener("click", () => {
+        btnYes.disabled = true;
+        btnNo.disabled = true;
+        awaitingDecision = false;
+        nextTurn();
+    });
+}
+
+// Calcula o aluguel futuro caso compre mais uma casa (para exibir no painel)
+function calculateUpcomingRent(space) {
+    const tempSpace = { ...space, houses: space.houses + 1 };
+    return calculateCurrentRent(tempSpace);
+}
+
+// Adiciona pequenos ícones visuais verdes (casas) ou vermelhos (hotéis) na tag de cor da propriedade!
+function updateSpaceVisualWithHouses(space) {
+    const tag = document.getElementById(`tag-${space.id}`);
+    if (!tag) return;
+
+    // Limpa os ícones anteriores
+    tag.innerHTML = "";
+    tag.style.display = "flex";
+    tag.style.justifyContent = "center";
+    tag.style.alignItems = "center";
+    tag.style.gap = "2px";
+
+    if (space.houses === 5) {
+        // Desenha um Hotel vermelho grande
+        tag.innerHTML = `<span style="color: #ff4757; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏨</span>`;
+    } else {
+        // Desenha mini casinhas verdes conforme a quantidade
+        let houseIcons = "";
+        for (let i = 0; i < space.houses; i++) {
+            houseIcons += `<span style="color: #2ed573; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏠</span>`;
+        }
+        tag.innerHTML = houseIcons;
+    }
+}
+
+// Inicialização......................................................................................................................................................................................Inicialização
 window.onload = () => {
     startPlayerSetup();
     document.getElementById("rollDice").addEventListener("click", rollDice);
