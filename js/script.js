@@ -21,7 +21,6 @@ const CARDS = [
 ];
 
 // Lista oficial de todas as 40 casas do Banco Imobiliário clássico
-// Para alterar preços ou aluguéis no futuro, basta mexer aqui!
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
     { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
@@ -79,7 +78,6 @@ const PLAYER_PRESETS = [
 ];
 
 let players = []; // Começa vazio e será preenchido no setup
-
 let currentPlayerIndex = 0; 
 let isMoving = false; 
 let awaitingDecision = false; // Bloqueia o dado enquanto o jogador decide uma compra
@@ -113,7 +111,6 @@ function renderBoard() {
         
         if (space.type === "property" || space.type === "station" || space.type === "utility") {
             const tag = document.createElement("div");
-            // Se tiver cor usa a classe de cor, senão usa cinza para estações/serviços
             tag.className = `property-tag ${space.color || 'cor-cinza'}`;
             tag.id = `tag-${space.id}`;
             spaceDiv.appendChild(tag);
@@ -201,19 +198,6 @@ function updateUI() {
     }
 }
 
-    // Controla a ativação do botão de dado
-    const rollButton = document.getElementById("rollDice");
-    if (isMoving || awaitingDecision) {
-        rollButton.disabled = true;
-        rollButton.style.opacity = "0.5";
-        rollButton.style.cursor = "not-allowed";
-    } else {
-        rollButton.disabled = false;
-        rollButton.style.opacity = "1";
-        rollButton.style.cursor = "pointer";
-    }
-}
-
 async function movePlayer(playerIndex, steps) {
     isMoving = true;
     updateUI();
@@ -236,7 +220,7 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
-// Lógica de Compra, Aluguel, Cartas e Casas Especiais .......................................................................................................................... Lógica de Compra, Aluguel, Cartas e Casas Especiais
+// Lógica de Compra, Aluguel, Cartas e Casas Especiais
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     const purchaseableTypes = ["property", "station", "utility"];
@@ -250,8 +234,7 @@ function handleLanding(player) {
         } else if (currentSpace.owner !== player.id) {
             payRent(player, currentSpace);
             return; 
-       } else {
-            // O dono da casa é o próprio jogador que caiu nela.
+        } else {
             // Se for do tipo 'property' e ele tiver o monopólio da cor, ele pode construir!
             if (currentSpace.type === "property" && hasMonopoly(player, currentSpace.color)) {
                 if (currentSpace.houses < 5) {
@@ -268,7 +251,6 @@ function handleLanding(player) {
         drawCard(player);
         return; 
     } else if (currentSpace.name === "VÁ PARA A PRISÃO") {
-        // REGRA DA PRISÃO: Teleporta e prende o jogador
         player.position = 10;
         player.inJail = true;
         player.jailTurns = 0;
@@ -293,7 +275,6 @@ function handleLanding(player) {
         return;
         
     } else if (currentSpace.name === "Imposto de Renda") {
-        // COBRANÇA: Imposto de Renda
         player.money -= GAME_CONFIG.impostoRenda;
         
         const statusDiv = document.getElementById("game-status");
@@ -314,7 +295,6 @@ function handleLanding(player) {
         });
         return;
     } else if (currentSpace.name === "Taxa de Luxo") {
-        // COBRANÇA: Taxa de Luxo
         player.money -= GAME_CONFIG.taxaLuxo;
         
         const statusDiv = document.getElementById("game-status");
@@ -335,26 +315,23 @@ function handleLanding(player) {
         });
         return;
     } else {
-        // Outras casas sem ações financeiras automáticas (Partida, Prisão apenas visitando, Parada Livre)
         document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}.`;
     }
 
     nextTurn();
 }
+
 // Função para puxar e aplicar a carta
 function drawCard(player) {
-    // Sorteia uma carta aleatória do nosso baralho
     const randomIndex = Math.floor(Math.random() * CARDS.length);
     const card = CARDS[randomIndex];
     
-    // Aplica o efeito no dinheiro do jogador
     if (card.type === "earn") {
         player.money += card.value;
     } else if (card.type === "pay") {
         player.money -= card.value;
     }
 
-    // Mostra a carta na tela com um botão de OK
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; background: #fff8e1; color: #333; padding: 10px; border-radius: 5px; border: 2px solid #ffb300;">
@@ -373,18 +350,14 @@ function drawCard(player) {
     });
 }
 
-// Nova Função para processar o pagamento do aluguel ........................................................................................................................................................ Nova Função para processar o pagamento do aluguel
+// Processar o pagamento do aluguel
 function payRent(player, space) {
     const owner = players.find(p => p.id === space.owner);
-    
-    // Calcula o aluguel usando o multiplicador global da nossa configuração de regras
     const rentAmount = calculateCurrentRent(space);
     
-    // Transfere o dinheiro
     player.money -= rentAmount;
     owner.money += rentAmount;
     
-    // Atualiza a tela de status com o valor pago e o botão para avançar
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; color: #c62828;">
@@ -394,10 +367,9 @@ function payRent(player, space) {
         <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
     `;
     
-    awaitingDecision = true; // Trava o dado enquanto o jogador lê o recibo do aluguel
+    awaitingDecision = true; 
     updateUI();
     
-    // Quando clicar no botão "Ok, continuar", destrava o dado e passa a vez
     document.getElementById("btn-confirm-rent").addEventListener("click", () => {
         awaitingDecision = false;
         nextTurn();
@@ -427,7 +399,6 @@ function buyProperty(player, space) {
         player.money -= space.price;
         space.owner = player.id;
         
-        // Atualiza a cor visual da casa no tabuleiro para mostrar o dono
         const spaceDiv = document.getElementById(`space-${space.id}`);
         spaceDiv.style.border = `3px dashed ${player.color}`;
         
@@ -440,7 +411,7 @@ function buyProperty(player, space) {
         document.getElementById("game-status").innerText = `${player.name} comprou ${space.name} por $${space.price}!`;
     } else {
         alert("Dinheiro insuficiente para realizar a compra!");
-        return; // Não sai do estado de decisão se ele tentou comprar sem dinheiro
+        return;
     }
 
     awaitingDecision = false;
@@ -453,22 +424,17 @@ function skipProperty(player, space) {
     nextTurn();
 }
 
-// FUNÇÃO TROCA DE TURNO ................................................................................................................................................................................................... FUNÇÃO TROCA DE TURNO 
-
+// FUNÇÃO TROCA DE TURNO
 function nextTurn() {
     currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    
-    // Limpa o botão antigo do HTML para que ninguém possa clicar nele de novo!
     document.getElementById("game-status").innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
-    
     updateUI();
 }
 
-// Verifica se o jogador está preso e gerencia suas opções ................................................................................................................................................................. Verifica se o jogador está preso e gerencia suas opções
+// Gerencia opções da prisão
 function checkJailTurn(player) {
     const statusDiv = document.getElementById("game-status");
     
-    // Se ele já completou 3 turnos preso, é obrigado a pagar
     if (player.jailTurns >= 3) {
         player.money -= GAME_CONFIG.fiancaPrisao;
         player.inJail = false;
@@ -487,12 +453,10 @@ function checkJailTurn(player) {
         document.getElementById("btn-forced-jail-free").addEventListener("click", () => {
             awaitingDecision = false;
             updateUI();
-            // Permite rolar os dados normalmente agora que está livre
         });
         return true;
     }
 
-    // Mostra as opções: Tentar dados duplos ou pagar fiança ............................................................................................................................................................... Mostra as opções: Tentar dados duplos ou pagar fiança
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; color: #ffb300; background: #2e2e2e; padding: 10px; border-radius: 8px; border: 1px solid #ffb300;">
             ⛓️ <strong>${player.name} está na Prisão (Turno ${player.jailTurns + 1}/3)</strong><br>
@@ -507,7 +471,6 @@ function checkJailTurn(player) {
     awaitingDecision = true;
     updateUI();
 
-    // Opção 1: Tentar dados duplos
     document.getElementById("btn-jail-roll").addEventListener("click", () => {
         document.getElementById("btn-jail-roll").disabled = true;
         document.getElementById("btn-jail-pay").disabled = true;
@@ -516,18 +479,15 @@ function checkJailTurn(player) {
         const d2 = Math.floor(Math.random() * 6) + 1;
         
         if (d1 === d2) {
-            // Sucesso!
             player.inJail = false;
             player.jailTurns = 0;
             awaitingDecision = false;
             statusDiv.innerHTML = `🎲 Você tirou dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
             
-            // Move o jogador imediatamente com o valor tirado
             setTimeout(() => {
                 movePlayer(currentPlayerIndex, d1 + d2);
             }, 1500);
         } else {
-            // Falhou
             player.jailTurns += 1;
             awaitingDecision = false;
             statusDiv.innerHTML = `🎲 Você tirou ${d1} e ${d2} (Não foi duplo). Continua preso!`;
@@ -538,7 +498,6 @@ function checkJailTurn(player) {
         }
     });
 
-    // Opção 2: Pagar fiança
     document.getElementById("btn-jail-pay").addEventListener("click", () => {
         document.getElementById("btn-jail-roll").disabled = true;
         document.getElementById("btn-jail-pay").disabled = true;
@@ -551,7 +510,6 @@ function checkJailTurn(player) {
             updateUI();
             
             statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
-            // Deixa o botão de jogar dados ativo para ele rodar neste turno ainda
         } else {
             alert("Você não tem dinheiro suficiente para pagar a fiança!");
             document.getElementById("btn-jail-roll").disabled = false;
@@ -559,17 +517,15 @@ function checkJailTurn(player) {
         }
     });
 
-    return true; // Bloqueou a rodada padrão
+    return true;
 }
 
-// Ação de rolar o dado ..................................................................................................................................................................................................... Ação de rolar o dado
-
+// Ação de rolar o dado
 function rollDice() {
     if (isMoving || awaitingDecision) return;
 
     const player = players[currentPlayerIndex];
 
-    // Se o jogador está preso, interceptamos a rolagem normal
     if (player.inJail) {
         checkJailTurn(player);
         return;
@@ -584,9 +540,8 @@ function rollDice() {
     movePlayer(currentPlayerIndex, totalSteps);
 }
 
-// Cria a tela de seleção de jogadores ao iniciar a página ................................................................................................................................................................. Cria a tela de seleção de jogadores ao iniciar a página
+// Cria a tela de seleção de jogadores
 function startPlayerSetup() {
-    // Cria um fundo escuro (overlay) para o setup
     const overlay = document.createElement("div");
     overlay.id = "setup-overlay";
     overlay.style = `
@@ -595,7 +550,6 @@ function startPlayerSetup() {
         align-items: center; z-index: 9999; font-family: 'Montserrat', sans-serif;
     `;
 
-    // Cria a caixa de seleção de quantidade
     const setupBox = document.createElement("div");
     setupBox.style = `
         background: #1e1e1e; border: 3px solid #ff4757; border-radius: 12px;
@@ -617,7 +571,6 @@ function startPlayerSetup() {
     overlay.appendChild(setupBox);
     document.body.appendChild(overlay);
 
-    // Adiciona estilo básico para os botões do setup
     const style = document.createElement("style");
     style.innerHTML = `
         .setup-btn {
@@ -631,12 +584,11 @@ function startPlayerSetup() {
     `;
     document.head.appendChild(style);
 
-    // Escuta o clique nos botões de quantidade
     setupBox.querySelectorAll(".setup-btn").forEach(button => {
         button.addEventListener("click", (e) => {
             const qty = parseInt(e.target.getAttribute("data-qty"));
             initializePlayers(qty);
-            document.body.removeChild(overlay); // Remove o menu de configuração
+            document.body.removeChild(overlay);
         });
     });
 }
@@ -651,12 +603,11 @@ function initializePlayers(quantity) {
             money: GAME_CONFIG.startingMoney,
             position: 0,
             color: PLAYER_PRESETS[i].color,
-            inJail: false,       // Indica se o jogador está preso
-            jailTurns: 0         // Conta há quantos turnos ele está preso
+            inJail: false,
+            jailTurns: 0
         });
     }
     
-    // Adiciona automaticamente o campo 'houses' zerado para todas as propriedades
     boardSpaces.forEach(space => {
         if (space.type === "property") {
             space.houses = 0;
@@ -672,33 +623,25 @@ function initializePlayers(quantity) {
 // SISTEMA DE MONOPÓLIO E CONSTRUÇÃO DE CASAS
 // ==========================================
 
-// Verifica se o jogador possui TODAS as propriedades de uma determinada cor ............................................................................................................................Verifica se o jogador possui TODAS as propriedades de uma determinada cor
 function hasMonopoly(player, colorClass) {
     if (!colorClass) return false;
-    
-    // Filtra todas as propriedades do tabuleiro que têm essa cor
     const sameColorSpaces = boardSpaces.filter(space => space.color === colorClass);
-    
-    // Verifica se todas elas pertencem a este jogador
     return sameColorSpaces.every(space => space.owner === player.id);
 }
 
-// Calcula o aluguel final considerando Monopólio e Casas construídas
 function calculateCurrentRent(space) {
     if (space.type !== "property") {
-        return space.rent; // Estações e utilitários cobram aluguel base normal
+        return space.rent;
     }
 
     const owner = players.find(p => p.id === space.owner);
     let finalRent = space.rent;
 
-    // Se tem casas construídas, aplica o multiplicador de casas
     if (space.houses === 1) finalRent = space.rent * 5;
     else if (space.houses === 2) finalRent = space.rent * 15;
     else if (space.houses === 3) finalRent = space.rent * 40;
     else if (space.houses === 4) finalRent = space.rent * 80;
-    else if (space.houses === 5) finalRent = space.rent * 120; // 5 casas = Hotel
-    // Se não tem casas, mas o dono possui o monopólio da cor, o aluguel dobra!
+    else if (space.houses === 5) finalRent = space.rent * 120;
     else if (hasMonopoly(owner, space.color)) {
         finalRent = space.rent * 2;
     }
@@ -706,7 +649,6 @@ function calculateCurrentRent(space) {
     return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
 }
 
-// Exibe o painel de compra de casas.................................................................................................................................................................Exibe o painel de compra de casas
 function showBuildModal(player, space) {
     const housePrice = Math.round(space.price / 2);
     const isHotel = space.houses === 4;
@@ -720,8 +662,8 @@ function showBuildModal(player, space) {
             <small>Aluguel atual: $${calculateCurrentRent(space)} | Próximo aluguel: $${calculateUpcomingRent(space)}</small>
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-build-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Sim, Construir</button>
-            <button id="btn-build-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828;">Não, Passar Vez</button>
+            <button id="btn-build-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer;">Sim, Construir</button>
+            <button id="btn-build-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; border: none; color: white; border-radius: 4px; cursor: pointer;">Não, Passar Vez</button>
         </div>
     `;
 
@@ -736,7 +678,6 @@ function showBuildModal(player, space) {
             player.money -= housePrice;
             space.houses += 1;
             
-            // Atualiza o visual da casa no tabuleiro
             updateSpaceVisualWithHouses(space);
             
             document.getElementById("game-status").innerText = `${player.name} construiu ${itemText} em ${space.name}!`;
@@ -759,18 +700,15 @@ function showBuildModal(player, space) {
     });
 }
 
-// Calcula o aluguel futuro caso compre mais uma casa (para exibir no painel)
 function calculateUpcomingRent(space) {
     const tempSpace = { ...space, houses: space.houses + 1 };
     return calculateCurrentRent(tempSpace);
 }
 
-// Adiciona pequenos ícones visuais verdes (casas) ou vermelhos (hotéis) na tag de cor da propriedade!
 function updateSpaceVisualWithHouses(space) {
     const tag = document.getElementById(`tag-${space.id}`);
     if (!tag) return;
 
-    // Limpa os ícones anteriores
     tag.innerHTML = "";
     tag.style.display = "flex";
     tag.style.justifyContent = "center";
@@ -778,10 +716,8 @@ function updateSpaceVisualWithHouses(space) {
     tag.style.gap = "2px";
 
     if (space.houses === 5) {
-        // Desenha um Hotel vermelho grande
         tag.innerHTML = `<span style="color: #ff4757; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏨</span>`;
     } else {
-        // Desenha mini casinhas verdes conforme a quantidade
         let houseIcons = "";
         for (let i = 0; i < space.houses; i++) {
             houseIcons += `<span style="color: #2ed573; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏠</span>`;
@@ -796,12 +732,9 @@ function updateSpaceVisualWithHouses(space) {
 
 function openTradeModal() {
     const proposer = players[currentPlayerIndex];
-    
-    // Filtra os possíveis parceiros de negócio (outros jogadores)
     const otherPlayers = players.filter(p => p.id !== proposer.id);
     if (otherPlayers.length === 0) return;
 
-    // Cria a tela (overlay) de negociação
     const overlay = document.createElement("div");
     overlay.id = "trade-overlay";
     overlay.style = `
@@ -816,7 +749,6 @@ function openTradeModal() {
         padding: 25px; color: white; max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;
     `;
 
-    // Renderiza a estrutura da proposta
     tradeBox.innerHTML = `
         <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.6rem; margin-bottom: 15px;">🤝 Proposta de Negócio</h3>
         
@@ -826,7 +758,6 @@ function openTradeModal() {
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-            <!-- O QUE VOCÊ OFERECE -->
             <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
                 <h4 style="margin: 0 0 10px 0; color: #1e90ff;">Você Oferece:</h4>
                 <label style="font-size: 0.9rem;">Dinheiro ($):</label>
@@ -836,7 +767,6 @@ function openTradeModal() {
                 <select id="trade-offer-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
 
-            <!-- O QUE VOCÊ PEDE -->
             <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
                 <h4 style="margin: 0 0 10px 0; color: #ff4757;">Você Pede:</h4>
                 <label style="font-size: 0.9rem;">Dinheiro ($):</label>
@@ -860,27 +790,22 @@ function openTradeModal() {
     const offerPropSelect = document.getElementById("trade-offer-prop");
     const requestPropSelect = document.getElementById("trade-request-prop");
 
-    // Preenche a lista de parceiros
     otherPlayers.forEach(p => {
         receiverSelect.innerHTML += `<option value="${p.id}">${p.name} (Saldo: $${p.money})</option>`;
     });
 
-    // Função para carregar as propriedades nos selects
     function updatePropertiesDropdowns() {
         const selectedReceiverId = parseInt(receiverSelect.value);
         const receiver = players.find(p => p.id === selectedReceiverId);
 
-        // Suas propriedades livres de casas para oferecer
         offerPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
         boardSpaces.forEach(space => {
             if (space.owner === proposer.id) {
-                // REGRA: Propriedades com casas não podem ser trocadas diretamente para evitar bugs visuais
                 if (space.houses && space.houses > 0) return;
                 offerPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
             }
         });
 
-        // Propriedades do alvo livres de casas para pedir
         requestPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
         boardSpaces.forEach(space => {
             if (space.owner === receiver.id) {
@@ -890,16 +815,13 @@ function openTradeModal() {
         });
     }
 
-    // Recarrega os dropdowns sempre que mudar o jogador parceiro
     receiverSelect.addEventListener("change", updatePropertiesDropdowns);
-    updatePropertiesDropdowns(); // Executa a primeira vez
+    updatePropertiesDropdowns();
 
-    // Cancelar a negociação
     document.getElementById("btn-trade-cancel").addEventListener("click", () => {
         document.body.removeChild(overlay);
     });
 
-    // Enviar Proposta
     document.getElementById("btn-trade-send").addEventListener("click", () => {
         const receiverId = parseInt(receiverSelect.value);
         const receiver = players.find(p => p.id === receiverId);
@@ -910,7 +832,6 @@ function openTradeModal() {
         const offerPropId = offerPropSelect.value !== "" ? parseInt(offerPropSelect.value) : null;
         const requestPropId = requestPropSelect.value !== "" ? parseInt(requestPropSelect.value) : null;
 
-        // VALIDAÇÃO DE SALDO DO PROPONENTE
         if (offerMoney > proposer.money) {
             alert("Você não tem essa quantia de dinheiro para oferecer!");
             return;
@@ -929,7 +850,6 @@ function openTradeModal() {
     });
 }
 
-// Envia a proposta para a tela (painel central) para que o destinatário decida
 function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId) {
     const offerProp = offerPropId !== null ? boardSpaces.find(s => s.id === offerPropId) : null;
     const requestProp = requestPropId !== null ? boardSpaces.find(s => s.id === requestPropId) : null;
@@ -965,18 +885,15 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
     const acceptBtn = document.getElementById("btn-accept-trade");
     const declineBtn = document.getElementById("btn-decline-trade");
 
-    // Aceitar a troca!
     acceptBtn.addEventListener("click", () => {
         acceptBtn.disabled = true;
         declineBtn.disabled = true;
 
-        // Executa as transações financeiras
         proposer.money -= offerMoney;
         proposer.money += requestMoney;
         receiver.money += offerMoney;
         receiver.money -= requestMoney;
 
-        // Transfere as propriedades
         if (offerProp) {
             offerProp.owner = receiver.id;
             updateTradeVisualProperty(offerProp, receiver);
@@ -991,13 +908,11 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
         updateUI();
 
         setTimeout(() => {
-            // Mantém a vez com o proponente para ele poder rolar o seu dado após negociar!
             statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
             updateUI();
         }, 2000);
     });
 
-    // Recusar a troca
     declineBtn.addEventListener("click", () => {
         acceptBtn.disabled = true;
         declineBtn.disabled = true;
@@ -1013,7 +928,6 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
     });
 }
 
-// Atualiza as cores e bordas das propriedades negociadas no tabuleiro
 function updateTradeVisualProperty(space, newOwner) {
     const spaceDiv = document.getElementById(`space-${space.id}`);
     if (spaceDiv) {
@@ -1026,9 +940,8 @@ function updateTradeVisualProperty(space, newOwner) {
     }
 }
 
-// Inicialização......................................................................................................................................................................................Inicialização
+// Inicialização
 window.onload = () => {
     startPlayerSetup();
     document.getElementById("rollDice").addEventListener("click", rollDice);
 };
-
