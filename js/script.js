@@ -1031,3 +1031,4 @@ window.onload = () => {
     startPlayerSetup();
     document.getElementById("rollDice").addEventListener("click", rollDice);
 };
+
