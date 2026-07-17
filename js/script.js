@@ -142,6 +142,7 @@ function renderPawns() {
     document.querySelectorAll(".tokens-container").forEach(container => container.innerHTML = "");
 
     players.forEach(player => {
+        if (player.isBankrupt) return; // Não desenha peões de jogadores falidos
         const container = document.getElementById(`tokens-space-${player.position}`);
         if (container) {
             const pawn = document.createElement("div");
@@ -160,14 +161,24 @@ function updateUI() {
     players.forEach((p, idx) => {
         const row = document.createElement("div");
         row.className = "player-row";
-        if (idx === currentPlayerIndex) {
-            row.style.fontWeight = "bold";
-            row.style.backgroundColor = "rgba(255,255,255,0.15)";
-            row.style.borderRadius = "5px";
+        
+        if (p.isBankrupt) {
+            // Estilização para jogador eliminado
+            row.style.opacity = "0.4";
+            row.style.textDecoration = "line-through";
+            row.style.borderLeft = `5px solid #555`;
+            row.style.padding = "8px";
+            row.innerHTML = `<span>${p.name} (💥 Faliu)</span> <span>$0</span>`;
+        } else {
+            if (idx === currentPlayerIndex) {
+                row.style.fontWeight = "bold";
+                row.style.backgroundColor = "rgba(255,255,255,0.15)";
+                row.style.borderRadius = "5px";
+            }
+            row.style.borderLeft = `5px solid ${p.color}`;
+            row.style.padding = "8px";
+            row.innerHTML = `<span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span> <span>$${p.money}</span>`;
         }
-        row.style.borderLeft = `5px solid ${p.color}`;
-        row.style.padding = "8px";
-        row.innerHTML = `<span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span> <span>$${p.money}</span>`;
         playersList.appendChild(row);
     });
 
@@ -189,7 +200,7 @@ function updateUI() {
     }
 
     // Controla a ativação dos botões de dado e negociação
-    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail) {
+    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt) {
         if (rollButton) { rollButton.disabled = true; rollButton.style.opacity = "0.5"; rollButton.style.cursor = "not-allowed"; }
         if (tradeButton) { tradeButton.disabled = true; tradeButton.style.opacity = "0.5"; tradeButton.style.cursor = "not-allowed"; }
     } else {
@@ -235,7 +246,6 @@ function handleLanding(player) {
             payRent(player, currentSpace);
             return; 
         } else {
-            // Se for do tipo 'property' e ele tiver o monopólio da cor, ele pode construir!
             if (currentSpace.type === "property" && hasMonopoly(player, currentSpace.color)) {
                 if (currentSpace.houses < 5) {
                     showBuildModal(player, currentSpace);
@@ -277,6 +287,12 @@ function handleLanding(player) {
     } else if (currentSpace.name === "Imposto de Renda") {
         player.money -= GAME_CONFIG.impostoRenda;
         
+        // CHECA FALÊNCIA DO IMPOSTO
+        if (player.money < 0) {
+            checkBankruptcy(player, null);
+            return;
+        }
+
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
             <div style="margin-bottom: 10px; color: #c62828;">
@@ -297,6 +313,12 @@ function handleLanding(player) {
     } else if (currentSpace.name === "Taxa de Luxo") {
         player.money -= GAME_CONFIG.taxaLuxo;
         
+        // CHECA FALÊNCIA DA TAXA DE LUXO
+        if (player.money < 0) {
+            checkBankruptcy(player, null);
+            return;
+        }
+
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
             <div style="margin-bottom: 10px; color: #c62828;">
@@ -332,6 +354,12 @@ function drawCard(player) {
         player.money -= card.value;
     }
 
+    // CHECA FALÊNCIA DE CARTAS DE PAGAMENTO
+    if (player.money < 0) {
+        checkBankruptcy(player, null);
+        return;
+    }
+
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; background: #fff8e1; color: #333; padding: 10px; border-radius: 5px; border: 2px solid #ffb300;">
@@ -358,6 +386,12 @@ function payRent(player, space) {
     player.money -= rentAmount;
     owner.money += rentAmount;
     
+    // CHECA FALÊNCIA DO ALUGUEL (Transfere bens para o 'owner')
+    if (player.money < 0) {
+        checkBankruptcy(player, owner.id);
+        return;
+    }
+
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; color: #c62828;">
@@ -424,9 +458,12 @@ function skipProperty(player, space) {
     nextTurn();
 }
 
-// FUNÇÃO TROCA DE TURNO
+// FUNÇÃO TROCA DE TURNO (Ignora jogadores falidos)
 function nextTurn() {
-    currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    do {
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+    } while (players[currentPlayerIndex].isBankrupt);
+
     document.getElementById("game-status").innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
     updateUI();
 }
@@ -437,6 +474,13 @@ function checkJailTurn(player) {
     
     if (player.jailTurns >= 3) {
         player.money -= GAME_CONFIG.fiancaPrisao;
+        
+        // CHECA FALÊNCIA DO PRAZO FORÇADO DA PRISÃO
+        if (player.money < 0) {
+            checkBankruptcy(player, null);
+            return true;
+        }
+
         player.inJail = false;
         player.jailTurns = 0;
         
@@ -511,6 +555,7 @@ function checkJailTurn(player) {
             
             statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
         } else {
+            // CHECA SE ELE PODE FALIR AO TENTAR FORÇAR PAGAMENTO (Normalmente ele só tenta pagar se tiver dinheiro, mas caso forçado...)
             alert("Você não tem dinheiro suficiente para pagar a fiança!");
             document.getElementById("btn-jail-roll").disabled = false;
             document.getElementById("btn-jail-pay").disabled = false;
@@ -604,7 +649,8 @@ function initializePlayers(quantity) {
             position: 0,
             color: PLAYER_PRESETS[i].color,
             inJail: false,
-            jailTurns: 0
+            jailTurns: 0,
+            isBankrupt: false // Novo controle de falência
         });
     }
     
@@ -727,12 +773,120 @@ function updateSpaceVisualWithHouses(space) {
 }
 
 // ==========================================
+// SISTEMA DE FALÊNCIA E FIM DE JOGO
+// ==========================================
+
+function checkBankruptcy(player, creditorId) {
+    player.isBankrupt = true;
+    player.money = 0; // Evita mostrar saldos negativos bizarros
+    
+    const statusDiv = document.getElementById("game-status");
+    const creditor = creditorId !== null ? players.find(p => p.id === creditorId) : null;
+    
+    // Processa a devolução ou transferência das propriedades
+    boardSpaces.forEach(space => {
+        if (space.owner === player.id) {
+            if (creditor) {
+                // Faliu pagando aluguel: bens vão para o credor
+                space.owner = creditor.id;
+                space.houses = 0; // Reseta as casas por segurança técnica
+                updateSpaceVisualWithHouses(space);
+                
+                const spaceDiv = document.getElementById(`space-${space.id}`);
+                if (spaceDiv) spaceDiv.style.border = `3px dashed ${creditor.color}`;
+                
+                const priceLabel = document.getElementById(`price-label-${space.id}`);
+                if (priceLabel) {
+                    priceLabel.innerText = "COMPRADO";
+                    priceLabel.style.color = creditor.color;
+                }
+            } else {
+                // Faliu pagando taxas/cartas: bens voltam para o banco
+                space.owner = null;
+                space.houses = 0;
+                updateSpaceVisualWithHouses(space);
+                
+                const spaceDiv = document.getElementById(`space-${space.id}`);
+                if (spaceDiv) spaceDiv.style.border = "1px solid #ccc";
+                
+                const priceLabel = document.getElementById(`price-label-${space.id}`);
+                if (priceLabel) {
+                    priceLabel.innerText = `$${space.price}`;
+                    priceLabel.style.color = "inherit";
+                }
+            }
+        }
+    });
+
+    // Remove visualmente o peão faliu do tabuleiro
+    const pawn = document.getElementById(`pawn-player-${player.id}`);
+    if (pawn) pawn.remove();
+
+    // Checa a condição de vitória
+    const activePlayers = players.filter(p => !p.isBankrupt);
+    if (activePlayers.length === 1) {
+        showWinModal(activePlayers[0]);
+        return true;
+    }
+
+    // Alerta de falência no painel central
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px; background: #c62828; color: white; padding: 15px; border-radius: 8px;">
+            💥 <strong>FALÊNCIA!</strong><br>
+            ${player.name} faliu! ${creditor ? `Suas propriedades foram transferidas para ${creditor.name}.` : "Suas propriedades voltaram para o banco."}
+        </div>
+        <button id="btn-confirm-bankruptcy" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; cursor: pointer;">Continuar jogo</button>
+    `;
+    
+    awaitingDecision = true;
+    updateUI();
+
+    document.getElementById("btn-confirm-bankruptcy").addEventListener("click", () => {
+        awaitingDecision = false;
+        nextTurn();
+    });
+
+    return true;
+}
+
+// Janela final de Parabéns ao vencedor!
+function showWinModal(winner) {
+    const overlay = document.createElement("div");
+    overlay.id = "win-overlay";
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
+        align-items: center; z-index: 20000; font-family: 'Montserrat', sans-serif;
+    `;
+
+    const winBox = document.createElement("div");
+    winBox.style = `
+        background: #1e1e1e; border: 5px solid #ffa502; border-radius: 15px;
+        padding: 40px; text-align: center; color: white; max-width: 450px; width: 90%;
+        box-shadow: 0px 10px 30px rgba(250, 165, 2, 0.3);
+    `;
+    winBox.innerHTML = `
+        <h1 style="margin-top: 0; color: #ffa502; font-size: 2.5rem; margin-bottom: 10px;">🏆 VITÓRIA! 🏆</h1>
+        <h2 style="color: ${winner.color}; margin-bottom: 20px;">${winner.name} venceu a partida!</h2>
+        <p style="font-size: 1.1rem; margin-bottom: 30px;">Parabéns! Todos os concorrentes faliram e você conquistou o monopólio absoluto do tabuleiro!</p>
+        <button id="btn-restart-game" style="padding: 12px 25px; font-size: 1.1rem; background: #ffa502; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Jogar Novamente 🔄</button>
+    `;
+
+    overlay.appendChild(winBox);
+    document.body.appendChild(overlay);
+
+    document.getElementById("btn-restart-game").addEventListener("click", () => {
+        location.reload();
+    });
+}
+
+// ==========================================
 // SISTEMA COMPLETO DE COMPRA E VENDA (TROCAS)
 // ==========================================
 
 function openTradeModal() {
     const proposer = players[currentPlayerIndex];
-    const otherPlayers = players.filter(p => p.id !== proposer.id);
+    const otherPlayers = players.filter(p => p.id !== proposer.id && !p.isBankrupt);
     if (otherPlayers.length === 0) return;
 
     const overlay = document.createElement("div");
