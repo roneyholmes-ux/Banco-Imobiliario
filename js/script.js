@@ -790,6 +790,242 @@ function updateSpaceVisualWithHouses(space) {
     }
 }
 
+// ==========================================
+// SISTEMA COMPLETO DE COMPRA E VENDA (TROCAS)
+// ==========================================
+
+function openTradeModal() {
+    const proposer = players[currentPlayerIndex];
+    
+    // Filtra os possíveis parceiros de negócio (outros jogadores)
+    const otherPlayers = players.filter(p => p.id !== proposer.id);
+    if (otherPlayers.length === 0) return;
+
+    // Cria a tela (overlay) de negociação
+    const overlay = document.createElement("div");
+    overlay.id = "trade-overlay";
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
+        align-items: center; z-index: 10000; font-family: 'Montserrat', sans-serif;
+    `;
+
+    const tradeBox = document.createElement("div");
+    tradeBox.style = `
+        background: #1e1e1e; border: 3px solid #2e7d32; border-radius: 12px;
+        padding: 25px; color: white; max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;
+    `;
+
+    // Renderiza a estrutura da proposta
+    tradeBox.innerHTML = `
+        <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.6rem; margin-bottom: 15px;">🤝 Proposta de Negócio</h3>
+        
+        <div style="margin-bottom: 15px;">
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Negociar com:</label>
+            <select id="trade-receiver-select" style="width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 1rem;"></select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <!-- O QUE VOCÊ OFERECE -->
+            <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
+                <h4 style="margin: 0 0 10px 0; color: #1e90ff;">Você Oferece:</h4>
+                <label style="font-size: 0.9rem;">Dinheiro ($):</label>
+                <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+                
+                <label style="font-size: 0.9rem; display: block; margin-bottom: 5px;">Propriedade:</label>
+                <select id="trade-offer-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
+            </div>
+
+            <!-- O QUE VOCÊ PEDE -->
+            <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
+                <h4 style="margin: 0 0 10px 0; color: #ff4757;">Você Pede:</h4>
+                <label style="font-size: 0.9rem;">Dinheiro ($):</label>
+                <input type="number" id="trade-request-money" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+                
+                <label style="font-size: 0.9rem; display: block; margin-bottom: 5px;">Propriedade:</label>
+                <select id="trade-request-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <button id="btn-trade-cancel" style="padding: 8px 18px; background: #c62828; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Cancelar</button>
+            <button id="btn-trade-send" style="padding: 8px 18px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Enviar Proposta</button>
+        </div>
+    `;
+
+    overlay.appendChild(tradeBox);
+    document.body.appendChild(overlay);
+
+    const receiverSelect = document.getElementById("trade-receiver-select");
+    const offerPropSelect = document.getElementById("trade-offer-prop");
+    const requestPropSelect = document.getElementById("trade-request-prop");
+
+    // Preenche a lista de parceiros
+    otherPlayers.forEach(p => {
+        receiverSelect.innerHTML += `<option value="${p.id}">${p.name} (Saldo: $${p.money})</option>`;
+    });
+
+    // Função para carregar as propriedades nos selects
+    function updatePropertiesDropdowns() {
+        const selectedReceiverId = parseInt(receiverSelect.value);
+        const receiver = players.find(p => p.id === selectedReceiverId);
+
+        // Suas propriedades livres de casas para oferecer
+        offerPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
+        boardSpaces.forEach(space => {
+            if (space.owner === proposer.id) {
+                // REGRA: Propriedades com casas não podem ser trocadas diretamente para evitar bugs visuais
+                if (space.houses && space.houses > 0) return;
+                offerPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
+            }
+        });
+
+        // Propriedades do alvo livres de casas para pedir
+        requestPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
+        boardSpaces.forEach(space => {
+            if (space.owner === receiver.id) {
+                if (space.houses && space.houses > 0) return;
+                requestPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
+            }
+        });
+    }
+
+    // Recarrega os dropdowns sempre que mudar o jogador parceiro
+    receiverSelect.addEventListener("change", updatePropertiesDropdowns);
+    updatePropertiesDropdowns(); // Executa a primeira vez
+
+    // Cancelar a negociação
+    document.getElementById("btn-trade-cancel").addEventListener("click", () => {
+        document.body.removeChild(overlay);
+    });
+
+    // Enviar Proposta
+    document.getElementById("btn-trade-send").addEventListener("click", () => {
+        const receiverId = parseInt(receiverSelect.value);
+        const receiver = players.find(p => p.id === receiverId);
+        
+        const offerMoney = parseInt(document.getElementById("trade-offer-money").value) || 0;
+        const requestMoney = parseInt(document.getElementById("trade-request-money").value) || 0;
+        
+        const offerPropId = offerPropSelect.value !== "" ? parseInt(offerPropSelect.value) : null;
+        const requestPropId = requestPropSelect.value !== "" ? parseInt(requestPropSelect.value) : null;
+
+        // VALIDAÇÃO DE SALDO DO PROPONENTE
+        if (offerMoney > proposer.money) {
+            alert("Você não tem essa quantia de dinheiro para oferecer!");
+            return;
+        }
+        if (requestMoney > receiver.money) {
+            alert("O outro jogador não possui essa quantia de dinheiro para lhe dar!");
+            return;
+        }
+        if (offerMoney === 0 && requestMoney === 0 && offerPropId === null && requestPropId === null) {
+            alert("Uma proposta precisa conter pelo menos dinheiro ou uma propriedade!");
+            return;
+        }
+
+        document.body.removeChild(overlay);
+        sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId);
+    });
+}
+
+// Envia a proposta para a tela (painel central) para que o destinatário decida
+function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId) {
+    const offerProp = offerPropId !== null ? boardSpaces.find(s => s.id === offerPropId) : null;
+    const requestProp = requestPropId !== null ? boardSpaces.find(s => s.id === requestPropId) : null;
+
+    let offerDetails = [];
+    if (offerMoney > 0) offerDetails.push(`<strong>$${offerMoney}</strong>`);
+    if (offerProp) offerDetails.push(`<strong>${offerProp.name}</strong>`);
+    if (offerDetails.length === 0) offerDetails.push("Nada");
+
+    let requestDetails = [];
+    if (requestMoney > 0) requestDetails.push(`<strong>$${requestMoney}</strong>`);
+    if (requestProp) requestDetails.push(`<strong>${requestProp.name}</strong>`);
+    if (requestDetails.length === 0) requestDetails.push("Nada");
+
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 15px; background: #1e1e1e; color: white; padding: 15px; border-radius: 8px; border: 2px dashed #2e7d32;">
+            🤝 <strong>Proposta de Negócio para ${receiver.name}!</strong><br><br>
+            ${proposer.name} oferece:<br>
+            👉 ${offerDetails.join(" + ")}<br><br>
+            Em troca de:<br>
+            👉 ${requestDetails.join(" + ")}
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-accept-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Aceitar Negócio</button>
+            <button id="btn-decline-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828;">Recusar</button>
+        </div>
+    `;
+
+    awaitingDecision = true;
+    updateUI();
+
+    const acceptBtn = document.getElementById("btn-accept-trade");
+    const declineBtn = document.getElementById("btn-decline-trade");
+
+    // Aceitar a troca!
+    acceptBtn.addEventListener("click", () => {
+        acceptBtn.disabled = true;
+        declineBtn.disabled = true;
+
+        // Executa as transações financeiras
+        proposer.money -= offerMoney;
+        proposer.money += requestMoney;
+        receiver.money += offerMoney;
+        receiver.money -= requestMoney;
+
+        // Transfere as propriedades
+        if (offerProp) {
+            offerProp.owner = receiver.id;
+            updateTradeVisualProperty(offerProp, receiver);
+        }
+        if (requestProp) {
+            requestProp.owner = proposer.id;
+            updateTradeVisualProperty(requestProp, proposer);
+        }
+
+        statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Fechado com Sucesso!</div>`;
+        awaitingDecision = false;
+        updateUI();
+
+        setTimeout(() => {
+            // Mantém a vez com o proponente para ele poder rolar o seu dado após negociar!
+            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
+            updateUI();
+        }, 2000);
+    });
+
+    // Recusar a troca
+    declineBtn.addEventListener("click", () => {
+        acceptBtn.disabled = true;
+        declineBtn.disabled = true;
+
+        statusDiv.innerHTML = `<div style="color: #ff4757; font-weight: bold;">❌ ${receiver.name} recusou a proposta de negócio.</div>`;
+        awaitingDecision = false;
+        updateUI();
+
+        setTimeout(() => {
+            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
+            updateUI();
+        }, 2000);
+    });
+}
+
+// Atualiza as cores e bordas das propriedades negociadas no tabuleiro
+function updateTradeVisualProperty(space, newOwner) {
+    const spaceDiv = document.getElementById(`space-${space.id}`);
+    if (spaceDiv) {
+        spaceDiv.style.border = `3px dashed ${newOwner.color}`;
+    }
+    const priceLabel = document.getElementById(`price-label-${space.id}`);
+    if (priceLabel) {
+        priceLabel.innerText = "COMPRADO";
+        priceLabel.style.color = newOwner.color;
+    }
+}
+
 // Inicialização......................................................................................................................................................................................Inicialização
 window.onload = () => {
     startPlayerSetup();
