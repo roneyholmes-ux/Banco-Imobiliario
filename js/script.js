@@ -163,7 +163,6 @@ function updateUI() {
         row.className = "player-row";
         
         if (p.isBankrupt) {
-            // Estilização para jogador eliminado
             row.style.opacity = "0.4";
             row.style.textDecoration = "line-through";
             row.style.borderLeft = `5px solid #555`;
@@ -287,7 +286,6 @@ function handleLanding(player) {
     } else if (currentSpace.name === "Imposto de Renda") {
         player.money -= GAME_CONFIG.impostoRenda;
         
-        // CHECA FALÊNCIA DO IMPOSTO
         if (player.money < 0) {
             checkBankruptcy(player, null);
             return;
@@ -313,7 +311,6 @@ function handleLanding(player) {
     } else if (currentSpace.name === "Taxa de Luxo") {
         player.money -= GAME_CONFIG.taxaLuxo;
         
-        // CHECA FALÊNCIA DA TAXA DE LUXO
         if (player.money < 0) {
             checkBankruptcy(player, null);
             return;
@@ -354,7 +351,6 @@ function drawCard(player) {
         player.money -= card.value;
     }
 
-    // CHECA FALÊNCIA DE CARTAS DE PAGAMENTO
     if (player.money < 0) {
         checkBankruptcy(player, null);
         return;
@@ -386,7 +382,6 @@ function payRent(player, space) {
     player.money -= rentAmount;
     owner.money += rentAmount;
     
-    // CHECA FALÊNCIA DO ALUGUEL (Transfere bens para o 'owner')
     if (player.money < 0) {
         checkBankruptcy(player, owner.id);
         return;
@@ -475,7 +470,6 @@ function checkJailTurn(player) {
     if (player.jailTurns >= 3) {
         player.money -= GAME_CONFIG.fiancaPrisao;
         
-        // CHECA FALÊNCIA DO PRAZO FORÇADO DA PRISÃO
         if (player.money < 0) {
             checkBankruptcy(player, null);
             return true;
@@ -555,7 +549,6 @@ function checkJailTurn(player) {
             
             statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
         } else {
-            // CHECA SE ELE PODE FALIR AO TENTAR FORÇAR PAGAMENTO (Normalmente ele só tenta pagar se tiver dinheiro, mas caso forçado...)
             alert("Você não tem dinheiro suficiente para pagar a fiança!");
             document.getElementById("btn-jail-roll").disabled = false;
             document.getElementById("btn-jail-pay").disabled = false;
@@ -591,7 +584,7 @@ function startPlayerSetup() {
     overlay.id = "setup-overlay";
     overlay.style = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center;
+        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
         align-items: center; z-index: 9999; font-family: 'Montserrat', sans-serif;
     `;
 
@@ -611,6 +604,7 @@ function startPlayerSetup() {
             <button class="setup-btn" data-qty="5">5</button>
             <button class="setup-btn" data-qty="6">6</button>
         </div>
+        <button id="btn-back-to-menu" style="background: transparent; color: #aaa; border: none; cursor: pointer; text-decoration: underline;">Voltar ao Menu</button>
     `;
 
     overlay.appendChild(setupBox);
@@ -636,6 +630,10 @@ function startPlayerSetup() {
             document.body.removeChild(overlay);
         });
     });
+
+    document.getElementById("btn-back-to-menu").addEventListener("click", () => {
+        document.body.removeChild(overlay);
+    });
 }
 
 // Configura os jogadores selecionados e inicia a partida
@@ -650,7 +648,7 @@ function initializePlayers(quantity) {
             color: PLAYER_PRESETS[i].color,
             inJail: false,
             jailTurns: 0,
-            isBankrupt: false // Novo controle de falência
+            isBankrupt: false
         });
     }
     
@@ -660,9 +658,14 @@ function initializePlayers(quantity) {
         }
     });
     
+    document.getElementById("home-screen").classList.add("hidden"); 
+    document.getElementById("game-screen").classList.remove("hidden"); 
+    
     renderBoard();
     renderPawns();
     updateUI();
+
+    document.getElementById("game-status").innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
 }
 
 // ==========================================
@@ -778,18 +781,16 @@ function updateSpaceVisualWithHouses(space) {
 
 function checkBankruptcy(player, creditorId) {
     player.isBankrupt = true;
-    player.money = 0; // Evita mostrar saldos negativos bizarros
+    player.money = 0;
     
     const statusDiv = document.getElementById("game-status");
     const creditor = creditorId !== null ? players.find(p => p.id === creditorId) : null;
     
-    // Processa a devolução ou transferência das propriedades
     boardSpaces.forEach(space => {
         if (space.owner === player.id) {
             if (creditor) {
-                // Faliu pagando aluguel: bens vão para o credor
                 space.owner = creditor.id;
-                space.houses = 0; // Reseta as casas por segurança técnica
+                space.houses = 0;
                 updateSpaceVisualWithHouses(space);
                 
                 const spaceDiv = document.getElementById(`space-${space.id}`);
@@ -801,7 +802,6 @@ function checkBankruptcy(player, creditorId) {
                     priceLabel.style.color = creditor.color;
                 }
             } else {
-                // Faliu pagando taxas/cartas: bens voltam para o banco
                 space.owner = null;
                 space.houses = 0;
                 updateSpaceVisualWithHouses(space);
@@ -818,18 +818,15 @@ function checkBankruptcy(player, creditorId) {
         }
     });
 
-    // Remove visualmente o peão faliu do tabuleiro
     const pawn = document.getElementById(`pawn-player-${player.id}`);
     if (pawn) pawn.remove();
 
-    // Checa a condição de vitória
     const activePlayers = players.filter(p => !p.isBankrupt);
     if (activePlayers.length === 1) {
         showWinModal(activePlayers[0]);
         return true;
     }
 
-    // Alerta de falência no painel central
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; background: #c62828; color: white; padding: 15px; border-radius: 8px;">
             💥 <strong>FALÊNCIA!</strong><br>
@@ -849,7 +846,6 @@ function checkBankruptcy(player, creditorId) {
     return true;
 }
 
-// Janela final de Parabéns ao vencedor!
 function showWinModal(winner) {
     const overlay = document.createElement("div");
     overlay.id = "win-overlay";
@@ -1094,8 +1090,20 @@ function updateTradeVisualProperty(space, newOwner) {
     }
 }
 
-// Inicialização
+// Inicialização e Eventos da Tela Principal
 window.onload = () => {
-    startPlayerSetup();
+    // Configura botão de "Jogar Nova Partida"
+    document.getElementById("btn-start-game").addEventListener("click", startPlayerSetup);
+
+    // Configura os modais de Regras
+    const rulesModal = document.getElementById("rules-modal");
+    document.getElementById("btn-show-rules").addEventListener("click", () => {
+        rulesModal.classList.remove("hidden");
+    });
+    document.getElementById("btn-close-rules").addEventListener("click", () => {
+        rulesModal.classList.add("hidden");
+    });
+
+    // Evento do botão de Rolar Dados
     document.getElementById("rollDice").addEventListener("click", rollDice);
 };
