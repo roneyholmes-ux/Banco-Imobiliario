@@ -188,7 +188,162 @@ button:hover {
     background-color: #7f8c8d;
 }
 
+/* ==========================================
+   ESTILOS DO MENU INICIAL E DE TRANSIÇÕES
+   ========================================== */
 
+.hidden {
+    display: none !important;
+}
+
+/* Fundo da tela de Entrada */
+.screen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: radial-gradient(circle, #2c3e50 0%, #0f171e 100%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.menu-box {
+    background: rgba(20, 30, 40, 0.95);
+    border: 3px solid #ff4757;
+    border-radius: 16px;
+    padding: 40px;
+    text-align: center;
+    max-width: 550px;
+    width: 90%;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 71, 87, 0.2);
+}
+
+.game-title {
+    color: #ff4757;
+    font-size: 2.5rem;
+    font-weight: 900;
+    margin-bottom: 15px;
+    letter-spacing: 2px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.game-subtitle {
+    color: #f1f2f6;
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 35px;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Botões do Menu */
+.menu-btn {
+    padding: 14px 28px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.primary-btn {
+    background: #ff4757;
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+}
+
+.primary-btn:hover {
+    background: #ff6b81;
+    transform: translateY(-2px);
+}
+
+.secondary-btn {
+    background: #2f3542;
+    color: #ced6e0;
+    border: 2px solid #57606f;
+}
+
+.secondary-btn:hover {
+    background: #3f4452;
+    color: white;
+}
+
+.danger-btn {
+    background: #ff4757;
+    color: white;
+}
+
+.danger-btn:hover {
+    background: #ff6b81;
+}
+
+/* Modal de Regras */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.85);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 6000;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.rules-box {
+    background: #1e272e;
+    border: 2px solid #57606f;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    color: white;
+}
+
+.rules-box h2 {
+    margin-top: 0;
+    color: #ff4757;
+    font-size: 1.8rem;
+    border-bottom: 2px solid #2f3542;
+    padding-bottom: 10px;
+}
+
+.rules-content {
+    overflow-y: auto;
+    margin: 15px 0 25px 0;
+    text-align: left;
+    line-height: 1.6;
+}
+
+.rules-content hr {
+    border: 0;
+    height: 1px;
+    background: #2f3542;
+    margin: 15px 0;
+}
+
+.rules-content ul {
+    padding-left: 20px;
+}
+
+.rules-content li {
+    margin-bottom: 12px;
+}
 
 
 
