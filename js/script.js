@@ -174,6 +174,33 @@ function updateUI() {
         playersList.appendChild(row);
     });
 
+    // --- SISTEMA DE NEGOCIAÇÃO: Criação dinâmica do botão ---
+    const rollButton = document.getElementById("rollDice");
+    let tradeButton = document.getElementById("btn-open-trade");
+    
+    if (!tradeButton && rollButton) {
+        tradeButton = document.createElement("button");
+        tradeButton.id = "btn-open-trade";
+        tradeButton.innerText = "🤝 Negociar";
+        tradeButton.style = `
+            padding: 10px 20px; font-size: 1.1rem; font-weight: bold;
+            background: #2e7d32; color: white; border: none; border-radius: 5px;
+            cursor: pointer; margin-left: 10px; transition: all 0.2s ease;
+        `;
+        tradeButton.addEventListener("click", openTradeModal);
+        rollButton.parentNode.insertBefore(tradeButton, rollButton.nextSibling);
+    }
+
+    // Controla a ativação dos botões de dado e negociação
+    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail) {
+        if (rollButton) { rollButton.disabled = true; rollButton.style.opacity = "0.5"; rollButton.style.cursor = "not-allowed"; }
+        if (tradeButton) { tradeButton.disabled = true; tradeButton.style.opacity = "0.5"; tradeButton.style.cursor = "not-allowed"; }
+    } else {
+        if (rollButton) { rollButton.disabled = false; rollButton.style.opacity = "1"; rollButton.style.cursor = "pointer"; }
+        if (tradeButton) { tradeButton.disabled = false; tradeButton.style.opacity = "1"; tradeButton.style.cursor = "pointer"; }
+    }
+}
+
     // Controla a ativação do botão de dado
     const rollButton = document.getElementById("rollDice");
     if (isMoving || awaitingDecision) {
