@@ -1,5 +1,5 @@
 // ==========================================
-// CONFIGURAÇÕES GERAIS DO JOGO (Altere aqui facilmente no futuro!)
+// CONFIGURAÇÕES GERAIS DO JOGO
 // ==========================================
 const GAME_CONFIG = {
     startingMoney: 25000,       // Dinheiro inicial de cada jogador
@@ -67,7 +67,6 @@ const boardSpaces = [
     { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
-// Paleta de cores oficial para até 6 jogadores
 const PLAYER_PRESETS = [
     { name: "Jogador 1 (Azul)", color: "#1e90ff" },
     { name: "Jogador 2 (Vermelho)", color: "#ff4757" },
@@ -77,10 +76,10 @@ const PLAYER_PRESETS = [
     { name: "Jogador 6 (Laranja)", color: "#e67e22" }
 ];
 
-let players = []; // Começa vazio e será preenchido no setup
+let players = []; 
 let currentPlayerIndex = 0; 
 let isMoving = false; 
-let awaitingDecision = false; // Bloqueia o dado enquanto o jogador decide uma compra
+let awaitingDecision = false; 
 
 function getGridPosition(index) {
     if (index >= 0 && index <= 10) {
@@ -97,7 +96,6 @@ function getGridPosition(index) {
 function renderBoard() {
     const boardElement = document.getElementById("board");
     
-    // Evita duplicar elementos na reinicialização
     document.querySelectorAll(".space").forEach(e => e.remove());
     
     boardSpaces.forEach((space) => {
@@ -142,7 +140,7 @@ function renderPawns() {
     document.querySelectorAll(".tokens-container").forEach(container => container.innerHTML = "");
 
     players.forEach(player => {
-        if (player.isBankrupt) return; // Não desenha peões de jogadores falidos
+        if (player.isBankrupt) return; 
         const container = document.getElementById(`tokens-space-${player.position}`);
         if (container) {
             const pawn = document.createElement("div");
@@ -181,7 +179,6 @@ function updateUI() {
         playersList.appendChild(row);
     });
 
-    // --- SISTEMA DE NEGOCIAÇÃO: Criação dinâmica do botão ---
     const rollButton = document.getElementById("rollDice");
     let tradeButton = document.getElementById("btn-open-trade");
     
@@ -198,7 +195,6 @@ function updateUI() {
         rollButton.parentNode.insertBefore(tradeButton, rollButton.nextSibling);
     }
 
-    // Controla a ativação dos botões de dado e negociação
     if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt) {
         if (rollButton) { rollButton.disabled = true; rollButton.style.opacity = "0.5"; rollButton.style.cursor = "not-allowed"; }
         if (tradeButton) { tradeButton.disabled = true; tradeButton.style.opacity = "0.5"; tradeButton.style.cursor = "not-allowed"; }
@@ -230,7 +226,6 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
-// Lógica de Compra, Aluguel, Cartas e Casas Especiais
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     const purchaseableTypes = ["property", "station", "utility"];
@@ -271,7 +266,7 @@ function handleLanding(player) {
                 🚨 <strong>Vá para a Prisão!</strong><br>
                 ${player.name} foi enviado diretamente para a Prisão e está preso!
             </div>
-            <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
+            <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
         `;
         
         awaitingDecision = true;
@@ -297,7 +292,7 @@ function handleLanding(player) {
                 💸 <strong>Imposto de Renda!</strong><br>
                 ${player.name} pagou <strong>$${GAME_CONFIG.impostoRenda}</strong> de impostos ao Leão!
             </div>
-            <button id="btn-confirm-tax" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, pagar</button>
+            <button id="btn-confirm-tax" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
         `;
         
         awaitingDecision = true;
@@ -322,7 +317,7 @@ function handleLanding(player) {
                 💎 <strong>Taxa de Luxo!</strong><br>
                 ${player.name} pagou <strong>$${GAME_CONFIG.taxaLuxo}</strong> de taxa de luxo!
             </div>
-            <button id="btn-confirm-luxury" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, pagar</button>
+            <button id="btn-confirm-luxury" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
         `;
         
         awaitingDecision = true;
@@ -340,7 +335,6 @@ function handleLanding(player) {
     nextTurn();
 }
 
-// Função para puxar e aplicar a carta
 function drawCard(player) {
     const randomIndex = Math.floor(Math.random() * CARDS.length);
     const card = CARDS[randomIndex];
@@ -362,7 +356,7 @@ function drawCard(player) {
             🃏 <strong>Carta Sorte ou Revés</strong><br><br>
             <em>"${card.text}"</em>
         </div>
-        <button id="btn-confirm-card" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
+        <button id="btn-confirm-card" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
     `;
     
     awaitingDecision = true; 
@@ -374,7 +368,6 @@ function drawCard(player) {
     });
 }
 
-// Processar o pagamento do aluguel
 function payRent(player, space) {
     const owner = players.find(p => p.id === space.owner);
     const rentAmount = calculateCurrentRent(space);
@@ -393,7 +386,7 @@ function payRent(player, space) {
             💸 <strong>Pedágio!</strong><br>
             ${player.name} caiu em <strong>${space.name}</strong> e pagou <strong>$${rentAmount}</strong> de aluguel para ${owner.name}!
         </div>
-        <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d;">Ok, continuar</button>
+        <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
     `;
     
     awaitingDecision = true; 
@@ -405,7 +398,6 @@ function payRent(player, space) {
     });
 }
 
-// Exibe as opções de compra na tela
 function showPurchaseModal(player, space) {
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
@@ -414,8 +406,8 @@ function showPurchaseModal(player, space) {
             Preço de compra: <strong>$${space.price}</strong>. Deseja comprar?
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-buy-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Sim, Comprar</button>
-            <button id="btn-buy-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828;">Não, Passar Vez</button>
+            <button id="btn-buy-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Sim, Comprar</button>
+            <button id="btn-buy-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Não, Passar Vez</button>
         </div>
     `;
 
@@ -453,7 +445,6 @@ function skipProperty(player, space) {
     nextTurn();
 }
 
-// FUNÇÃO TROCA DE TURNO (Ignora jogadores falidos)
 function nextTurn() {
     do {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
@@ -463,7 +454,6 @@ function nextTurn() {
     updateUI();
 }
 
-// Gerencia opções da prisão
 function checkJailTurn(player) {
     const statusDiv = document.getElementById("game-status");
     
@@ -483,7 +473,7 @@ function checkJailTurn(player) {
                 🚨 <strong>Fim do Prazo!</strong><br>
                 ${player.name} completou 3 turnos na prisão e foi obrigado a pagar a fiança de <strong>$${GAME_CONFIG.fiancaPrisao}</strong> para ser liberado!
             </div>
-            <button id="btn-forced-jail-free" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Rolar Dados</button>
+            <button id="btn-forced-jail-free" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Rolar Dados</button>
         `;
         awaitingDecision = true;
         updateUI();
@@ -501,8 +491,8 @@ function checkJailTurn(player) {
             O que deseja fazer para sair?
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-jail-roll" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; border: 1px solid #555;">Tentar Dados Duplos 🎲</button>
-            <button id="btn-jail-pay" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Pagar $${GAME_CONFIG.fiancaPrisao} 💸</button>
+            <button id="btn-jail-roll" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Tentar Dados Duplos 🎲</button>
+            <button id="btn-jail-pay" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Pagar $${GAME_CONFIG.fiancaPrisao} 💸</button>
         </div>
     `;
     
@@ -558,7 +548,6 @@ function checkJailTurn(player) {
     return true;
 }
 
-// Ação de rolar o dado
 function rollDice() {
     if (isMoving || awaitingDecision) return;
 
@@ -578,7 +567,6 @@ function rollDice() {
     movePlayer(currentPlayerIndex, totalSteps);
 }
 
-// Cria a tela de seleção de jogadores
 function startPlayerSetup() {
     const overlay = document.createElement("div");
     overlay.id = "setup-overlay";
@@ -636,7 +624,6 @@ function startPlayerSetup() {
     });
 }
 
-// Configura os jogadores selecionados e inicia a partida
 function initializePlayers(quantity) {
     players = [];
     for (let i = 0; i < quantity; i++) {
@@ -657,8 +644,7 @@ function initializePlayers(quantity) {
             space.houses = 0;
         }
     });
-    
-   // Subtitua as antigas linhas 661 e 662 por estas:
+
     const gameArea = document.getElementById("game-section-area");
     gameArea.classList.remove("hidden");
 
@@ -666,18 +652,9 @@ function initializePlayers(quantity) {
     renderPawns();
     updateUI();
 
-    // Rola a tela até o jogo
     gameArea.scrollIntoView({ behavior: "smooth" });
 
     document.getElementById("game-status").innerHTML = `Partida iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
-}
-
-    
-    renderBoard();
-    renderPawns();
-    updateUI();
-
-    document.getElementById("game-status").innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
 }
 
 // ==========================================
@@ -844,7 +821,7 @@ function checkBankruptcy(player, creditorId) {
             💥 <strong>FALÊNCIA!</strong><br>
             ${player.name} faliu! ${creditor ? `Suas propriedades foram transferidas para ${creditor.name}.` : "Suas propriedades voltaram para o banco."}
         </div>
-        <button id="btn-confirm-bankruptcy" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; cursor: pointer;">Continuar jogo</button>
+        <button id="btn-confirm-bankruptcy" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Continuar jogo</button>
     `;
     
     awaitingDecision = true;
@@ -1036,8 +1013,8 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
             👉 ${requestDetails.join(" + ")}
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-accept-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32;">Aceitar Negócio</button>
-            <button id="btn-decline-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828;">Recusar</button>
+            <button id="btn-accept-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Aceitar Negócio</button>
+            <button id="btn-decline-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Recusar</button>
         </div>
     `;
 
@@ -1104,18 +1081,9 @@ function updateTradeVisualProperty(space, newOwner) {
 
 // Inicialização e Eventos da Tela Principal
 window.onload = () => {
-    // Configura botão de "Jogar Nova Partida"
-    document.getElementById("btn-start-game").addEventListener("click", startPlayerSetup);
-
-    // Configura os modais de Regras
-    const rulesModal = document.getElementById("rules-modal");
-    document.getElementById("btn-show-rules").addEventListener("click", () => {
-        rulesModal.classList.remove("hidden");
-    });
-    document.getElementById("btn-close-rules").addEventListener("click", () => {
-        rulesModal.classList.add("hidden");
-    });
-
     // Evento do botão de Rolar Dados
-    document.getElementById("rollDice").addEventListener("click", rollDice);
+    const rollBtn = document.getElementById("rollDice");
+    if (rollBtn) {
+        rollBtn.addEventListener("click", rollDice);
+    }
 };
