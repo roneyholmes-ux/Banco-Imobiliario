@@ -658,8 +658,20 @@ function initializePlayers(quantity) {
         }
     });
     
-    document.getElementById("home-screen").classList.add("hidden"); 
-    document.getElementById("game-screen").classList.remove("hidden"); 
+   // Subtitua as antigas linhas 661 e 662 por estas:
+    const gameArea = document.getElementById("game-section-area");
+    gameArea.classList.remove("hidden");
+
+    renderBoard();
+    renderPawns();
+    updateUI();
+
+    // Rola a tela até o jogo
+    gameArea.scrollIntoView({ behavior: "smooth" });
+
+    document.getElementById("game-status").innerHTML = `Partida iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
+}
+
     
     renderBoard();
     renderPawns();
