@@ -683,3 +683,16 @@ body {
     40% { transform: translateY(-15px) translateX(-50%); }
     60% { transform: translateY(-7px) translateX(-50%); }
 }
+
+/* ==========================================
+   7. PALETA DE CORES DAS PROPRIEDADES DO TABULEIRO
+   ========================================== */
+.cor-rosa        { background-color: #ff7675 !important; }
+.cor-azul-claro  { background-color: #74b9ff !important; }
+.cor-roxo        { background-color: #a29bfe !important; }
+.cor-laranja     { background-color: #fab1a0 !important; }
+.cor-vermelho    { background-color: #ff7675 !important; }
+.cor-amarelo     { background-color: #ffeaa7 !important; }
+.cor-verde       { background-color: #55efc4 !important; }
+.cor-azul-escuro { background-color: #0984e3 !important; }
+.cor-cinza       { background-color: #b2bec3 !important; }
