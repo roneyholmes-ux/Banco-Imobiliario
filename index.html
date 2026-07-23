@@ -3,70 +3,229 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banco Imobiliário</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    <title>Banco Imobiliário Educativo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
-    <!-- 🚪 TELA INICIAL (MENU PRINCIPAL) -->
-    <div id="home-screen" class="screen-overlay">
-        <div class="menu-box">
-            <h1 class="game-title">BANCO IMOBILIÁRIO</h1>
-            <p class="game-subtitle">Compre propriedades, negocie com amigos, construa impérios e faleza seus adversários neste clássico de tabuleiro!</p>
-            
-            <div class="menu-buttons">
-                <button id="btn-start-game" class="menu-btn primary-btn">Jogar Nova Partida 🎲</button>
-                <button id="btn-show-rules" class="menu-btn secondary-btn">Como Jogar? 📖</button>
-            </div>
-        </div>
-    </div>
+    <!-- 🧭 BARRA DE NAVEGAÇÃO FIXA (TOP NAV) -->
+    <nav class="navbar">
+        <div class="nav-logo">🎲 BANCO IMOBILIÁRIO</div>
+        <ul class="nav-links">
+            <li><a href="#home">Home</a></li>
+            <li><a href="#about">O que é</a></li>
+            <li><a href="#benefits">Por que jogar</a></li>
+            <li><a href="#explore">Explorar</a></li>
+            <li><a href="#faq">FAQ</a></li>
+            <li><button class="nav-play-btn" onclick="scrollToGame()">Jogar agora</button></li>
+        </ul>
+    </nav>
 
-    <!-- 📖 MODAL DE REGRAS -->
-    <div id="rules-modal" class="modal-overlay hidden">
-        <div class="rules-box">
-            <h2>Como Jogar? 📖</h2>
-            <div class="rules-content">
-                <p><strong>🎯 Objetivo:</strong> Ser o único jogador a não falir, conquistando o monopólio das propriedades do tabuleiro.</p>
-                <hr>
-                <ul>
-                    <li><strong>🎲 Movimentação:</strong> Role os dados na sua vez para avançar no tabuleiro.</li>
-                    <li><strong>🏡 Propriedades & Aluguéis:</strong> Compre terrenos vazios. Se outro jogador cair neles, cobrará aluguel. Se possuir <strong>todas as casas da mesma cor (Monopólio)</strong>, o aluguel base dobra!</li>
-                    <li><strong>🏠 Construção:</strong> Ao obter o monopólio de uma cor, se cair em uma propriedade sua, você poderá construir casas (até 4) ou um hotel (5ª casa) para multiplicar o aluguel em até 120x!</li>
-                    <li><strong>⛓️ Prisão:</strong> Se cair em "Vá para a Prisão", você será enviado para lá. Para sair, tente tirar dados duplos na sua vez ou pague uma fiança de $500. Se completar 3 turnos preso, será forçado a pagar.</li>
-                    <li><strong>🤝 Negociações:</strong> Antes de rolar o dado, clique em "Negociar" para propor trocas de propriedades e dinheiro com outros jogadores!</li>
-                    <li><strong>💸 Falência:</strong> Se seu saldo ficar negativo, você faliu! Seus bens irão para o jogador credor ou voltarão ao banco.</li>
-                </ul>
-            </div>
-            <button id="btn-close-rules" class="menu-btn danger-btn">Fechar</button>
-        </div>
-    </div>
-
-    <!-- 🎲 ÁREA DO TABULEIRO (ESCONDIDA POR PADRÃO NO CSS) -->
-    <div id="game-screen" class="hidden">
-        <h1 class="main-title">BANCO IMOBILIÁRIO</h1>
-        <div class="container">
-            <div id="board" class="board">
-                <!-- O grid do tabuleiro será desenhado pelo JS aqui -->
-            </div>
-            
-            <div class="control-panel">
-                <div class="status-box">
-                    <h3>Painel de Controle</h3>
-                    <div id="game-status">Clique no botão para começar!</div>
-                    <button id="rollDice" class="dice-btn">🎲 Jogar Dado</button>
+    <!-- 🚪 SEÇÃO 1: HERO (HOME) -->
+    <section id="home" class="hero-section">
+        <div class="hero-container">
+            <div class="hero-text">
+                <h1 class="main-hero-title">Estratégia se aprende <br><span>jogando</span></h1>
+                <p class="hero-description">O Banco Imobiliário é um simulador estratégico e financeiro que combina tomadas de decisão, negociações dinâmicas e gerenciamento de riscos de forma prática, desafiadora e significativa.</p>
+                <div class="hero-buttons">
+                    <button class="hero-btn-primary" onclick="scrollToGame()">JOGAR AGORA</button>
+                    <button class="hero-btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('hidden')">CONHECER REGRAS</button>
                 </div>
-                
-                <div class="players-box">
-                    <h3>Jogadores</h3>
-                    <div id="players-list">
-                        <!-- Placar dos jogadores -->
+            </div>
+            <div class="hero-visual">
+                <!-- Elemento ilustrativo à direita simétrico às cartas roxas da referência -->
+                <div class="visual-card-stack">
+                    <div class="v-card c1">🏠<br>Hotéis</div>
+                    <div class="v-card c2">🎲<br>Dados</div>
+                    <div class="v-card c3">🤝<br>Trocas</div>
+                </div>
+            </div>
+        </div>
+        <!-- Seta de Rolagem Inferior -->
+        <a href="#about" class="scroll-arrow">🔽</a>
+    </section>
+
+    <!-- 📖 SEÇÃO 2: O QUE É -->
+    <section id="about" class="section-light">
+        <div class="section-container grid-2">
+            <div class="text-block">
+                <span class="section-tag">O QUE É?</span>
+                <h2 class="section-title">Um simulador de mercado e dados para explorar possibilidades.</h2>
+                <p>O Banco Imobiliário propõe partidas em que os jogadores gerenciam capital, lançam dados e analisam mercados para tomar decisões. A cada rodada, conceitos como fluxo de caixa, investimentos, probabilidade em dados e negociação interpessoal aparecem de forma concreta.</p>
+            </div>
+            <div class="cards-step-container">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Gerencie Capital</h3>
+                    <p>Controle seu saldo inicial, invista em ativos e previna-se contra taxas e falências eminentes.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Construa Monopólios</h3>
+                    <p>Agrupe propriedades da mesma cor para evoluir construções de casas e hotéis visuais.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Negocie Ativos</h3>
+                    <p>Use a mesa de trocas integrada para comprar, vender e negociar ativos diretamente com rivais.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🧠 SEÇÃO 3: POR QUE USAR ESTE JOGO -->
+    <section id="benefits" class="section-dark">
+        <div class="section-container text-center">
+            <h2 class="section-title text-white">Por que usar este jogo?</h2>
+            <div class="accent-bar"></div>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="b-number">1</div>
+                    <h3>Aprendizagem ativa</h3>
+                    <p>O jogador participa ativamente, testa hipóteses de negócios, observa resultados financeiros rápidos e aprende fazendo.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="b-number">2</div>
+                    <h3>Finanças na prática</h3>
+                    <p>Conceitos complexos como patrimônio líquido, aluguéis de risco, quebras e transações tornam-se lúdicos.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="b-number">3</div>
+                    <h3>Estratégia e decisão</h3>
+                    <p>Cada jogada envolve análise minuciosa de risco, escolha ponderada de compra e previsão matemática de dados.</p>
+                </div>
+                <div class="benefit-card">
+                    <div class="b-number">4</div>
+                    <h3>Suporte a Multiplayer</h3>
+                    <p>Mecânica escalável de 2 a 6 jogadores reais de forma circular e automatizada nativamente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🔍 SEÇÃO 4: EXPLORAR O JOGO -->
+    <section id="explore" class="section-light">
+        <div class="section-container text-center">
+            <h2 class="section-title">Explore o Banco</h2>
+            <div class="explore-row">
+                <div class="explore-item" onclick="scrollToGame()">
+                    <div class="ex-icon">🎮</div>
+                    <h4>Jogo</h4>
+                    <p>Jre online e experimente.</p>
+                </div>
+                <div class="explore-item" onclick="document.getElementById('rules-modal').classList.remove('hidden')">
+                    <div class="ex-icon">📜</div>
+                    <h4>Regras</h4>
+                    <p>Aprenda a jogar passo a passo.</p>
+                </div>
+                <div class="explore-item" onclick="alert('Funcionalidade de Relatório/Fichas Educativas pré-moldada!')">
+                    <div class="ex-icon">📥</div>
+                    <h4>Downloads</h4>
+                    <p>Baixe regras e tabelas extras.</p>
+                </div>
+                <div class="explore-item" onclick="alert('Área Didática: Análise de Riscos Financeiros e Probabilidade de Dados.')">
+                    <div class="ex-icon">🧑‍🏫</div>
+                    <h4>Professor</h4>
+                    <p>Veja caminhos pedagógicos.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🎮 SEÇÃO DO TABULEIRO DE JOGO (ESCONDIDO ATÉ O CLICK) -->
+    <section id="game-section-area" class="section-game hidden">
+        <div class="section-container">
+            <h2 class="section-title text-white">Mesa de Jogo</h2>
+            <div class="container">
+                <div id="board" class="board"></div>
+                <div class="control-panel">
+                    <div class="status-box">
+                        <h3>Painel de Controle</h3>
+                        <div id="game-status">Escolha os jogadores para iniciar a partida!</div>
+                        <button id="rollDice" class="dice-btn">🎲 Jogar Dado</button>
+                    </div>
+                    <div class="players-box">
+                        <h3>Jogadores</h3>
+                        <div id="players-list"></div>
                     </div>
                 </div>
             </div>
         </div>
+    </section>
+
+    <!-- ❓ SEÇÃO 5: FAQ -->
+    <section id="faq" class="section-light border-top">
+        <div class="section-container grid-faq">
+            <div class="faq-intro">
+                <span class="section-tag">PERGUNTAS FREQUENTES</span>
+                <h2 class="section-title">Dúvidas rápidas sobre o <span>Banco</span>.</h2>
+                <p>Respostas diretas para quem quer conhecer, aplicar ou calibrar as configurações de simulação do tabuleiro.</p>
+            </div>
+            <div class="faq-accordion">
+                <div class="faq-item" onclick="toggleFaq(this)">
+                    <div class="faq-header">O jogo é gratuito? <span class="faq-icon">+</span></div>
+                    <div class="faq-body">Sim! Trata-se de uma aplicação web de código aberto desenvolvida inteiramente em JavaScript nativo.</div>
+                </div>
+                <div class="faq-item" onclick="toggleFaq(this)">
+                    <div class="faq-header">Para qual público é indicado? <span class="faq-icon">+</span></div>
+                    <div class="faq-body">Qualquer pessoa interessada em jogos de estratégia, simulação financeira ou dinâmicas matemáticas de probabilidade.</div>
+                </div>
+                <div class="faq-item" onclick="toggleFaq(this)">
+                    <div class="faq-header">Posso adaptar as regras? <span class="faq-icon">+</span></div>
+                    <div class="faq-body">Totalmente! No início do arquivo de código existe o objeto global GAME_CONFIG onde taxas, bônus e fianças podem ser recalibrados de forma imediata.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 🧳 FOOTER REALIZAÇÃO -->
+    <footer class="game-footer">
+        <div class="footer-container">
+            <div class="footer-brand">REALIZAÇÃO</div>
+            <div class="footer-logos">
+                <div class="logo-placeholder">🏫 PROJETO EDUCACIONAL</div>
+                <div class="logo-placeholder">💻 DESENVOLVIMENTO WEB</div>
+            </div>
+            <p class="footer-copyright">&copy; 2026 Banco Imobiliário Estratégico. Desenvolvido sob arquitetura web modular. Feito para a educação.</p>
+        </div>
+    </footer>
+
+    <!-- 📖 MODAL DE REGRAS RE-ESTILIZADO -->
+    <div id="rules-modal" class="modal-overlay hidden">
+        <div class="rules-box">
+            <h2>Como Jogar? 📖</h2>
+            <div class="rules-content">
+                <p><strong>🎯 Objetivo:</strong> Ser o único jogador restante à mesa, forçando a quebra de capital de seus concorrentes.</p>
+                <hr>
+                <ul>
+                    <li><strong>🎲 Dados:</strong> Avance casas somando o resultado de dois dados simultâneos.</li>
+                    <li><strong>🏡 Monopólio:</strong> Obter todos os terrenos de uma mesma cor dobra os aluguéis bases recebidos daquela categoria.</li>
+                    <li><strong>🏠 Casas & Hotéis:</strong> Ao cair em suas propriedades pertencentes a monopólios, compre benfeitorias para inflacionar aluguéis em até 120x.</li>
+                    <li><strong>⛓️ Prisão:</strong> Saia tirando dados idênticos (duplos) ou efetuando o pagamento compulsório de fiança tarifada em $500.</li>
+                    <li><strong>🤝 Negociações:</strong> Proponha intercâmbios bilaterais de moedas e terrenos antes da rolagem de sua vez clicando no botão de transação.</li>
+                </ul>
+            </div>
+            <button id="btn-close-rules" class="menu-btn danger-btn" onclick="document.getElementById('rules-modal').classList.add('hidden')">Fechar Diretrizes</button>
+        </div>
     </div>
 
     <script src="js/script.js"></script>
+    <script>
+        // Funções rápidas auxiliares para navegação por rolagem de seções
+        function scrollToGame() {
+            const gameArea = document.getElementById('game-section-area');
+            gameArea.classList.remove('hidden');
+            if(typeof startPlayerSetup === 'function' && players.length === 0){
+                startPlayerSetup();
+            }
+            gameArea.scrollIntoView({ behavior: 'smooth' });
+        }
+        function toggleFaq(element) {
+            element.classList.toggle('active');
+            const icon = element.querySelector('.faq-icon');
+            icon.innerText = element.classList.contains('active') ? '-' : '+';
+        }
+    </script>
 </body>
 </html>
