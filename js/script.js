@@ -62,9 +62,9 @@ const boardSpaces = [
     { id: 34, name: "Pressão atmosférica", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
     { id: 35, name: "Companhia Aérea", type: "station", price: 200, rent: 20, owner: null },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Crescimento da planta", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
+    { id: 37, name: "Área", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Fotossíntese", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
+    { id: 39, name: "Lado do quadrado", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
 const PLAYER_PRESETS = [
