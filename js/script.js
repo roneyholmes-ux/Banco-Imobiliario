@@ -56,15 +56,15 @@ const boardSpaces = [
     { id: 29, name: "Casablanca", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
     
     { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Sydnei", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
-    { id: 32, name: "Auckland", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 31, name: "Temperatura", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 32, name: "Umidade do ar", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
     { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Melbourne", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
+    { id: 34, name: "Pressão atmosférica", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
     { id: 35, name: "Companhia Aérea", type: "station", price: 200, rent: 20, owner: null },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Londres", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
+    { id: 37, name: "Crescimento da planta", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Genebra", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
+    { id: 39, name: "Fotossíntese", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
 const PLAYER_PRESETS = [
