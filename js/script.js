@@ -23,9 +23,9 @@ const CARDS = [
 // Lista oficial de todas as 40 casas do Banco Imobiliário clássico
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
+    { id: 1, name: "Av. do Estado", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Av. Novo Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
+    { id: 3, name: "Av. Novo Estado", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
     { id: 4, name: "Imposto de Renda", type: "special" },
     { id: 5, name: "Estação Carioca", type: "station", price: 200, rent: 20, owner: null },
     { id: 6, name: "Av. Brigadeiro", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null },
@@ -34,10 +34,10 @@ const boardSpaces = [
     { id: 9, name: "Av. 9 de Julho", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
     
     { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Av. Europa", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null },
+    { id: 11, name: "Av. Europa", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
     { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 13, name: "Rua Augusta", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null },
-    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-roxo", price: 180, rent: 18, owner: null },
+    { id: 13, name: "Rua Augusta", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
+    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-rosa", price: 180, rent: 18, owner: null },
     { id: 15, name: "Estação da Luz", type: "station", price: 200, rent: 20, owner: null },
     { id: 16, name: "Av. S. João", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
     { id: 17, name: "Sorte ou Revés", type: "special" },
