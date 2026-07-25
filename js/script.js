@@ -14,57 +14,57 @@ const GAME_CONFIG = {
 // CARTAS DE SORTE OU REVÉS
 // ==========================================
 const CARDS = [
-    { text: "Sorte! Você tirou o 1º lugar no torneio de xadrez. Receba $100", type: "earn", value: 100 },
-    { text: "Revés! Pague a mensalidade da escola. Pague $50", type: "pay", value: 50 },
-    { text: "Sorte! Receba os dividendos de suas ações. Receba $200", type: "earn", value: 200 },
-    { text: "Revés! Multa por excesso de velocidade. Pague $30", type: "pay", value: 30 }
+    { text: "Sorte! Você tirou o 1º lugar no torneio de xadrez internacional. Receba $100", type: "earn", value: 100 },
+    { text: "Revés! Pague taxas alfandegárias de viagem. Pague $50", type: "pay", value: 50 },
+    { text: "Sorte! Receba os dividendos de suas ações globais. Receba $200", type: "earn", value: 200 },
+    { text: "Revés! Multa de trânsito internacional. Pague $30", type: "pay", value: 30 }
 ];
 
-// Lista oficial de todas as 40 casas do Banco Imobiliário clássico
+// Lista oficial das 40 casas - Edição Banco Imobiliário Mundo
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Av. do Estado", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
+    { id: 1, name: "Pequim", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Av. Novo Estado", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
+    { id: 3, name: "Tóquio", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
     { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Estação Carioca", type: "station", price: 200, rent: 20, owner: null },
-    { id: 6, name: "Av. Brigadeiro", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null },
+    { id: 5, name: "Aeroporto Intl.", type: "station", price: 200, rent: 20, owner: null },
+    { id: 6, name: "Moscou", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null },
     { id: 7, name: "Sorte ou Revés", type: "special" },
-    { id: 8, name: "Av. Rebouças", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
-    { id: 9, name: "Av. 9 de Julho", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
+    { id: 8, name: "Atenas", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
+    { id: 9, name: "Istambul", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
     
     { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Av. Europa", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
-    { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 13, name: "Rua Augusta", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
-    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-rosa", price: 180, rent: 18, owner: null },
-    { id: 15, name: "Estação da Luz", type: "station", price: 200, rent: 20, owner: null },
-    { id: 16, name: "Av. S. João", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
+    { id: 11, name: "Roma", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
+    { id: 12, name: "Cia. Telecom", type: "utility", price: 150, rent: 15, owner: null },
+    { id: 13, name: "Madri", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
+    { id: 14, name: "Paris", type: "property", color: "cor-rosa", price: 180, rent: 18, owner: null },
+    { id: 15, name: "Trem de Alta Velocidade", type: "station", price: 200, rent: 20, owner: null },
+    { id: 16, name: "Buenos Aires", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
     { id: 17, name: "Sorte ou Revés", type: "special" },
-    { id: 18, name: "Av. Ipiranga", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
-    { id: 19, name: "Av. Rio Branco", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null },
+    { id: 18, name: "Cidade do México", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
+    { id: 19, name: "Rio de Janeiro", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null },
     
     { id: 20, name: "PARADA LIVRE", type: "special", cssClass: "corner-space" },
-    { id: 21, name: "Av. Paulista", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
+    { id: 21, name: "Toronto", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
     { id: 22, name: "Sorte ou Revés", type: "special" },
-    { id: 23, name: "Av. Brasil", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
-    { id: 24, name: "Av. Brigadeiro", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null },
-    { id: 25, name: "Estação Barra Funda", type: "station", price: 200, rent: 20, owner: null },
-    { id: 26, name: "Copacabana", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
-    { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 28, name: "Av. Vieira Souto", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
-    { id: 29, name: "Ipanema", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
+    { id: 23, name: "Los Angeles", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
+    { id: 24, name: "Nova York", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null },
+    { id: 25, name: "Porto Marítimo", type: "station", price: 200, rent: 20, owner: null },
+    { id: 26, name: "Cairo", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
+    { id: 27, name: "Cia. Energia Solar", type: "utility", price: 150, rent: 15, owner: null },
+    { id: 28, name: "Cidade do Cabo", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
+    { id: 29, name: "Casablanca", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
     
     { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Jardim Europa", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
-    { id: 32, name: "Jardim América", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 31, name: "Sydnei", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 32, name: "Auckland", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
     { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Av. Interlagos", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
-    { id: 35, name: "Estação Brás", type: "station", price: 200, rent: 20, owner: null },
+    { id: 34, name: "Melbourne", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
+    { id: 35, name: "Companhia Aérea", type: "station", price: 200, rent: 20, owner: null },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Av. Morumbi", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
+    { id: 37, name: "Londres", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
+    { id: 39, name: "Genebra", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
 const PLAYER_PRESETS = [
@@ -98,9 +98,18 @@ function renderBoard() {
     
     document.querySelectorAll(".space").forEach(e => e.remove());
     
+    // Inserir elemento central do Mundo
+    let boardCenter = document.querySelector(".board-center");
+    if (!boardCenter) {
+        boardCenter = document.createElement("div");
+        boardCenter.className = "board-center";
+        boardCenter.innerText = "MUNDO";
+        boardElement.appendChild(boardCenter);
+    }
+
     boardSpaces.forEach((space) => {
         const spaceDiv = document.createElement("div");
-        spaceDiv.className = `space ${space.cssClass || ''}`;
+        spaceDiv.className = `space space-${space.id} ${space.cssClass || ''}`;
         spaceDiv.id = `space-${space.id}`;
         
         const pos = getGridPosition(space.id);
@@ -583,7 +592,7 @@ function startPlayerSetup() {
         box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
     `;
     setupBox.innerHTML = `
-        <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 20px;">BANCO IMOBILIÁRIO</h2>
+        <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 20px;">BANCO IMOBILIÁRIO MUNDO</h2>
         <p style="font-size: 1.1rem; margin-bottom: 25px;">Quantos jogadores vão participar?</p>
         <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px;">
             <button class="setup-btn" data-qty="2">2</button>
@@ -1081,7 +1090,6 @@ function updateTradeVisualProperty(space, newOwner) {
 
 // Inicialização e Eventos da Tela Principal
 window.onload = () => {
-    // Evento do botão de Rolar Dados
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) {
         rollBtn.addEventListener("click", rollDice);
