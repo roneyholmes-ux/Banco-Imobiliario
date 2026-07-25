@@ -3,68 +3,74 @@
 // ==========================================
 const GAME_CONFIG = {
     startingMoney: 25000,       // Dinheiro inicial de cada jogador
-    goBonus: 2000,              // Quanto ganha ao passar pela PARTIDA
+    goBonus: 2000,              // Bônus ao passar pela PARTIDA
     rentMultiplier: 1.0,        // Multiplicador global de aluguéis
-    impostoRenda: 2000,         // Valor cobrado na casa Imposto de Renda
-    taxaLuxo: 1000,             // Valor cobrado na casa Taxa de Luxo
-    fiancaPrisao: 500           // Valor para pagar e sair da prisão
+    impostoRenda: 2000,         // Imposto de Renda
+    taxaLuxo: 1000,             // Taxa de Luxo
+    fiancaPrisao: 500,          // Valor da fiança
+    tradeFeePercent: 0.10       // Taxa de troca (10% de taxa cobrada pelo Banco sobre dinheiros trocados)
 };
 
-// ==========================================
-// CARTAS DE SORTE OU REVÉS
-// ==========================================
+// Cartas de Sorte ou Revés
 const CARDS = [
-    { text: "Sorte! Você tirou o 1º lugar no torneio de xadrez internacional. Receba $100", type: "earn", value: 100 },
-    { text: "Revés! Pague taxas alfandegárias de viagem. Pague $50", type: "pay", value: 50 },
-    { text: "Sorte! Receba os dividendos de suas ações globais. Receba $200", type: "earn", value: 200 },
-    { text: "Revés! Multa de trânsito internacional. Pague $30", type: "pay", value: 30 }
+    { text: "Sorte! Você tirou o 1º lugar no torneio. Receba $100", type: "earn", value: 100 },
+    { text: "Revés! Pague taxas de manutenção. Pague $50", type: "pay", value: 50 },
+    { text: "Sorte! Receba os dividendos de suas ações. Receba $200", type: "earn", value: 200 },
+    { text: "Revés! Multa de trânsito. Pague $30", type: "pay", value: 30 }
 ];
 
-// Lista oficial das 40 casas - Edição Banco Imobiliário Mundo
+// Lista oficial das 40 casas
+// tokenType define qual Ficha de Grandeza é exigida ("discreta" ou "continua")
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Raio", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
+    { id: 1, name: "Raio", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null, tokenType: "continua" },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Área do círculo", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null },
+    { id: 3, name: "Área do círculo", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null, tokenType: "continua" },
     { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Grandeza Contínua", type: "station", price: 200, rent: 20, owner: null },
-    { id: 6, name: "Número de indivíduos", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null },
+    
+    // Casa Especial de Grandeza Contínua
+    { id: 5, name: "Grandeza Contínua", type: "grandeza_station", price: 200, rent: 20, owner: null, tokenType: "continua" },
+    
+    { id: 6, name: "Número de indivíduos", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null, tokenType: "discreta" },
     { id: 7, name: "Sorte ou Revés", type: "special" },
-    { id: 8, name: "Taxa de natalidade", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
-    { id: 9, name: "Taxa de mortalidade", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
+    { id: 8, name: "Taxa de natalidade", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null, tokenType: "discreta" },
+    { id: 9, name: "Taxa de mortalidade", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null, tokenType: "discreta" },
     
     { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Desempenho", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
-    { id: 12, name: "Cia. Telecom", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 13, name: "Número de exercícios", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null },
-    { id: 14, name: "Horas de estudo", type: "property", color: "cor-rosa", price: 180, rent: 18, owner: null },
-    { id: 15, name: "Trem de Alta Velocidade", type: "station", price: 200, rent: 20, owner: null },
-    { id: 16, name: "Tempo de uso", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
+    { id: 11, name: "Desempenho", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null, tokenType: "discreta" },
+    { id: 12, name: "Cia. Telecom", type: "utility", price: 150, rent: 15, owner: null, tokenType: "continua" },
+    { id: 13, name: "Número de exercícios", type: "property", color: "cor-rosa", price: 160, rent: 16, owner: null, tokenType: "discreta" },
+    { id: 14, name: "Horas de estudo", type: "property", color: "cor-rosa", price: 180, rent: 18, owner: null, tokenType: "continua" },
+    { id: 15, name: "Trem de Alta Velocidade", type: "station", price: 200, rent: 20, owner: null, tokenType: "continua" },
+    { id: 16, name: "Tempo de uso", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null, tokenType: "continua" },
     { id: 17, name: "Sorte ou Revés", type: "special" },
-    { id: 18, name: "Potência", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
-    { id: 19, name: "Consumo elétrico", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null },
+    { id: 18, name: "Potência", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null, tokenType: "continua" },
+    { id: 19, name: "Consumo elétrico", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null, tokenType: "continua" },
     
     { id: 20, name: "PARADA LIVRE", type: "special", cssClass: "corner-space" },
-    { id: 21, name: "Preço", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
+    { id: 21, name: "Preço", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null, tokenType: "discreta" },
     { id: 22, name: "Sorte ou Revés", type: "special" },
-    { id: 23, name: "Demanda", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
-    { id: 24, name: "Produção", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null },
-    { id: 25, name: "Grandeza Discreta", type: "station", price: 200, rent: 20, owner: null },
-    { id: 26, name: "Pressão atmosférica", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
-    { id: 27, name: "Cia. Energia Solar", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 28, name: "Umidade do ar", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
-    { id: 29, name: "Temperatura", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
+    { id: 23, name: "Demanda", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null, tokenType: "discreta" },
+    { id: 24, name: "Produção", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null, tokenType: "discreta" },
+    
+    // Casa Especial de Grandeza Discreta
+    { id: 25, name: "Grandeza Discreta", type: "grandeza_station", price: 200, rent: 20, owner: null, tokenType: "discreta" },
+    
+    { id: 26, name: "Pressão atmosférica", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null, tokenType: "continua" },
+    { id: 27, name: "Cia. Energia Solar", type: "utility", price: 150, rent: 15, owner: null, tokenType: "continua" },
+    { id: 28, name: "Umidade do ar", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null, tokenType: "continua" },
+    { id: 29, name: "Temperatura", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null, tokenType: "continua" },
     
     { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Temperatura", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
-    { id: 32, name: "Umidade do ar", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 31, name: "Vazão de Água", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null, tokenType: "continua" },
+    { id: 32, name: "Volume de Reservatório", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null, tokenType: "continua" },
     { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Pressão atmosférica", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
-    { id: 35, name: "Companhia Aérea", type: "station", price: 200, rent: 20, owner: null },
+    { id: 34, name: "Massa Total", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null, tokenType: "continua" },
+    { id: 35, name: "Companhia Aérea", type: "station", price: 200, rent: 20, owner: null, tokenType: "continua" },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Área", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
+    { id: 37, name: "Área", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null, tokenType: "continua" },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Lado do quadrado", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
+    { id: 39, name: "Lado do quadrado", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null, tokenType: "continua" }
 ];
 
 const PLAYER_PRESETS = [
@@ -82,23 +88,16 @@ let isMoving = false;
 let awaitingDecision = false; 
 
 function getGridPosition(index) {
-    if (index >= 0 && index <= 10) {
-        return { row: 11, col: 11 - index };
-    } else if (index > 10 && index <= 20) {
-        return { row: 11 - (index - 10), col: 1 };
-    } else if (index > 20 && index <= 30) {
-        return { row: 1, col: index - 19 };
-    } else if (index > 30 && index <= 39) {
-        return { row: index - 29, col: 11 };
-    }
+    if (index >= 0 && index <= 10) return { row: 11, col: 11 - index };
+    if (index > 10 && index <= 20) return { row: 11 - (index - 10), col: 1 };
+    if (index > 20 && index <= 30) return { row: 1, col: index - 19 };
+    if (index > 30 && index <= 39) return { row: index - 29, col: 11 };
 }
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
-    
     document.querySelectorAll(".space").forEach(e => e.remove());
     
-    // Inserir elemento central do Mundo
     let boardCenter = document.querySelector(".board-center");
     if (!boardCenter) {
         boardCenter = document.createElement("div");
@@ -116,7 +115,7 @@ function renderBoard() {
         spaceDiv.style.gridRow = pos.row;
         spaceDiv.style.gridColumn = pos.col;
         
-        if (space.type === "property" || space.type === "station" || space.type === "utility") {
+        if (space.type === "property" || space.type === "station" || space.type === "utility" || space.type === "grandeza_station") {
             const tag = document.createElement("div");
             tag.className = `property-tag ${space.color || 'cor-cinza'}`;
             tag.id = `tag-${space.id}`;
@@ -183,7 +182,18 @@ function updateUI() {
             }
             row.style.borderLeft = `5px solid ${p.color}`;
             row.style.padding = "8px";
-            row.innerHTML = `<span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span> <span>$${p.money}</span>`;
+            row.style.flexDirection = "column";
+            row.style.alignItems = "flex-start";
+            
+            row.innerHTML = `
+                <div style="display: flex; justify-content: space-between; width: 100%;">
+                    <span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span>
+                    <span>$${p.money}</span>
+                </div>
+                <div style="font-size: 0.75rem; color: #ddd; margin-top: 3px;">
+                    Fichas: 🔵 Discreta: <strong>${p.tokens.discreta}</strong> | 🔴 Contínua: <strong>${p.tokens.continua}</strong>
+                </div>
+            `;
         }
         playersList.appendChild(row);
     });
@@ -235,14 +245,23 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
+// ==========================================
+// AVALIAÇÃO E PROCESSAMENTO DA PARADA
+// ==========================================
+
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
-    const purchaseableTypes = ["property", "station", "utility"];
 
+    // 1. CASAS ESPECIAIS DE GRANDEZA (Discreta ou Contínua)
+    if (currentSpace.type === "grandeza_station") {
+        handleGrandezaSpaceLanding(player, currentSpace);
+        return;
+    }
+
+    // 2. PROPRIEDADES NORMAIS, ESTAÇÕES E UTILIDADES
+    const purchaseableTypes = ["property", "station", "utility"];
     if (purchaseableTypes.includes(currentSpace.type)) {
         if (currentSpace.owner === null) {
-            awaitingDecision = true;
-            updateUI();
             showPurchaseModal(player, currentSpace);
             return; 
         } else if (currentSpace.owner !== player.id) {
@@ -254,7 +273,7 @@ function handleLanding(player) {
                     showBuildModal(player, currentSpace);
                     return;
                 } else {
-                    document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name} (Hotel completo!).`;
+                    document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name} (Melhorias máximas completadas!).`;
                 }
             } else {
                 document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${currentSpace.name}.`;
@@ -264,78 +283,13 @@ function handleLanding(player) {
         drawCard(player);
         return; 
     } else if (currentSpace.name === "VÁ PARA A PRISÃO") {
-        player.position = 10;
-        player.inJail = true;
-        player.jailTurns = 0;
-        renderPawns();
-        
-        const statusDiv = document.getElementById("game-status");
-        statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #c62828;">
-                🚨 <strong>Vá para a Prisão!</strong><br>
-                ${player.name} foi enviado diretamente para a Prisão e está preso!
-            </div>
-            <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
-        `;
-        
-        awaitingDecision = true;
-        updateUI();
-        
-        document.getElementById("btn-confirm-jail").addEventListener("click", () => {
-            awaitingDecision = false;
-            nextTurn();
-        });
+        sendToJail(player);
         return;
-        
     } else if (currentSpace.name === "Imposto de Renda") {
-        player.money -= GAME_CONFIG.impostoRenda;
-        
-        if (player.money < 0) {
-            checkBankruptcy(player, null);
-            return;
-        }
-
-        const statusDiv = document.getElementById("game-status");
-        statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #c62828;">
-                💸 <strong>Imposto de Renda!</strong><br>
-                ${player.name} pagou <strong>$${GAME_CONFIG.impostoRenda}</strong> de impostos ao Leão!
-            </div>
-            <button id="btn-confirm-tax" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
-        `;
-        
-        awaitingDecision = true;
-        updateUI();
-        
-        document.getElementById("btn-confirm-tax").addEventListener("click", () => {
-            awaitingDecision = false;
-            nextTurn();
-        });
+        payFlatTax(player, GAME_CONFIG.impostoRenda, "Imposto de Renda");
         return;
     } else if (currentSpace.name === "Taxa de Luxo") {
-        player.money -= GAME_CONFIG.taxaLuxo;
-        
-        if (player.money < 0) {
-            checkBankruptcy(player, null);
-            return;
-        }
-
-        const statusDiv = document.getElementById("game-status");
-        statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #c62828;">
-                💎 <strong>Taxa de Luxo!</strong><br>
-                ${player.name} pagou <strong>$${GAME_CONFIG.taxaLuxo}</strong> de taxa de luxo!
-            </div>
-            <button id="btn-confirm-luxury" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
-        `;
-        
-        awaitingDecision = true;
-        updateUI();
-        
-        document.getElementById("btn-confirm-luxury").addEventListener("click", () => {
-            awaitingDecision = false;
-            nextTurn();
-        });
+        payFlatTax(player, GAME_CONFIG.taxaLuxo, "Taxa de Luxo");
         return;
     } else {
         document.getElementById("game-status").innerText = `${player.name} caiu em ${currentSpace.name}.`;
@@ -344,28 +298,315 @@ function handleLanding(player) {
     nextTurn();
 }
 
+// ==========================================
+// REGRAS DAS CASAS "GRANDEZA DISCRETA / CONTÍNUA"
+// ==========================================
+
+function handleGrandezaSpaceLanding(player, space) {
+    const tokenType = space.tokenType; // 'discreta' ou 'continua'
+    const tokenName = tokenType === 'discreta' ? 'Ficha de Grandeza Discreta' : 'Ficha de Grandeza Contínua';
+
+    // CASO 1: Sem dono -> Jogador pode comprar e ganha 1 ficha de graça
+    if (space.owner === null) {
+        const statusDiv = document.getElementById("game-status");
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px;">
+                ⭐ ${player.name} caiu na casa <strong>${space.name}</strong>!<br>
+                Compre por <strong>$${space.price}</strong> e receba <strong>1 ${tokenName} de graça</strong>!
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-buy-g-yes" style="padding: 6px 15px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Comprar</button>
+                <button id="btn-buy-g-no" style="padding: 6px 15px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Passar</button>
+            </div>
+        `;
+
+        awaitingDecision = true;
+        updateUI();
+
+        document.getElementById("btn-buy-g-yes").addEventListener("click", () => {
+            if (player.money >= space.price) {
+                player.money -= space.price;
+                space.owner = player.id;
+                player.tokens[tokenType] += 1; // Ganha 1 ficha de graça!
+
+                const spaceDiv = document.getElementById(`space-${space.id}`);
+                spaceDiv.style.border = `3px dashed ${player.color}`;
+                
+                const priceLabel = document.getElementById(`price-label-${space.id}`);
+                if (priceLabel) {
+                    priceLabel.innerText = "COMPRADO";
+                    priceLabel.style.color = player.color;
+                }
+
+                document.getElementById("game-status").innerText = `${player.name} comprou ${space.name} por $${space.price} e ganhou 1 ${tokenName}!`;
+            } else {
+                alert("Dinheiro insuficiente!");
+                return;
+            }
+
+            awaitingDecision = false;
+            nextTurn();
+        });
+
+        document.getElementById("btn-buy-g-no").addEventListener("click", () => {
+            document.getElementById("game-status").innerText = `${player.name} não comprou ${space.name}.`;
+            awaitingDecision = false;
+            nextTurn();
+        });
+    } 
+    // CASO 2: O dono caiu na própria casa -> Não paga nada e ganha 1 ficha sozinho
+    else if (space.owner === player.id) {
+        player.tokens[tokenType] += 1;
+        const statusDiv = document.getElementById("game-status");
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px; color: #2ed573;">
+                🎁 <strong>Sua própria Casa de Grandeza!</strong><br>
+                ${player.name} não paga nada e recebeu <strong>+1 ${tokenName}</strong>!
+            </div>
+            <button id="btn-confirm-own-g" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok</button>
+        `;
+        awaitingDecision = true;
+        updateUI();
+
+        document.getElementById("btn-confirm-own-g").addEventListener("click", () => {
+            awaitingDecision = false;
+            nextTurn();
+        });
+    } 
+    // CASO 3: Outro jogador caiu na casa -> Pode pagar o aluguel OU dar 1 Ficha para TODOS os jogadores
+    else {
+        const owner = players.find(p => p.id === space.owner);
+        const rentAmount = space.rent;
+
+        const statusDiv = document.getElementById("game-status");
+        statusDiv.innerHTML = `
+            <div style="margin-bottom: 10px; color: #ffa502;">
+                ⚠️ ${player.name} caiu em <strong>${space.name}</strong> (Dono: ${owner.name}).<br>
+                Escolha a sua ação:
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button id="btn-g-pay-rent" style="padding: 6px 15px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    💸 Pagar Aluguel ($${rentAmount})
+                </button>
+                <button id="btn-g-give-tokens" style="padding: 6px 15px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                    🎁 Todos recebem 1 ${tokenName}
+                </button>
+            </div>
+        `;
+
+        awaitingDecision = true;
+        updateUI();
+
+        document.getElementById("btn-g-pay-rent").addEventListener("click", () => {
+            player.money -= rentAmount;
+            owner.money += rentAmount;
+
+            if (player.money < 0) {
+                checkBankruptcy(player, owner.id);
+                return;
+            }
+
+            document.getElementById("game-status").innerText = `${player.name} pagou $${rentAmount} de taxa para ${owner.name}.`;
+            awaitingDecision = false;
+            nextTurn();
+        });
+
+        document.getElementById("btn-g-give-tokens").addEventListener("click", () => {
+            players.forEach(p => {
+                if (!p.isBankrupt) {
+                    p.tokens[tokenType] += 1;
+                }
+            });
+
+            document.getElementById("game-status").innerText = `🎉 ${player.name} escolheu distribuir 1 ${tokenName} para TODOS os jogadores!`;
+            awaitingDecision = false;
+            nextTurn();
+        });
+    }
+}
+
+// ==========================================
+// COMPRAS DE PROPRIEDADES NORMAIS (Exige Ficha de Grandeza)
+// ==========================================
+
+function showPurchaseModal(player, space) {
+    const tokenType = space.tokenType || "continua";
+    const tokenName = tokenType === "discreta" ? "Ficha Discreta" : "Ficha Contínua";
+    const playerHasToken = player.tokens[tokenType] >= 1;
+
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            ${player.name} caiu em <strong>${space.name}</strong>!<br>
+            Custo: <strong>$${space.price} + 1 ${tokenName}</strong>.<br>
+            <small style="color: ${playerHasToken ? '#2ed573' : '#ff4757'};">
+                ${playerHasToken ? `✅ Você possui ${player.tokens[tokenType]} ${tokenName}(s)` : `❌ Você NÃO tem ${tokenName} necessária para comprar!`}
+            </small>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-buy-yes" ${!playerHasToken ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : 'style="padding: 6px 15px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;"'}>Comprar</button>
+            <button id="btn-buy-no" style="padding: 6px 15px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Passar Vez</button>
+        </div>
+    `;
+
+    awaitingDecision = true;
+    updateUI();
+
+    if (playerHasToken) {
+        document.getElementById("btn-buy-yes").addEventListener("click", () => {
+            if (player.money >= space.price) {
+                player.money -= space.price;
+                player.tokens[tokenType] -= 1; // Consome 1 Ficha
+                space.owner = player.id;
+                
+                const spaceDiv = document.getElementById(`space-${space.id}`);
+                spaceDiv.style.border = `3px dashed ${player.color}`;
+                
+                const priceLabel = document.getElementById(`price-label-${space.id}`);
+                if (priceLabel) {
+                    priceLabel.innerText = "COMPRADO";
+                    priceLabel.style.color = player.color;
+                }
+
+                document.getElementById("game-status").innerText = `${player.name} comprou ${space.name} usando $${space.price} e 1 ${tokenName}!`;
+            } else {
+                alert("Dinheiro insuficiente!");
+                return;
+            }
+
+            awaitingDecision = false;
+            nextTurn();
+        });
+    }
+
+    document.getElementById("btn-buy-no").addEventListener("click", () => {
+        document.getElementById("game-status").innerText = `${player.name} passou a oportunidade de comprar ${space.name}.`;
+        awaitingDecision = false;
+        nextTurn();
+    });
+}
+
+// ==========================================
+// CONSTRUÇÃO DE MELHORIAS (Exige Ficha de Grandeza)
+// ==========================================
+
+function showBuildModal(player, space) {
+    const housePrice = Math.round(space.price / 2);
+    const tokenType = space.tokenType || "continua";
+    const tokenName = tokenType === "discreta" ? "Ficha Discreta" : "Ficha Contínua";
+    const playerHasToken = player.tokens[tokenType] >= 1;
+
+    const isHotel = space.houses === 4;
+    const itemText = isHotel ? "um Hotel" : "uma Casa";
+    
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            🏰 <strong>Monopólio!</strong> Você caiu em <strong>${space.name}</strong> (${space.houses} melhoria(s)).<br>
+            Construir ${itemText} por <strong>$${housePrice} + 1 ${tokenName}</strong>?<br>
+            <small style="color: ${playerHasToken ? '#2ed573' : '#ff4757'};">
+                ${playerHasToken ? `✅ Você tem ${player.tokens[tokenType]} ${tokenName}(s)` : `❌ Falta 1 ${tokenName} para construir!`}
+            </small>
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="btn-build-yes" ${!playerHasToken ? 'disabled style="opacity:0.5; cursor:not-allowed;"' : 'style="padding: 6px 15px; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer;"'}>Construir</button>
+            <button id="btn-build-no" style="padding: 6px 15px; background: #c62828; border: none; color: white; border-radius: 4px; cursor: pointer;">Passar Vez</button>
+        </div>
+    `;
+
+    awaitingDecision = true;
+    updateUI();
+
+    if (playerHasToken) {
+        document.getElementById("btn-build-yes").addEventListener("click", () => {
+            if (player.money >= housePrice) {
+                player.money -= housePrice;
+                player.tokens[tokenType] -= 1; // Consome 1 Ficha
+                space.houses += 1;
+                
+                updateSpaceVisualWithHouses(space);
+                
+                document.getElementById("game-status").innerText = `${player.name} construiu ${itemText} em ${space.name}!`;
+                awaitingDecision = false;
+                nextTurn();
+            } else {
+                alert("Dinheiro insuficiente!");
+            }
+        });
+    }
+
+    document.getElementById("btn-build-no").addEventListener("click", () => {
+        awaitingDecision = false;
+        nextTurn();
+    });
+}
+
+// ==========================================
+// OUTRAS AÇÕES DE TABULEIRO E AUXILIARES
+// ==========================================
+
+function payFlatTax(player, amount, taxName) {
+    player.money -= amount;
+    if (player.money < 0) { checkBankruptcy(player, null); return; }
+
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px; color: #c62828;">
+            💸 <strong>${taxName}!</strong><br>
+            ${player.name} pagou <strong>$${amount}</strong> ao banco.
+        </div>
+        <button id="btn-confirm-tax" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok</button>
+    `;
+    
+    awaitingDecision = true;
+    updateUI();
+    
+    document.getElementById("btn-confirm-tax").addEventListener("click", () => {
+        awaitingDecision = false;
+        nextTurn();
+    });
+}
+
+function sendToJail(player) {
+    player.position = 10;
+    player.inJail = true;
+    player.jailTurns = 0;
+    renderPawns();
+    
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 10px; color: #c62828;">
+            🚨 <strong>Vá para a Prisão!</strong><br>
+            ${player.name} foi preso!
+        </div>
+        <button id="btn-confirm-jail" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok</button>
+    `;
+    
+    awaitingDecision = true;
+    updateUI();
+    
+    document.getElementById("btn-confirm-jail").addEventListener("click", () => {
+        awaitingDecision = false;
+        nextTurn();
+    });
+}
+
 function drawCard(player) {
     const randomIndex = Math.floor(Math.random() * CARDS.length);
     const card = CARDS[randomIndex];
     
-    if (card.type === "earn") {
-        player.money += card.value;
-    } else if (card.type === "pay") {
-        player.money -= card.value;
-    }
+    if (card.type === "earn") player.money += card.value;
+    else if (card.type === "pay") player.money -= card.value;
 
-    if (player.money < 0) {
-        checkBankruptcy(player, null);
-        return;
-    }
+    if (player.money < 0) { checkBankruptcy(player, null); return; }
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px; background: #fff8e1; color: #333; padding: 10px; border-radius: 5px; border: 2px solid #ffb300;">
+        <div style="margin-bottom: 10px; background: #fff8e1; color: #333; padding: 10px; border-radius: 5px;">
             🃏 <strong>Carta Sorte ou Revés</strong><br><br>
             <em>"${card.text}"</em>
         </div>
-        <button id="btn-confirm-card" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
+        <button id="btn-confirm-card" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok</button>
     `;
     
     awaitingDecision = true; 
@@ -384,18 +625,15 @@ function payRent(player, space) {
     player.money -= rentAmount;
     owner.money += rentAmount;
     
-    if (player.money < 0) {
-        checkBankruptcy(player, owner.id);
-        return;
-    }
+    if (player.money < 0) { checkBankruptcy(player, owner.id); return; }
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; color: #c62828;">
-            💸 <strong>Pedágio!</strong><br>
-            ${player.name} caiu em <strong>${space.name}</strong> e pagou <strong>$${rentAmount}</strong> de aluguel para ${owner.name}!
+            💸 <strong>Aluguel!</strong><br>
+            ${player.name} pagou <strong>$${rentAmount}</strong> para ${owner.name}!
         </div>
-        <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
+        <button id="btn-confirm-rent" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok</button>
     `;
     
     awaitingDecision = true; 
@@ -405,53 +643,6 @@ function payRent(player, space) {
         awaitingDecision = false;
         nextTurn();
     });
-}
-
-function showPurchaseModal(player, space) {
-    const statusDiv = document.getElementById("game-status");
-    statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px;">
-            ${player.name} caiu em <strong>${space.name}</strong>!<br>
-            Preço de compra: <strong>$${space.price}</strong>. Deseja comprar?
-        </div>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-buy-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Sim, Comprar</button>
-            <button id="btn-buy-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Não, Passar Vez</button>
-        </div>
-    `;
-
-    document.getElementById("btn-buy-yes").addEventListener("click", () => buyProperty(player, space));
-    document.getElementById("btn-buy-no").addEventListener("click", () => skipProperty(player, space));
-}
-
-function buyProperty(player, space) {
-    if (player.money >= space.price) {
-        player.money -= space.price;
-        space.owner = player.id;
-        
-        const spaceDiv = document.getElementById(`space-${space.id}`);
-        spaceDiv.style.border = `3px dashed ${player.color}`;
-        
-        const priceLabel = document.getElementById(`price-label-${space.id}`);
-        if (priceLabel) {
-            priceLabel.innerText = "COMPRADO";
-            priceLabel.style.color = player.color;
-        }
-
-        document.getElementById("game-status").innerText = `${player.name} comprou ${space.name} por $${space.price}!`;
-    } else {
-        alert("Dinheiro insuficiente para realizar a compra!");
-        return;
-    }
-
-    awaitingDecision = false;
-    nextTurn();
-}
-
-function skipProperty(player, space) {
-    document.getElementById("game-status").innerText = `${player.name} decidiu não comprar ${space.name}.`;
-    awaitingDecision = false;
-    nextTurn();
 }
 
 function nextTurn() {
@@ -468,21 +659,16 @@ function checkJailTurn(player) {
     
     if (player.jailTurns >= 3) {
         player.money -= GAME_CONFIG.fiancaPrisao;
-        
-        if (player.money < 0) {
-            checkBankruptcy(player, null);
-            return true;
-        }
+        if (player.money < 0) { checkBankruptcy(player, null); return true; }
 
         player.inJail = false;
         player.jailTurns = 0;
         
         statusDiv.innerHTML = `
             <div style="margin-bottom: 10px; color: #c62828;">
-                🚨 <strong>Fim do Prazo!</strong><br>
-                ${player.name} completou 3 turnos na prisão e foi obrigado a pagar a fiança de <strong>$${GAME_CONFIG.fiancaPrisao}</strong> para ser liberado!
+                🚨 ${player.name} pagou a fiança obrigatória de $${GAME_CONFIG.fiancaPrisao}!
             </div>
-            <button id="btn-forced-jail-free" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Rolar Dados</button>
+            <button id="btn-forced-jail-free" style="padding: 6px 15px; background: #2e7d32; color: white; border: none; border-radius: 4px;">Continuar</button>
         `;
         awaitingDecision = true;
         updateUI();
@@ -495,13 +681,12 @@ function checkJailTurn(player) {
     }
 
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px; color: #ffb300; background: #2e2e2e; padding: 10px; border-radius: 8px; border: 1px solid #ffb300;">
-            ⛓️ <strong>${player.name} está na Prisão (Turno ${player.jailTurns + 1}/3)</strong><br>
-            O que deseja fazer para sair?
+        <div style="margin-bottom: 10px;">
+            ⛓️ <strong>${player.name} está na Prisão</strong>
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-jail-roll" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Tentar Dados Duplos 🎲</button>
-            <button id="btn-jail-pay" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Pagar $${GAME_CONFIG.fiancaPrisao} 💸</button>
+            <button id="btn-jail-roll" style="padding: 6px 15px; background: #333; color: white; border: 1px solid #555; cursor: pointer;">Tentar Dados Duplos 🎲</button>
+            <button id="btn-jail-pay" style="padding: 6px 15px; background: #2e7d32; color: white; border: none; cursor: pointer;">Pagar $${GAME_CONFIG.fiancaPrisao} 💸</button>
         </div>
     `;
     
@@ -509,9 +694,6 @@ function checkJailTurn(player) {
     updateUI();
 
     document.getElementById("btn-jail-roll").addEventListener("click", () => {
-        document.getElementById("btn-jail-roll").disabled = true;
-        document.getElementById("btn-jail-pay").disabled = true;
-        
         const d1 = Math.floor(Math.random() * 6) + 1;
         const d2 = Math.floor(Math.random() * 6) + 1;
         
@@ -519,38 +701,26 @@ function checkJailTurn(player) {
             player.inJail = false;
             player.jailTurns = 0;
             awaitingDecision = false;
-            statusDiv.innerHTML = `🎲 Você tirou dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
-            
-            setTimeout(() => {
-                movePlayer(currentPlayerIndex, d1 + d2);
-            }, 1500);
+            statusDiv.innerHTML = `🎲 Dados duplos (${d1} e ${d2})! Você está LIVRE!`;
+            setTimeout(() => { movePlayer(currentPlayerIndex, d1 + d2); }, 1500);
         } else {
             player.jailTurns += 1;
             awaitingDecision = false;
-            statusDiv.innerHTML = `🎲 Você tirou ${d1} e ${d2} (Não foi duplo). Continua preso!`;
-            
-            setTimeout(() => {
-                nextTurn();
-            }, 2000);
+            statusDiv.innerHTML = `🎲 Tirou ${d1} e ${d2}. Continua preso!`;
+            setTimeout(() => { nextTurn(); }, 1500);
         }
     });
 
     document.getElementById("btn-jail-pay").addEventListener("click", () => {
-        document.getElementById("btn-jail-roll").disabled = true;
-        document.getElementById("btn-jail-pay").disabled = true;
-        
         if (player.money >= GAME_CONFIG.fiancaPrisao) {
             player.money -= GAME_CONFIG.fiancaPrisao;
             player.inJail = false;
             player.jailTurns = 0;
             awaitingDecision = false;
             updateUI();
-            
-            statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
+            statusDiv.innerText = `${player.name} pagou a fiança e está livre!`;
         } else {
-            alert("Você não tem dinheiro suficiente para pagar a fiança!");
-            document.getElementById("btn-jail-roll").disabled = false;
-            document.getElementById("btn-jail-pay").disabled = false;
+            alert("Dinheiro insuficiente!");
         }
     });
 
@@ -559,7 +729,6 @@ function checkJailTurn(player) {
 
 function rollDice() {
     if (isMoving || awaitingDecision) return;
-
     const player = players[currentPlayerIndex];
 
     if (player.inJail) {
@@ -567,12 +736,11 @@ function rollDice() {
         return;
     }
 
-    const diceValue1 = Math.floor(Math.random() * 6) + 1;
-    const diceValue2 = Math.floor(Math.random() * 6) + 1;
-    const totalSteps = diceValue1 + diceValue2;
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    const totalSteps = d1 + d2;
 
-    document.getElementById("game-status").innerText = `🎲 ${player.name} tirou ${diceValue1} + ${diceValue2} = ${totalSteps}!`;
-
+    document.getElementById("game-status").innerText = `🎲 ${player.name} tirou ${d1} + ${d2} = ${totalSteps}!`;
     movePlayer(currentPlayerIndex, totalSteps);
 }
 
@@ -589,7 +757,6 @@ function startPlayerSetup() {
     setupBox.style = `
         background: #1e1e1e; border: 3px solid #ff4757; border-radius: 12px;
         padding: 30px; text-align: center; color: white; max-width: 400px; width: 90%;
-        box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
     `;
     setupBox.innerHTML = `
         <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 20px;">BANCO IMOBILIÁRIO MUNDO</h2>
@@ -601,7 +768,6 @@ function startPlayerSetup() {
             <button class="setup-btn" data-qty="5">5</button>
             <button class="setup-btn" data-qty="6">6</button>
         </div>
-        <button id="btn-back-to-menu" style="background: transparent; color: #aaa; border: none; cursor: pointer; text-decoration: underline;">Voltar ao Menu</button>
     `;
 
     overlay.appendChild(setupBox);
@@ -614,9 +780,7 @@ function startPlayerSetup() {
             padding: 12px 20px; font-size: 1.2rem; border-radius: 8px;
             cursor: pointer; transition: all 0.2s ease; font-weight: bold; width: 55px;
         }
-        .setup-btn:hover {
-            background: #ff4757; border-color: #ff4757; transform: scale(1.1);
-        }
+        .setup-btn:hover { background: #ff4757; border-color: #ff4757; transform: scale(1.1); }
     `;
     document.head.appendChild(style);
 
@@ -626,10 +790,6 @@ function startPlayerSetup() {
             initializePlayers(qty);
             document.body.removeChild(overlay);
         });
-    });
-
-    document.getElementById("btn-back-to-menu").addEventListener("click", () => {
-        document.body.removeChild(overlay);
     });
 }
 
@@ -644,31 +804,24 @@ function initializePlayers(quantity) {
             color: PLAYER_PRESETS[i].color,
             inJail: false,
             jailTurns: 0,
-            isBankrupt: false
+            isBankrupt: false,
+            tokens: { discreta: 0, continua: 0 } // Fichas iniciais
         });
     }
     
     boardSpaces.forEach(space => {
-        if (space.type === "property") {
-            space.houses = 0;
-        }
+        if (space.type === "property") space.houses = 0;
     });
 
     const gameArea = document.getElementById("game-section-area");
-    gameArea.classList.remove("hidden");
+    if (gameArea) gameArea.classList.remove("hidden");
 
     renderBoard();
     renderPawns();
     updateUI();
 
-    gameArea.scrollIntoView({ behavior: "smooth" });
-
     document.getElementById("game-status").innerHTML = `Partida iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
 }
-
-// ==========================================
-// SISTEMA DE MONOPÓLIO E CONSTRUÇÃO DE CASAS
-// ==========================================
 
 function hasMonopoly(player, colorClass) {
     if (!colorClass) return false;
@@ -677,10 +830,7 @@ function hasMonopoly(player, colorClass) {
 }
 
 function calculateCurrentRent(space) {
-    if (space.type !== "property") {
-        return space.rent;
-    }
-
+    if (space.type !== "property") return space.rent;
     const owner = players.find(p => p.id === space.owner);
     let finalRent = space.rent;
 
@@ -689,67 +839,9 @@ function calculateCurrentRent(space) {
     else if (space.houses === 3) finalRent = space.rent * 40;
     else if (space.houses === 4) finalRent = space.rent * 80;
     else if (space.houses === 5) finalRent = space.rent * 120;
-    else if (hasMonopoly(owner, space.color)) {
-        finalRent = space.rent * 2;
-    }
+    else if (hasMonopoly(owner, space.color)) finalRent = space.rent * 2;
 
     return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
-}
-
-function showBuildModal(player, space) {
-    const housePrice = Math.round(space.price / 2);
-    const isHotel = space.houses === 4;
-    const itemText = isHotel ? "um Hotel" : "uma Casa";
-    
-    const statusDiv = document.getElementById("game-status");
-    statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px;">
-            🏰 <strong>Monopólio!</strong> Você caiu em <strong>${space.name}</strong> (${space.houses} casa(s)).<br>
-            Deseja construir ${itemText} por <strong>$${housePrice}</strong>?<br>
-            <small>Aluguel atual: $${calculateCurrentRent(space)} | Próximo aluguel: $${calculateUpcomingRent(space)}</small>
-        </div>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-build-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer;">Sim, Construir</button>
-            <button id="btn-build-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; border: none; color: white; border-radius: 4px; cursor: pointer;">Não, Passar Vez</button>
-        </div>
-    `;
-
-    const btnYes = document.getElementById("btn-build-yes");
-    const btnNo = document.getElementById("btn-build-no");
-
-    btnYes.addEventListener("click", () => {
-        btnYes.disabled = true;
-        btnNo.disabled = true;
-        
-        if (player.money >= housePrice) {
-            player.money -= housePrice;
-            space.houses += 1;
-            
-            updateSpaceVisualWithHouses(space);
-            
-            document.getElementById("game-status").innerText = `${player.name} construiu ${itemText} em ${space.name}!`;
-            awaitingDecision = false;
-            updateUI();
-            
-            setTimeout(() => { nextTurn(); }, 1500);
-        } else {
-            alert("Dinheiro insuficiente para construir!");
-            btnYes.disabled = false;
-            btnNo.disabled = false;
-        }
-    });
-
-    btnNo.addEventListener("click", () => {
-        btnYes.disabled = true;
-        btnNo.disabled = true;
-        awaitingDecision = false;
-        nextTurn();
-    });
-}
-
-function calculateUpcomingRent(space) {
-    const tempSpace = { ...space, houses: space.houses + 1 };
-    return calculateCurrentRent(tempSpace);
 }
 
 function updateSpaceVisualWithHouses(space) {
@@ -760,59 +852,29 @@ function updateSpaceVisualWithHouses(space) {
     tag.style.display = "flex";
     tag.style.justifyContent = "center";
     tag.style.alignItems = "center";
-    tag.style.gap = "2px";
 
     if (space.houses === 5) {
-        tag.innerHTML = `<span style="color: #ff4757; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏨</span>`;
+        tag.innerHTML = `<span style="color: #ff4757; font-size: 14px;">🏨</span>`;
     } else {
         let houseIcons = "";
-        for (let i = 0; i < space.houses; i++) {
-            houseIcons += `<span style="color: #2ed573; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏠</span>`;
-        }
+        for (let i = 0; i < space.houses; i++) houseIcons += `<span style="color: #2ed573; font-size: 10px;">🏠</span>`;
         tag.innerHTML = houseIcons;
     }
 }
-
-// ==========================================
-// SISTEMA DE FALÊNCIA E FIM DE JOGO
-// ==========================================
 
 function checkBankruptcy(player, creditorId) {
     player.isBankrupt = true;
     player.money = 0;
     
     const statusDiv = document.getElementById("game-status");
-    const creditor = creditorId !== null ? players.find(p => p.id === creditorId) : null;
     
     boardSpaces.forEach(space => {
         if (space.owner === player.id) {
-            if (creditor) {
-                space.owner = creditor.id;
-                space.houses = 0;
-                updateSpaceVisualWithHouses(space);
-                
-                const spaceDiv = document.getElementById(`space-${space.id}`);
-                if (spaceDiv) spaceDiv.style.border = `3px dashed ${creditor.color}`;
-                
-                const priceLabel = document.getElementById(`price-label-${space.id}`);
-                if (priceLabel) {
-                    priceLabel.innerText = "COMPRADO";
-                    priceLabel.style.color = creditor.color;
-                }
-            } else {
-                space.owner = null;
-                space.houses = 0;
-                updateSpaceVisualWithHouses(space);
-                
-                const spaceDiv = document.getElementById(`space-${space.id}`);
-                if (spaceDiv) spaceDiv.style.border = "1px solid #ccc";
-                
-                const priceLabel = document.getElementById(`price-label-${space.id}`);
-                if (priceLabel) {
-                    priceLabel.innerText = `$${space.price}`;
-                    priceLabel.style.color = "inherit";
-                }
-            }
+            space.owner = null;
+            space.houses = 0;
+            updateSpaceVisualWithHouses(space);
+            const spaceDiv = document.getElementById(`space-${space.id}`);
+            if (spaceDiv) spaceDiv.style.border = "1px solid #ccc";
         }
     });
 
@@ -826,17 +888,16 @@ function checkBankruptcy(player, creditorId) {
     }
 
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px; background: #c62828; color: white; padding: 15px; border-radius: 8px;">
-            💥 <strong>FALÊNCIA!</strong><br>
-            ${player.name} faliu! ${creditor ? `Suas propriedades foram transferidas para ${creditor.name}.` : "Suas propriedades voltaram para o banco."}
+        <div style="margin-bottom: 10px; background: #c62828; color: white; padding: 10px; border-radius: 5px;">
+            💥 <strong>FALÊNCIA!</strong> ${player.name} faliu!
         </div>
-        <button id="btn-confirm-bankruptcy" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Continuar jogo</button>
+        <button id="btn-confirm-bk" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; cursor: pointer;">Continuar</button>
     `;
     
     awaitingDecision = true;
     updateUI();
 
-    document.getElementById("btn-confirm-bankruptcy").addEventListener("click", () => {
+    document.getElementById("btn-confirm-bk").addEventListener("click", () => {
         awaitingDecision = false;
         nextTurn();
     });
@@ -845,37 +906,12 @@ function checkBankruptcy(player, creditorId) {
 }
 
 function showWinModal(winner) {
-    const overlay = document.createElement("div");
-    overlay.id = "win-overlay";
-    overlay.style = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
-        align-items: center; z-index: 20000; font-family: 'Montserrat', sans-serif;
-    `;
-
-    const winBox = document.createElement("div");
-    winBox.style = `
-        background: #1e1e1e; border: 5px solid #ffa502; border-radius: 15px;
-        padding: 40px; text-align: center; color: white; max-width: 450px; width: 90%;
-        box-shadow: 0px 10px 30px rgba(250, 165, 2, 0.3);
-    `;
-    winBox.innerHTML = `
-        <h1 style="margin-top: 0; color: #ffa502; font-size: 2.5rem; margin-bottom: 10px;">🏆 VITÓRIA! 🏆</h1>
-        <h2 style="color: ${winner.color}; margin-bottom: 20px;">${winner.name} venceu a partida!</h2>
-        <p style="font-size: 1.1rem; margin-bottom: 30px;">Parabéns! Todos os concorrentes faliram e você conquistou o monopólio absoluto do tabuleiro!</p>
-        <button id="btn-restart-game" style="padding: 12px 25px; font-size: 1.1rem; background: #ffa502; color: black; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Jogar Novamente 🔄</button>
-    `;
-
-    overlay.appendChild(winBox);
-    document.body.appendChild(overlay);
-
-    document.getElementById("btn-restart-game").addEventListener("click", () => {
-        location.reload();
-    });
+    alert(`🏆 PARABÉNS! ${winner.name} venceu a partida!`);
+    location.reload();
 }
 
 // ==========================================
-// SISTEMA COMPLETO DE COMPRA E VENDA (TROCAS)
+// SISTEMA DE TROCAS (TRADE) COM TAXA DE TROCA
 // ==========================================
 
 function openTradeModal() {
@@ -894,40 +930,57 @@ function openTradeModal() {
     const tradeBox = document.createElement("div");
     tradeBox.style = `
         background: #1e1e1e; border: 3px solid #2e7d32; border-radius: 12px;
-        padding: 25px; color: white; max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;
+        padding: 25px; color: white; max-width: 650px; width: 95%; max-height: 90vh; overflow-y: auto;
     `;
 
     tradeBox.innerHTML = `
-        <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.6rem; margin-bottom: 15px;">🤝 Proposta de Negócio</h3>
-        
+        <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.5rem;">🤝 Negociação de Mercado</h3>
+        <p style="text-align:center; font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">
+            ℹ️ O Banco cobra uma <strong>Taxa de Troca de 10%</strong> sobre quantias em dinheiro negociadas.
+        </p>
+
         <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Negociar com:</label>
-            <select id="trade-receiver-select" style="width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 1rem;"></select>
+            <label style="font-weight: bold;">Negociar com:</label>
+            <select id="trade-receiver-select" style="width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 5px;"></select>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-            <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
+            <!-- O QUE VOCÊ OFERECE -->
+            <div style="background: #2b2b2b; padding: 12px; border-radius: 8px;">
                 <h4 style="margin: 0 0 10px 0; color: #1e90ff;">Você Oferece:</h4>
-                <label style="font-size: 0.9rem;">Dinheiro ($):</label>
-                <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+                <label style="font-size: 0.85rem;">Dinheiro ($):</label>
+                <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
                 
-                <label style="font-size: 0.9rem; display: block; margin-bottom: 5px;">Propriedade:</label>
-                <select id="trade-offer-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
+                <label style="font-size: 0.85rem; display: block;">Fichas Discretas:</label>
+                <input type="number" id="trade-offer-disc" value="0" min="0" max="${proposer.tokens.discreta}" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                
+                <label style="font-size: 0.85rem; display: block;">Fichas Contínuas:</label>
+                <input type="number" id="trade-offer-cont" value="0" min="0" max="${proposer.tokens.continua}" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+
+                <label style="font-size: 0.85rem; display: block;">Propriedade:</label>
+                <select id="trade-offer-prop" style="width: 100%; padding: 5px; background: #444; color: white; border: 1px solid #555;"></select>
             </div>
 
-            <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
+            <!-- O QUE VOCÊ PEDE -->
+            <div style="background: #2b2b2b; padding: 12px; border-radius: 8px;">
                 <h4 style="margin: 0 0 10px 0; color: #ff4757;">Você Pede:</h4>
-                <label style="font-size: 0.9rem;">Dinheiro ($):</label>
-                <input type="number" id="trade-request-money" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+                <label style="font-size: 0.85rem;">Dinheiro ($):</label>
+                <input type="number" id="trade-request-money" value="0" min="0" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
                 
-                <label style="font-size: 0.9rem; display: block; margin-bottom: 5px;">Propriedade:</label>
-                <select id="trade-request-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
+                <label style="font-size: 0.85rem; display: block;">Fichas Discretas:</label>
+                <input type="number" id="trade-request-disc" value="0" min="0" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                
+                <label style="font-size: 0.85rem; display: block;">Fichas Contínuas:</label>
+                <input type="number" id="trade-request-cont" value="0" min="0" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+
+                <label style="font-size: 0.85rem; display: block;">Propriedade:</label>
+                <select id="trade-request-prop" style="width: 100%; padding: 5px; background: #444; color: white; border: 1px solid #555;"></select>
             </div>
         </div>
 
         <div style="display: flex; gap: 10px; justify-content: flex-end;">
-            <button id="btn-trade-cancel" style="padding: 8px 18px; background: #c62828; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Cancelar</button>
-            <button id="btn-trade-send" style="padding: 8px 18px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Enviar Proposta</button>
+            <button id="btn-trade-cancel" style="padding: 8px 18px; background: #c62828; color: white; border: none; border-radius: 5px; cursor: pointer;">Cancelar</button>
+            <button id="btn-trade-send" style="padding: 8px 18px; background: #2e7d32; color: white; border: none; border-radius: 5px; cursor: pointer;">Enviar Proposta</button>
         </div>
     `;
 
@@ -939,25 +992,22 @@ function openTradeModal() {
     const requestPropSelect = document.getElementById("trade-request-prop");
 
     otherPlayers.forEach(p => {
-        receiverSelect.innerHTML += `<option value="${p.id}">${p.name} (Saldo: $${p.money})</option>`;
+        receiverSelect.innerHTML += `<option value="${p.id}">${p.name} ($${p.money})</option>`;
     });
 
     function updatePropertiesDropdowns() {
-        const selectedReceiverId = parseInt(receiverSelect.value);
-        const receiver = players.find(p => p.id === selectedReceiverId);
+        const receiver = players.find(p => p.id === parseInt(receiverSelect.value));
 
-        offerPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
+        offerPropSelect.innerHTML = `<option value="">Nenhuma</option>`;
         boardSpaces.forEach(space => {
-            if (space.owner === proposer.id) {
-                if (space.houses && space.houses > 0) return;
+            if (space.owner === proposer.id && (!space.houses || space.houses === 0)) {
                 offerPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
             }
         });
 
-        requestPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
+        requestPropSelect.innerHTML = `<option value="">Nenhuma</option>`;
         boardSpaces.forEach(space => {
-            if (space.owner === receiver.id) {
-                if (space.houses && space.houses > 0) return;
+            if (space.owner === receiver.id && (!space.houses || space.houses === 0)) {
                 requestPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
             }
         });
@@ -966,132 +1016,97 @@ function openTradeModal() {
     receiverSelect.addEventListener("change", updatePropertiesDropdowns);
     updatePropertiesDropdowns();
 
-    document.getElementById("btn-trade-cancel").addEventListener("click", () => {
-        document.body.removeChild(overlay);
-    });
+    document.getElementById("btn-trade-cancel").addEventListener("click", () => document.body.removeChild(overlay));
 
     document.getElementById("btn-trade-send").addEventListener("click", () => {
-        const receiverId = parseInt(receiverSelect.value);
-        const receiver = players.find(p => p.id === receiverId);
+        const receiver = players.find(p => p.id === parseInt(receiverSelect.value));
         
         const offerMoney = parseInt(document.getElementById("trade-offer-money").value) || 0;
-        const requestMoney = parseInt(document.getElementById("trade-request-money").value) || 0;
-        
+        const offerDisc = parseInt(document.getElementById("trade-offer-disc").value) || 0;
+        const offerCont = parseInt(document.getElementById("trade-offer-cont").value) || 0;
         const offerPropId = offerPropSelect.value !== "" ? parseInt(offerPropSelect.value) : null;
+
+        const requestMoney = parseInt(document.getElementById("trade-request-money").value) || 0;
+        const requestDisc = parseInt(document.getElementById("trade-request-disc").value) || 0;
+        const requestCont = parseInt(document.getElementById("trade-request-cont").value) || 0;
         const requestPropId = requestPropSelect.value !== "" ? parseInt(requestPropSelect.value) : null;
 
-        if (offerMoney > proposer.money) {
-            alert("Você não tem essa quantia de dinheiro para oferecer!");
+        // Validações
+        if (offerMoney > proposer.money || offerDisc > proposer.tokens.discreta || offerCont > proposer.tokens.continua) {
+            alert("Você não possui os recursos ou fichas suficientes ofertados!");
             return;
         }
-        if (requestMoney > receiver.money) {
-            alert("O outro jogador não possui essa quantia de dinheiro para lhe dar!");
-            return;
-        }
-        if (offerMoney === 0 && requestMoney === 0 && offerPropId === null && requestPropId === null) {
-            alert("Uma proposta precisa conter pelo menos dinheiro ou uma propriedade!");
+        if (requestMoney > receiver.money || requestDisc > receiver.tokens.discreta || requestCont > receiver.tokens.continua) {
+            alert("O outro jogador não possui os recursos requisitados!");
             return;
         }
 
         document.body.removeChild(overlay);
-        sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId);
+        executeTradeProposalUI(proposer, receiver, {
+            offerMoney, offerDisc, offerCont, offerPropId,
+            requestMoney, requestDisc, requestCont, requestPropId
+        });
     });
 }
 
-function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId) {
-    const offerProp = offerPropId !== null ? boardSpaces.find(s => s.id === offerPropId) : null;
-    const requestProp = requestPropId !== null ? boardSpaces.find(s => s.id === requestPropId) : null;
+function executeTradeProposalUI(proposer, receiver, data) {
+    const offerProp = data.offerPropId !== null ? boardSpaces.find(s => s.id === data.offerPropId) : null;
+    const requestProp = data.requestPropId !== null ? boardSpaces.find(s => s.id === data.requestPropId) : null;
 
-    let offerDetails = [];
-    if (offerMoney > 0) offerDetails.push(`<strong>$${offerMoney}</strong>`);
-    if (offerProp) offerDetails.push(`<strong>${offerProp.name}</strong>`);
-    if (offerDetails.length === 0) offerDetails.push("Nada");
-
-    let requestDetails = [];
-    if (requestMoney > 0) requestDetails.push(`<strong>$${requestMoney}</strong>`);
-    if (requestProp) requestDetails.push(`<strong>${requestProp.name}</strong>`);
-    if (requestDetails.length === 0) requestDetails.push("Nada");
+    // Cálculo da taxa de troca
+    const offerFee = Math.round(data.offerMoney * GAME_CONFIG.tradeFeePercent);
+    const requestFee = Math.round(data.requestMoney * GAME_CONFIG.tradeFeePercent);
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 15px; background: #1e1e1e; color: white; padding: 15px; border-radius: 8px; border: 2px dashed #2e7d32;">
+        <div style="margin-bottom: 10px; background: #1e1e1e; padding: 12px; border-radius: 8px; border: 2px dashed #2e7d32;">
             🤝 <strong>Proposta de Negócio para ${receiver.name}!</strong><br><br>
-            ${proposer.name} oferece:<br>
-            👉 ${offerDetails.join(" + ")}<br><br>
-            Em troca de:<br>
-            👉 ${requestDetails.join(" + ")}
+            <strong>${proposer.name} oferece:</strong> $${data.offerMoney} ${offerFee > 0 ? `(Taxa Banco: $${offerFee})` : ''}, ${data.offerDisc} F.Discreta, ${data.offerCont} F.Contínua, ${offerProp ? offerProp.name : 'Nenhuma Prop.'}<br>
+            <strong>Em troca de:</strong> $${data.requestMoney} ${requestFee > 0 ? `(Taxa Banco: $${requestFee})` : ''}, ${data.requestDisc} F.Discreta, ${data.requestCont} F.Contínua, ${requestProp ? requestProp.name : 'Nenhuma Prop.'}
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-accept-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Aceitar Negócio</button>
-            <button id="btn-decline-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Recusar</button>
+            <button id="btn-accept-trade" style="padding: 6px 15px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Aceitar</button>
+            <button id="btn-decline-trade" style="padding: 6px 15px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Recusar</button>
         </div>
     `;
 
     awaitingDecision = true;
     updateUI();
 
-    const acceptBtn = document.getElementById("btn-accept-trade");
-    const declineBtn = document.getElementById("btn-decline-trade");
+    document.getElementById("btn-accept-trade").addEventListener("click", () => {
+        // Transfere e aplica taxas do banco
+        proposer.money -= (data.offerMoney + offerFee);
+        receiver.money += data.offerMoney;
 
-    acceptBtn.addEventListener("click", () => {
-        acceptBtn.disabled = true;
-        declineBtn.disabled = true;
+        receiver.money -= (data.requestMoney + requestFee);
+        proposer.money += data.requestMoney;
 
-        proposer.money -= offerMoney;
-        proposer.money += requestMoney;
-        receiver.money += offerMoney;
-        receiver.money -= requestMoney;
+        // Fichas
+        proposer.tokens.discreta += (data.requestDisc - data.offerDisc);
+        proposer.tokens.continua += (data.requestCont - data.offerCont);
+        receiver.tokens.discreta += (data.offerDisc - data.requestDisc);
+        receiver.tokens.continua += (data.offerCont - data.requestCont);
 
-        if (offerProp) {
-            offerProp.owner = receiver.id;
-            updateTradeVisualProperty(offerProp, receiver);
-        }
-        if (requestProp) {
-            requestProp.owner = proposer.id;
-            updateTradeVisualProperty(requestProp, proposer);
-        }
+        // Propriedades
+        if (offerProp) offerProp.owner = receiver.id;
+        if (requestProp) requestProp.owner = proposer.id;
 
-        statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Fechado com Sucesso!</div>`;
+        statusDiv.innerHTML = `<div style="color: #2ed573;">🤝 Troca concluída com sucesso (Taxas aplicadas)!</div>`;
         awaitingDecision = false;
         updateUI();
-
-        setTimeout(() => {
-            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
-            updateUI();
-        }, 2000);
+        setTimeout(() => { nextTurn(); }, 1500);
     });
 
-    declineBtn.addEventListener("click", () => {
-        acceptBtn.disabled = true;
-        declineBtn.disabled = true;
-
-        statusDiv.innerHTML = `<div style="color: #ff4757; font-weight: bold;">❌ ${receiver.name} recusou a proposta de negócio.</div>`;
+    document.getElementById("btn-decline-trade").addEventListener("click", () => {
+        statusDiv.innerHTML = `<div style="color: #ff4757;">❌ Troca recusada.</div>`;
         awaitingDecision = false;
         updateUI();
-
-        setTimeout(() => {
-            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
-            updateUI();
-        }, 2000);
+        setTimeout(() => { nextTurn(); }, 1500);
     });
 }
 
-function updateTradeVisualProperty(space, newOwner) {
-    const spaceDiv = document.getElementById(`space-${space.id}`);
-    if (spaceDiv) {
-        spaceDiv.style.border = `3px dashed ${newOwner.color}`;
-    }
-    const priceLabel = document.getElementById(`price-label-${space.id}`);
-    if (priceLabel) {
-        priceLabel.innerText = "COMPRADO";
-        priceLabel.style.color = newOwner.color;
-    }
-}
-
-// Inicialização e Eventos da Tela Principal
+// Inicialização
 window.onload = () => {
     const rollBtn = document.getElementById("rollDice");
-    if (rollBtn) {
-        rollBtn.addEventListener("click", rollDice);
-    }
+    if (rollBtn) rollBtn.addEventListener("click", rollDice);
 };
