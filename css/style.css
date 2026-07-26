@@ -648,65 +648,43 @@ body {
 
 
 /* ==========================================
-   7. PALETA DE CORES DAS PROPRIEDADES (GRADIENTE NEON)
+   7. PALETA DE CORES DAS PROPRIEDADES (DEGRADÊ DE FUNDO)
    ========================================== */
 
-/* Ajuste na casa para aceitar a cor de fundo com transparência */
+/* Torna a casa um contêiner relativo para o fundo se posicionar */
 .space {
-    position: relative;
-    z-index: 1;
+    position: relative !important;
+    overflow: hidden !important;
 }
 
-/* Esconde a barrinha antiga do topo para dar lugar ao gradiente total */
-.space .property-tag {
-    display: none;
+/* Faz a tag de cor expandir e preencher todo o fundo da casa */
+.property-tag {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100% !important;
+    height: 100% !important;
+    z-index: 0 !important;
+    border: none !important;
+    border-top-width: 3px !important;
+    border-top-style: solid !important;
 }
 
-/* Degradê em cada grupo de cor */
-.cor-marrom { 
-    background: linear-gradient(180deg, rgba(168, 85, 247, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #a855f7 !important;
+/* Garante que os textos e informações fiquem na frente do degradê */
+.space > *:not(.property-tag) {
+    position: relative !important;
+    z-index: 1 !important;
 }
 
-.cor-azul-claro { 
-    background: linear-gradient(180deg, rgba(56, 189, 248, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #38bdf8 !important;
-}
+/* DEGRADÊS POR COR (Com a cor vívida no topo sumindo até a base) */
+.cor-marrom       { background: linear-gradient(180deg, rgba(168, 85, 247, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #a855f7 !important; }
+.cor-azul-claro   { background: linear-gradient(180deg, rgba(56, 189, 248, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #38bdf8 !important; }
+.cor-rosa         { background: linear-gradient(180deg, rgba(236, 72, 153, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #ec4899 !important; }
+.cor-laranja      { background: linear-gradient(180deg, rgba(34, 197, 94, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #22c55e !important; }
+.cor-vermelho     { background: linear-gradient(180deg, rgba(239, 68, 68, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #ef4444 !important; }
+.cor-amarelo      { background: linear-gradient(180deg, rgba(234, 179, 8, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #eab308 !important; }
+.cor-verde        { background: linear-gradient(180deg, rgba(16, 185, 129, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #10b981 !important; }
+.cor-azul-escuro  { background: linear-gradient(180deg, rgba(59, 130, 246, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #3b82f6 !important; }
+.cor-cinza        { background: linear-gradient(180deg, rgba(100, 116, 139, 0.3) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #64748b !important; }
 
-.cor-rosa { 
-    background: linear-gradient(180deg, rgba(236, 72, 153, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #ec4899 !important;
-}
-
-.cor-laranja { 
-    background: linear-gradient(180deg, rgba(34, 197, 94, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #22c55e !important;
-}
-
-.cor-vermelho { 
-    background: linear-gradient(180deg, rgba(239, 68, 68, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #ef4444 !important;
-}
-
-.cor-amarelo { 
-    background: linear-gradient(180deg, rgba(234, 179, 8, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #eab308 !important;
-}
-
-.cor-verde { 
-    background: linear-gradient(180deg, rgba(16, 185, 129, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #10b981 !important;
-}
-
-.cor-azul-escuro { 
-    background: linear-gradient(180deg, rgba(59, 130, 246, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-    border-top: 3px solid #3b82f6 !important;
-}
-
-.cor-cinza { 
-    background: linear-gradient(180deg, rgba(100, 116, 139, 0.3) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
-}
-
-.border-top { 
-    border-top: 1px solid #23354d; 
-}
+.border-top { border-top: 1px solid #23354d; }
