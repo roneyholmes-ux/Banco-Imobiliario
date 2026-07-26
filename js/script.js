@@ -8,7 +8,7 @@ const GAME_CONFIG = {
     impostoRenda: 2000,         // Imposto de Renda
     taxaLuxo: 1000,             // Taxa de Luxo
     fiancaPrisao: 500,          // Valor da fiança
-    tradeFeePercent: 0.10       // Taxa de troca (10% de taxa cobrada pelo Banco sobre dinheiros trocados)
+    tradeFeePercent: 0.10       // Taxa de troca (10% de taxa cobrada pelo Banco)
 };
 
 // Cartas de Sorte ou Revés
@@ -20,7 +20,6 @@ const CARDS = [
 ];
 
 // Lista oficial das 40 casas
-// tokenType define qual Ficha de Grandeza é exigida ("discreta" ou "continua")
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
     { id: 1, name: "Raio", type: "property", color: "cor-roxo", price: 100, rent: 10, owner: null, tokenType: "continua" },
@@ -96,15 +95,13 @@ function getGridPosition(index) {
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
-    document.querySelectorAll(".space").forEach(e => e.remove());
+    if (!boardElement) return;
+    boardElement.innerHTML = "";
     
-    let boardCenter = document.querySelector(".board-center");
-    if (!boardCenter) {
-        boardCenter = document.createElement("div");
-        boardCenter.className = "board-center";
-        boardCenter.innerText = "MUNDO";
-        boardElement.appendChild(boardCenter);
-    }
+    let boardCenter = document.createElement("div");
+    boardCenter.className = "board-center";
+    boardCenter.innerText = "MUNDO";
+    boardElement.appendChild(boardCenter);
 
     boardSpaces.forEach((space) => {
         const spaceDiv = document.createElement("div");
@@ -130,6 +127,7 @@ function renderBoard() {
         if (space.price) {
             const priceText = document.createElement("div");
             priceText.id = `price-label-${space.id}`;
+            priceText.className = "space-price";
             priceText.innerText = `$${space.price}`;
             priceText.style.marginTop = "auto";
             spaceDiv.appendChild(priceText);
@@ -162,35 +160,33 @@ function renderPawns() {
 
 function updateUI() {
     const playersList = document.getElementById("players-list");
+    if (!playersList) return;
     playersList.innerHTML = "";
     
     players.forEach((p, idx) => {
         const row = document.createElement("div");
-        row.className = "player-row";
+        row.className = "player-card";
         
         if (p.isBankrupt) {
             row.style.opacity = "0.4";
             row.style.textDecoration = "line-through";
             row.style.borderLeft = `5px solid #555`;
-            row.style.padding = "8px";
             row.innerHTML = `<span>${p.name} (💥 Faliu)</span> <span>$0</span>`;
         } else {
             if (idx === currentPlayerIndex) {
-                row.style.fontWeight = "bold";
-                row.style.backgroundColor = "rgba(255,255,255,0.15)";
-                row.style.borderRadius = "5px";
+                row.classList.add("active-turn");
             }
             row.style.borderLeft = `5px solid ${p.color}`;
-            row.style.padding = "8px";
-            row.style.flexDirection = "column";
-            row.style.alignItems = "flex-start";
             
             row.innerHTML = `
-                <div style="display: flex; justify-content: space-between; width: 100%;">
-                    <span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span>
-                    <span>$${p.money}</span>
+                <div class="player-header">
+                    <span class="player-name">
+                        <span class="player-dot" style="background-color: ${p.color}"></span>
+                        ${p.name} ${idx === currentPlayerIndex ? "👉" : ""}
+                    </span>
+                    <span class="player-money">$${p.money}</span>
                 </div>
-                <div style="font-size: 0.75rem; color: #ddd; margin-top: 3px;">
+                <div style="font-size: 0.8rem; color: #ddd; margin-top: 5px;">
                     Fichas: 🔵 Discreta: <strong>${p.tokens.discreta}</strong> | 🔴 Contínua: <strong>${p.tokens.continua}</strong>
                 </div>
             `;
@@ -201,24 +197,31 @@ function updateUI() {
     const rollButton = document.getElementById("rollDice");
     let tradeButton = document.getElementById("btn-open-trade");
     
-    if (!tradeButton && rollButton) {
+    if (!tradeButton && rollButton && rollButton.parentNode) {
         tradeButton = document.createElement("button");
         tradeButton.id = "btn-open-trade";
         tradeButton.innerText = "🤝 Negociar";
-        tradeButton.style = `
-            padding: 10px 20px; font-size: 1.1rem; font-weight: bold;
-            background: #2e7d32; color: white; border: none; border-radius: 5px;
-            cursor: pointer; margin-left: 10px; transition: all 0.2s ease;
-        `;
+        tradeButton.style.padding = "14px";
+        tradeButton.style.fontSize = "1.1rem";
+        tradeButton.style.fontWeight = "bold";
+        tradeButton.style.backgroundColor = "#2e7d32";
+        tradeButton.style.color = "white";
+        tradeButton.style.border = "none";
+        tradeButton.style.borderRadius = "8px";
+        tradeButton.style.cursor = "pointer";
+        tradeButton.style.transition = "all 0.2s ease";
         tradeButton.addEventListener("click", openTradeModal);
-        rollButton.parentNode.insertBefore(tradeButton, rollButton.nextSibling);
+        rollButton.parentNode.appendChild(tradeButton);
     }
 
-    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt) {
-        if (rollButton) { rollButton.disabled = true; rollButton.style.opacity = "0.5"; rollButton.style.cursor = "not-allowed"; }
+    const isCurrentInJail = players[currentPlayerIndex]?.inJail;
+    const isCurrentBankrupt = players[currentPlayerIndex]?.isBankrupt;
+
+    if (isMoving || awaitingDecision || isCurrentBankrupt) {
+        if (rollButton) { rollButton.disabled = true; }
         if (tradeButton) { tradeButton.disabled = true; tradeButton.style.opacity = "0.5"; tradeButton.style.cursor = "not-allowed"; }
     } else {
-        if (rollButton) { rollButton.disabled = false; rollButton.style.opacity = "1"; rollButton.style.cursor = "pointer"; }
+        if (rollButton) { rollButton.disabled = false; }
         if (tradeButton) { tradeButton.disabled = false; tradeButton.style.opacity = "1"; tradeButton.style.cursor = "pointer"; }
     }
 }
@@ -233,7 +236,10 @@ async function movePlayer(playerIndex, steps) {
         
         if (player.position === 0) {
             player.money += GAME_CONFIG.goBonus;
-            document.getElementById("game-status").innerText = `${player.name} passou pelo início e ganhou $${GAME_CONFIG.goBonus}!`;
+            // Bônus adicional ao passar na PARTIDA: ganha 1 ficha de cada tipo
+            player.tokens.discreta += 1;
+            player.tokens.continua += 1;
+            document.getElementById("game-status").innerText = `${player.name} passou pela PARTIDA, ganhou $${GAME_CONFIG.goBonus} e +1 Ficha de cada tipo!`;
             updateUI();
         }
 
@@ -304,7 +310,7 @@ function handleLanding(player) {
 
 function handleGrandezaSpaceLanding(player, space) {
     const tokenType = space.tokenType; // 'discreta' ou 'continua'
-    const tokenName = tokenType === 'discreta' ? 'Ficha de Grandeza Discreta' : 'Ficha de Grandeza Contínua';
+    const tokenName = tokenType === 'discreta' ? 'Ficha Discreta' : 'Ficha Contínua';
 
     // CASO 1: Sem dono -> Jogador pode comprar e ganha 1 ficha de graça
     if (space.owner === null) {
@@ -330,7 +336,7 @@ function handleGrandezaSpaceLanding(player, space) {
                 player.tokens[tokenType] += 1; // Ganha 1 ficha de graça!
 
                 const spaceDiv = document.getElementById(`space-${space.id}`);
-                spaceDiv.style.border = `3px dashed ${player.color}`;
+                if (spaceDiv) spaceDiv.style.border = `3px dashed ${player.color}`;
                 
                 const priceLabel = document.getElementById(`price-label-${space.id}`);
                 if (priceLabel) {
@@ -354,7 +360,7 @@ function handleGrandezaSpaceLanding(player, space) {
             nextTurn();
         });
     } 
-    // CASO 2: O dono caiu na própria casa -> Não paga nada e ganha 1 ficha sozinho
+    // CASO 2: O dono caiu na própria casa -> Ganha 1 ficha sozinho
     else if (space.owner === player.id) {
         player.tokens[tokenType] += 1;
         const statusDiv = document.getElementById("game-status");
@@ -373,7 +379,7 @@ function handleGrandezaSpaceLanding(player, space) {
             nextTurn();
         });
     } 
-    // CASO 3: Outro jogador caiu na casa -> Pode pagar o aluguel OU dar 1 Ficha para TODOS os jogadores
+    // CASO 3: Outro jogador caiu na casa -> Pode pagar o aluguel OU dar 1 Ficha para TODOS
     else {
         const owner = players.find(p => p.id === space.owner);
         const rentAmount = space.rent;
@@ -381,7 +387,7 @@ function handleGrandezaSpaceLanding(player, space) {
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
             <div style="margin-bottom: 10px; color: #ffa502;">
-                ⚠️ ${player.name} caiu em <strong>${space.name}</strong> (Dono: ${owner.name}).<br>
+                ⚠️ ${player.name} caiu em <strong>${space.name}</strong> (Dono: ${owner ? owner.name : 'Banco'}).<br>
                 Escolha a sua ação:
             </div>
             <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
@@ -399,14 +405,14 @@ function handleGrandezaSpaceLanding(player, space) {
 
         document.getElementById("btn-g-pay-rent").addEventListener("click", () => {
             player.money -= rentAmount;
-            owner.money += rentAmount;
+            if (owner) owner.money += rentAmount;
 
             if (player.money < 0) {
-                checkBankruptcy(player, owner.id);
+                checkBankruptcy(player, owner ? owner.id : null);
                 return;
             }
 
-            document.getElementById("game-status").innerText = `${player.name} pagou $${rentAmount} de taxa para ${owner.name}.`;
+            document.getElementById("game-status").innerText = `${player.name} pagou $${rentAmount} de taxa para ${owner ? owner.name : 'o Banco'}.`;
             awaitingDecision = false;
             nextTurn();
         });
@@ -426,7 +432,7 @@ function handleGrandezaSpaceLanding(player, space) {
 }
 
 // ==========================================
-// COMPRAS DE PROPRIEDADES NORMAIS (Exige Ficha de Grandeza)
+// COMPRAS DE PROPRIEDADES NORMAIS (Exige Ficha)
 // ==========================================
 
 function showPurchaseModal(player, space) {
@@ -439,8 +445,8 @@ function showPurchaseModal(player, space) {
         <div style="margin-bottom: 10px;">
             ${player.name} caiu em <strong>${space.name}</strong>!<br>
             Custo: <strong>$${space.price} + 1 ${tokenName}</strong>.<br>
-            <small style="color: ${playerHasToken ? '#2ed573' : '#ff4757'};">
-                ${playerHasToken ? `✅ Você possui ${player.tokens[tokenType]} ${tokenName}(s)` : `❌ Você NÃO tem ${tokenName} necessária para comprar!`}
+            <small style="color: ${playerHasToken ? '#2ed573' : '#ff4757'}; font-weight: bold;">
+                ${playerHasToken ? `✅ Você possui ${player.tokens[tokenType]} ${tokenName}(s)` : `❌ Você NÃO tem a ${tokenName} necessária!`}
             </small>
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
@@ -460,7 +466,7 @@ function showPurchaseModal(player, space) {
                 space.owner = player.id;
                 
                 const spaceDiv = document.getElementById(`space-${space.id}`);
-                spaceDiv.style.border = `3px dashed ${player.color}`;
+                if (spaceDiv) spaceDiv.style.border = `3px dashed ${player.color}`;
                 
                 const priceLabel = document.getElementById(`price-label-${space.id}`);
                 if (priceLabel) {
@@ -487,7 +493,7 @@ function showPurchaseModal(player, space) {
 }
 
 // ==========================================
-// CONSTRUÇÃO DE MELHORIAS (Exige Ficha de Grandeza)
+// CONSTRUÇÃO DE MELHORIAS
 // ==========================================
 
 function showBuildModal(player, space) {
@@ -542,7 +548,7 @@ function showBuildModal(player, space) {
 }
 
 // ==========================================
-// OUTRAS AÇÕES DE TABULEIRO E AUXILIARES
+// AUXILIARES DE TABULEIRO
 // ==========================================
 
 function payFlatTax(player, amount, taxName) {
@@ -623,15 +629,15 @@ function payRent(player, space) {
     const rentAmount = calculateCurrentRent(space);
     
     player.money -= rentAmount;
-    owner.money += rentAmount;
+    if (owner) owner.money += rentAmount;
     
-    if (player.money < 0) { checkBankruptcy(player, owner.id); return; }
+    if (player.money < 0) { checkBankruptcy(player, owner ? owner.id : null); return; }
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; color: #c62828;">
             💸 <strong>Aluguel!</strong><br>
-            ${player.name} pagou <strong>$${rentAmount}</strong> para ${owner.name}!
+            ${player.name} pagou <strong>$${rentAmount}</strong> para ${owner ? owner.name : 'o Banco'}!
         </div>
         <button id="btn-confirm-rent" style="padding: 6px 15px; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok</button>
     `;
@@ -805,12 +811,14 @@ function initializePlayers(quantity) {
             inJail: false,
             jailTurns: 0,
             isBankrupt: false,
-            tokens: { discreta: 0, continua: 0 } // Fichas iniciais
+            // Cada jogador começa com 2 fichas de cada tipo para dinamizar o jogo
+            tokens: { discreta: 2, continua: 2 } 
         });
     }
     
     boardSpaces.forEach(space => {
         if (space.type === "property") space.houses = 0;
+        space.owner = null;
     });
 
     const gameArea = document.getElementById("game-section-area");
@@ -839,7 +847,7 @@ function calculateCurrentRent(space) {
     else if (space.houses === 3) finalRent = space.rent * 40;
     else if (space.houses === 4) finalRent = space.rent * 80;
     else if (space.houses === 5) finalRent = space.rent * 120;
-    else if (hasMonopoly(owner, space.color)) finalRent = space.rent * 2;
+    else if (owner && hasMonopoly(owner, space.color)) finalRent = space.rent * 2;
 
     return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
 }
@@ -911,19 +919,23 @@ function showWinModal(winner) {
 }
 
 // ==========================================
-// SISTEMA DE TROCAS (TRADE) COM TAXA DE TROCA
+// SISTEMA DE TROCAS (TRADE) COM FICHAS
 // ==========================================
 
 function openTradeModal() {
     const proposer = players[currentPlayerIndex];
     const otherPlayers = players.filter(p => p.id !== proposer.id && !p.isBankrupt);
-    if (otherPlayers.length === 0) return;
+    
+    if (otherPlayers.length === 0) {
+        alert("Não há outros jogadores ativos para negociar!");
+        return;
+    }
 
     const overlay = document.createElement("div");
     overlay.id = "trade-overlay";
     overlay.style = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
+        background: rgba(0, 0, 0, 0.85); display: flex; justify-content: center;
         align-items: center; z-index: 10000; font-family: 'Montserrat', sans-serif;
     `;
 
@@ -936,11 +948,11 @@ function openTradeModal() {
     tradeBox.innerHTML = `
         <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.5rem;">🤝 Negociação de Mercado</h3>
         <p style="text-align:center; font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">
-            ℹ️ O Banco cobra uma <strong>Taxa de Troca de 10%</strong> sobre quantias em dinheiro negociadas.
+            ℹ️ Taxa do Banco de <strong>10%</strong> cobrada apenas sobre quantias em dinheiro negociadas.
         </p>
 
         <div style="margin-bottom: 15px;">
-            <label style="font-weight: bold;">Negociar com:</label>
+            <label style="font-weight: bold; display: block; margin-bottom: 5px;">Negociar com:</label>
             <select id="trade-receiver-select" style="width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 5px;"></select>
         </div>
 
@@ -948,33 +960,33 @@ function openTradeModal() {
             <!-- O QUE VOCÊ OFERECE -->
             <div style="background: #2b2b2b; padding: 12px; border-radius: 8px;">
                 <h4 style="margin: 0 0 10px 0; color: #1e90ff;">Você Oferece:</h4>
-                <label style="font-size: 0.85rem;">Dinheiro ($):</label>
-                <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                <label style="font-size: 0.85rem; display: block;">Dinheiro ($):</label>
+                <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px; border-radius: 4px;">
                 
-                <label style="font-size: 0.85rem; display: block;">Fichas Discretas:</label>
-                <input type="number" id="trade-offer-disc" value="0" min="0" max="${proposer.tokens.discreta}" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                <label style="font-size: 0.85rem; display: block;">Fichas Discretas (Máx: ${proposer.tokens.discreta}):</label>
+                <input type="number" id="trade-offer-disc" value="0" min="0" max="${proposer.tokens.discreta}" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px; border-radius: 4px;">
                 
-                <label style="font-size: 0.85rem; display: block;">Fichas Contínuas:</label>
-                <input type="number" id="trade-offer-cont" value="0" min="0" max="${proposer.tokens.continua}" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                <label style="font-size: 0.85rem; display: block;">Fichas Contínuas (Máx: ${proposer.tokens.continua}):</label>
+                <input type="number" id="trade-offer-cont" value="0" min="0" max="${proposer.tokens.continua}" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px; border-radius: 4px;">
 
                 <label style="font-size: 0.85rem; display: block;">Propriedade:</label>
-                <select id="trade-offer-prop" style="width: 100%; padding: 5px; background: #444; color: white; border: 1px solid #555;"></select>
+                <select id="trade-offer-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
 
             <!-- O QUE VOCÊ PEDE -->
             <div style="background: #2b2b2b; padding: 12px; border-radius: 8px;">
                 <h4 style="margin: 0 0 10px 0; color: #ff4757;">Você Pede:</h4>
-                <label style="font-size: 0.85rem;">Dinheiro ($):</label>
-                <input type="number" id="trade-request-money" value="0" min="0" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                <label style="font-size: 0.85rem; display: block;">Dinheiro ($):</label>
+                <input type="number" id="trade-request-money" value="0" min="0" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px; border-radius: 4px;">
                 
                 <label style="font-size: 0.85rem; display: block;">Fichas Discretas:</label>
-                <input type="number" id="trade-request-disc" value="0" min="0" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                <input type="number" id="trade-request-disc" value="0" min="0" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px; border-radius: 4px;">
                 
                 <label style="font-size: 0.85rem; display: block;">Fichas Contínuas:</label>
-                <input type="number" id="trade-request-cont" value="0" min="0" style="width: 90%; padding: 5px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px;">
+                <input type="number" id="trade-request-cont" value="0" min="0" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; margin-bottom: 8px; border-radius: 4px;">
 
                 <label style="font-size: 0.85rem; display: block;">Propriedade:</label>
-                <select id="trade-request-prop" style="width: 100%; padding: 5px; background: #444; color: white; border: 1px solid #555;"></select>
+                <select id="trade-request-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
         </div>
 
@@ -996,7 +1008,9 @@ function openTradeModal() {
     });
 
     function updatePropertiesDropdowns() {
-        const receiver = players.find(p => p.id === parseInt(receiverSelect.value));
+        const receiverId = parseInt(receiverSelect.value);
+        const receiver = players.find(p => p.id === receiverId);
+        if (!receiver) return;
 
         offerPropSelect.innerHTML = `<option value="">Nenhuma</option>`;
         boardSpaces.forEach(space => {
@@ -1019,32 +1033,44 @@ function openTradeModal() {
     document.getElementById("btn-trade-cancel").addEventListener("click", () => document.body.removeChild(overlay));
 
     document.getElementById("btn-trade-send").addEventListener("click", () => {
-        const receiver = players.find(p => p.id === parseInt(receiverSelect.value));
+        const receiverId = parseInt(receiverSelect.value);
+        const receiver = players.find(p => p.id === receiverId);
         
-        const offerMoney = parseInt(document.getElementById("trade-offer-money").value) || 0;
-        const offerDisc = parseInt(document.getElementById("trade-offer-disc").value) || 0;
-        const offerCont = parseInt(document.getElementById("trade-offer-cont").value) || 0;
+        const offerMoney = Math.max(0, parseInt(document.getElementById("trade-offer-money").value) || 0);
+        const offerDisc = Math.max(0, parseInt(document.getElementById("trade-offer-disc").value) || 0);
+        const offerCont = Math.max(0, parseInt(document.getElementById("trade-offer-cont").value) || 0);
         const offerPropId = offerPropSelect.value !== "" ? parseInt(offerPropSelect.value) : null;
 
-        const requestMoney = parseInt(document.getElementById("trade-request-money").value) || 0;
-        const requestDisc = parseInt(document.getElementById("trade-request-disc").value) || 0;
-        const requestCont = parseInt(document.getElementById("trade-request-cont").value) || 0;
+        const requestMoney = Math.max(0, parseInt(document.getElementById("trade-request-money").value) || 0);
+        const requestDisc = Math.max(0, parseInt(document.getElementById("trade-request-disc").value) || 0);
+        const requestCont = Math.max(0, parseInt(document.getElementById("trade-request-cont").value) || 0);
         const requestPropId = requestPropSelect.value !== "" ? parseInt(requestPropSelect.value) : null;
 
+        const offerFee = Math.round(offerMoney * GAME_CONFIG.tradeFeePercent);
+        const requestFee = Math.round(requestMoney * GAME_CONFIG.tradeFeePercent);
+
         // Validações
-        if (offerMoney > proposer.money || offerDisc > proposer.tokens.discreta || offerCont > proposer.tokens.continua) {
-            alert("Você não possui os recursos ou fichas suficientes ofertados!");
+        if (offerMoney + offerFee > proposer.money) {
+            alert(`Você não tem dinheiro suficiente para essa oferta + taxa ($${offerFee})!`);
             return;
         }
-        if (requestMoney > receiver.money || requestDisc > receiver.tokens.discreta || requestCont > receiver.tokens.continua) {
-            alert("O outro jogador não possui os recursos requisitados!");
+        if (offerDisc > proposer.tokens.discreta || offerCont > proposer.tokens.continua) {
+            alert("Você não possui o número de fichas ofertado!");
+            return;
+        }
+        if (requestMoney + requestFee > receiver.money) {
+            alert("O outro jogador não possui dinheiro suficiente para cobrir o valor solicitado + taxa!");
+            return;
+        }
+        if (requestDisc > receiver.tokens.discreta || requestCont > receiver.tokens.continua) {
+            alert("O outro jogador não possui o número de fichas solicitado!");
             return;
         }
 
         document.body.removeChild(overlay);
         executeTradeProposalUI(proposer, receiver, {
-            offerMoney, offerDisc, offerCont, offerPropId,
-            requestMoney, requestDisc, requestCont, requestPropId
+            offerMoney, offerDisc, offerCont, offerPropId, offerFee,
+            requestMoney, requestDisc, requestCont, requestPropId, requestFee
         });
     });
 }
@@ -1053,16 +1079,12 @@ function executeTradeProposalUI(proposer, receiver, data) {
     const offerProp = data.offerPropId !== null ? boardSpaces.find(s => s.id === data.offerPropId) : null;
     const requestProp = data.requestPropId !== null ? boardSpaces.find(s => s.id === data.requestPropId) : null;
 
-    // Cálculo da taxa de troca
-    const offerFee = Math.round(data.offerMoney * GAME_CONFIG.tradeFeePercent);
-    const requestFee = Math.round(data.requestMoney * GAME_CONFIG.tradeFeePercent);
-
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; background: #1e1e1e; padding: 12px; border-radius: 8px; border: 2px dashed #2e7d32;">
             🤝 <strong>Proposta de Negócio para ${receiver.name}!</strong><br><br>
-            <strong>${proposer.name} oferece:</strong> $${data.offerMoney} ${offerFee > 0 ? `(Taxa Banco: $${offerFee})` : ''}, ${data.offerDisc} F.Discreta, ${data.offerCont} F.Contínua, ${offerProp ? offerProp.name : 'Nenhuma Prop.'}<br>
-            <strong>Em troca de:</strong> $${data.requestMoney} ${requestFee > 0 ? `(Taxa Banco: $${requestFee})` : ''}, ${data.requestDisc} F.Discreta, ${data.requestCont} F.Contínua, ${requestProp ? requestProp.name : 'Nenhuma Prop.'}
+            <strong>${proposer.name} oferece:</strong> $${data.offerMoney} ${data.offerFee > 0 ? `(Taxa: $${data.offerFee})` : ''}, ${data.offerDisc} F.Discreta, ${data.offerCont} F.Contínua, ${offerProp ? offerProp.name : 'Nenhuma Prop.'}<br>
+            <strong>Em troca de:</strong> $${data.requestMoney} ${data.requestFee > 0 ? `(Taxa: $${data.requestFee})` : ''}, ${data.requestDisc} F.Discreta, ${data.requestCont} F.Contínua, ${requestProp ? requestProp.name : 'Nenhuma Prop.'}
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button id="btn-accept-trade" style="padding: 6px 15px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Aceitar</button>
@@ -1074,39 +1096,51 @@ function executeTradeProposalUI(proposer, receiver, data) {
     updateUI();
 
     document.getElementById("btn-accept-trade").addEventListener("click", () => {
-        // Transfere e aplica taxas do banco
-        proposer.money -= (data.offerMoney + offerFee);
+        // Transfere dinheiro e aplica taxas
+        proposer.money -= (data.offerMoney + data.offerFee);
         receiver.money += data.offerMoney;
 
-        receiver.money -= (data.requestMoney + requestFee);
+        receiver.money -= (data.requestMoney + data.requestFee);
         proposer.money += data.requestMoney;
 
-        // Fichas
-        proposer.tokens.discreta += (data.requestDisc - data.offerDisc);
-        proposer.tokens.continua += (data.requestCont - data.offerCont);
-        receiver.tokens.discreta += (data.offerDisc - data.requestDisc);
-        receiver.tokens.continua += (data.offerCont - data.requestCont);
+        // Transfere Fichas
+        proposer.tokens.discreta = proposer.tokens.discreta - data.offerDisc + data.requestDisc;
+        proposer.tokens.continua = proposer.tokens.continua - data.offerCont + data.requestCont;
 
-        // Propriedades
-        if (offerProp) offerProp.owner = receiver.id;
-        if (requestProp) requestProp.owner = proposer.id;
+        receiver.tokens.discreta = receiver.tokens.discreta - data.requestDisc + data.offerDisc;
+        receiver.tokens.continua = receiver.tokens.continua - data.requestCont + data.offerCont;
 
-        statusDiv.innerHTML = `<div style="color: #2ed573;">🤝 Troca concluída com sucesso (Taxas aplicadas)!</div>`;
+        // Transfere Propriedades
+        if (offerProp) {
+            offerProp.owner = receiver.id;
+            const spaceDiv = document.getElementById(`space-${offerProp.id}`);
+            if (spaceDiv) spaceDiv.style.border = `3px dashed ${receiver.color}`;
+        }
+        if (requestProp) {
+            requestProp.owner = proposer.id;
+            const spaceDiv = document.getElementById(`space-${requestProp.id}`);
+            if (spaceDiv) spaceDiv.style.border = `3px dashed ${proposer.color}`;
+        }
+
+        statusDiv.innerHTML = `<div style="color: #2ed573;">🤝 Troca concluída com sucesso! Fichas e recursos transferidos.</div>`;
         awaitingDecision = false;
         updateUI();
         setTimeout(() => { nextTurn(); }, 1500);
     });
 
     document.getElementById("btn-decline-trade").addEventListener("click", () => {
-        statusDiv.innerHTML = `<div style="color: #ff4757;">❌ Troca recusada.</div>`;
+        statusDiv.innerHTML = `<div style="color: #ff4757;">❌ Troca recusada por ${receiver.name}.</div>`;
         awaitingDecision = false;
         updateUI();
         setTimeout(() => { nextTurn(); }, 1500);
     });
 }
 
-// Inicialização
+// Inicialização automática ao carregar a página
 window.onload = () => {
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) rollBtn.addEventListener("click", rollDice);
+    
+    // Inicia o setup para criar a partida
+    startPlayerSetup();
 };
