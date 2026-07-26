@@ -7,7 +7,8 @@ const GAME_CONFIG = {
     rentMultiplier: 1.0,        // Multiplicador global de aluguéis
     impostoRenda: 2000,         // Valor cobrado na casa Imposto de Renda
     taxaLuxo: 1000,             // Valor cobrado na casa Taxa de Luxo
-    fiancaPrisao: 500           // Valor para pagar e sair da prisão
+    fiancaPrisao: 500,          // Valor para pagar e sair da prisão
+    taxaTroca: 200              // 🆕 Taxa cobrada pelo banco ao realizar trocas entre jogadores
 };
 
 // ==========================================
@@ -20,51 +21,62 @@ const CARDS = [
     { text: "Revés! Multa por excesso de velocidade. Pague $30", type: "pay", value: 30 }
 ];
 
-// Lista oficial de todas as 40 casas do Banco Imobiliário clássico
+// ==========================================
+// Mapeamento do Tipo de Grandeza Exigido para Melhorias/Construções
+// 🧠 Regra Didática:
+// - Discreta: Propriedades contáveis (ex: Número de Exercícios, Pessoas, etc.)
+// - Contínua: Propriedades mensuráveis em escala contínua (ex: Área do Círculo, Horas de Estudo, Pressão Atmosférica)
+// ==========================================
+const PROPERTY_GRANDEZA_TYPES = {
+    "discreta": ["Rua Augusta", "Av. Pacaembu", "Av. Brasil", "Av. Brigadeiro"],
+    "continua": ["Av. do Estado", "Av. Novo Estado", "Av. Europa", "Av. Paulista", "Av. Interlagos"]
+};
+
+// Lista de casas atualizada incluindo as casas geradoras de Grandezas
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Raio", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
+    { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null, grandezaType: "continua" },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Área do círculo", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null },
+    { id: 3, name: "Grandeza Discreta", type: "grandeza", color: "cor-cinza", price: 300, rent: 50, owner: null, grandezaKind: "discreta" },
     { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Grandeza Contínua", type: "station", price: 200, rent: 20, owner: null },
-    { id: 6, name: "Número de indivíduos", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null },
+    { id: 5, name: "Estação Carioca", type: "station", price: 200, rent: 20, owner: null },
+    { id: 6, name: "Av. Brigadeiro", type: "property", color: "cor-azul-claro", price: 120, rent: 12, owner: null, grandezaType: "discreta" },
     { id: 7, name: "Sorte ou Revés", type: "special" },
-    { id: 8, name: "Taxa de natalidade", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
-    { id: 9, name: "axa de mortalidade", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
+    { id: 8, name: "Av. Rebouças", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
+    { id: 9, name: "Av. 9 de Julho", type: "property", color: "cor-azul-claro", price: 140, rent: 14, owner: null },
     
     { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Desempenho", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null },
+    { id: 11, name: "Av. Europa", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null, grandezaType: "continua" },
     { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 13, name: "Número de exercícios", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null },
-    { id: 14, name: "Horas de estudo", type: "property", color: "cor-roxo", price: 180, rent: 18, owner: null },
+    { id: 13, name: "Rua Augusta", type: "property", color: "cor-roxo", price: 160, rent: 16, owner: null, grandezaType: "discreta" },
+    { id: 14, name: "Av. Pacaembu", type: "property", color: "cor-roxo", price: 180, rent: 18, owner: null, grandezaType: "discreta" },
     { id: 15, name: "Estação da Luz", type: "station", price: 200, rent: 20, owner: null },
-    { id: 16, name: "Tempo de uso", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
+    { id: 16, name: "Grandeza Contínua", type: "grandeza", color: "cor-cinza", price: 300, rent: 50, owner: null, grandezaKind: "continua" },
     { id: 17, name: "Sorte ou Revés", type: "special" },
-    { id: 18, name: "Potência", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
-    { id: 19, name: "Consumo elétrico", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null },
+    { id: 18, name: "Av. Ipiranga", type: "property", color: "cor-laranja", price: 200, rent: 20, owner: null },
+    { id: 19, name: "Av. Rio Branco", type: "property", color: "cor-laranja", price: 220, rent: 22, owner: null },
     
     { id: 20, name: "PARADA LIVRE", type: "special", cssClass: "corner-space" },
-    { id: 21, name: "Preço", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
+    { id: 21, name: "Av. Paulista", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null, grandezaType: "continua" },
     { id: 22, name: "Sorte ou Revés", type: "special" },
-    { id: 23, name: "Demanda", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null },
-    { id: 24, name: "Produção", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null },
-    { id: 25, name: "Grandeza Discreta", type: "station", price: 200, rent: 20, owner: null },
-    { id: 26, name: "Pressão atmosférica", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
+    { id: 23, name: "Av. Brasil", type: "property", color: "cor-vermelho", price: 240, rent: 24, owner: null, grandezaType: "discreta" },
+    { id: 24, name: "Av. Brigadeiro", type: "property", color: "cor-vermelho", price: 260, rent: 26, owner: null },
+    { id: 25, name: "Estação Barra Funda", type: "station", price: 200, rent: 20, owner: null },
+    { id: 26, name: "Copacabana", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
     { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 28, name: "Umidade do ar", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
-    { id: 29, name: "Temperatura", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
+    { id: 28, name: "Av. Vieira Souto", type: "property", color: "cor-amarelo", price: 280, rent: 28, owner: null },
+    { id: 29, name: "Ipanema", type: "property", color: "cor-amarelo", price: 300, rent: 30, owner: null },
     
     { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Vazão de Água", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
-    { id: 32, name: "Volume de Reservatório", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 31, name: "Jardim Europa", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
+    { id: 32, name: "Jardim América", type: "property", color: "cor-verde", price: 320, rent: 32, owner: null },
     { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Massa Total", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null },
+    { id: 34, name: "Av. Interlagos", type: "property", color: "cor-verde", price: 350, rent: 35, owner: null, grandezaType: "continua" },
     { id: 35, name: "Estação Brás", type: "station", price: 200, rent: 20, owner: null },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Área", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
+    { id: 37, name: "Av. Morumbi", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Lado do quadrado", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
+    { id: 39, name: "Av. Lineu de Paula", type: "property", color: "cor-azul-escuro", price: 400, rent: 40, owner: null }
 ];
 
 const PLAYER_PRESETS = [
@@ -95,7 +107,6 @@ function getGridPosition(index) {
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
-    
     document.querySelectorAll(".space").forEach(e => e.remove());
     
     boardSpaces.forEach((space) => {
@@ -107,7 +118,7 @@ function renderBoard() {
         spaceDiv.style.gridRow = pos.row;
         spaceDiv.style.gridColumn = pos.col;
         
-        if (space.type === "property" || space.type === "station" || space.type === "utility") {
+        if (space.type === "property" || space.type === "station" || space.type === "utility" || space.type === "grandeza") {
             const tag = document.createElement("div");
             tag.className = `property-tag ${space.color || 'cor-cinza'}`;
             tag.id = `tag-${space.id}`;
@@ -174,7 +185,15 @@ function updateUI() {
             }
             row.style.borderLeft = `5px solid ${p.color}`;
             row.style.padding = "8px";
-            row.innerHTML = `<span>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</span> <span>$${p.money}</span>`;
+            row.innerHTML = `
+                <div>
+                    <div>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</div>
+                    <div style="font-size: 0.8rem; color: #ddd; margin-top: 3px;">
+                        🎲 Discretas: <strong>${p.fichasDiscreta}</strong> | 📈 Contínuas: <strong>${p.fichasContinua}</strong>
+                    </div>
+                </div>
+                <span style="font-size: 1.1rem; font-weight: bold;">$${p.money}</span>
+            `;
         }
         playersList.appendChild(row);
     });
@@ -226,21 +245,54 @@ async function movePlayer(playerIndex, steps) {
     handleLanding(player);
 }
 
+// ==========================================
+// TRATAMENTO DA CHEGADA NAS CASAS (LANDING)
+// ==========================================
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
-    const purchaseableTypes = ["property", "station", "utility"];
+    const purchaseableTypes = ["property", "station", "utility", "grandeza"];
 
     if (purchaseableTypes.includes(currentSpace.type)) {
+        // CASO 1: A casa não tem dono -> Opção de compra
         if (currentSpace.owner === null) {
             awaitingDecision = true;
             updateUI();
             showPurchaseModal(player, currentSpace);
             return; 
-        } else if (currentSpace.owner !== player.id) {
-            payRent(player, currentSpace);
+        } 
+        // CASO 2: A casa pertence a OUTRO jogador -> Decisão do Aluguel vs Fichas Globais
+        else if (currentSpace.owner !== player.id) {
+            if (currentSpace.type === "grandeza") {
+                handleGrandezaLandingOtherPlayer(player, currentSpace);
+            } else {
+                payRent(player, currentSpace);
+            }
             return; 
-        } else {
-            if (currentSpace.type === "property" && hasMonopoly(player, currentSpace.color)) {
+        } 
+        // CASO 3: O DONO cai na própria casa -> Ganha 1 Ficha de graça sem pagar taxa
+        else {
+            if (currentSpace.type === "grandeza") {
+                const kind = currentSpace.grandezaKind;
+                if (kind === "discreta") player.fichasDiscreta += 1;
+                else player.fichasContinua += 1;
+
+                const statusDiv = document.getElementById("game-status");
+                statusDiv.innerHTML = `
+                    <div style="margin-bottom: 10px; color: #2ed573;">
+                        👑 <strong>Sua propriedade de Grandeza!</strong><br>
+                        ${player.name} visitou sua casa de <strong>${currentSpace.name}</strong>. Não paga nada e ganhou <strong>1 Ficha de Grandeza ${kind.toUpperCase()}</strong>!
+                    </div>
+                    <button id="btn-owner-ok" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Excelente!</button>
+                `;
+                awaitingDecision = true;
+                updateUI();
+
+                document.getElementById("btn-owner-ok").addEventListener("click", () => {
+                    awaitingDecision = false;
+                    nextTurn();
+                });
+                return;
+            } else if (currentSpace.type === "property" && hasMonopoly(player, currentSpace.color)) {
                 if (currentSpace.houses < 5) {
                     showBuildModal(player, currentSpace);
                     return;
@@ -335,6 +387,60 @@ function handleLanding(player) {
     nextTurn();
 }
 
+// 🆕 REGRA: Outro jogador cai na casa de Grandeza
+function handleGrandezaLandingOtherPlayer(player, space) {
+    const owner = players.find(p => p.id === space.owner);
+    const rentAmount = calculateCurrentRent(space);
+    const kind = space.grandezaKind;
+
+    const statusDiv = document.getElementById("game-status");
+    statusDiv.innerHTML = `
+        <div style="margin-bottom: 12px; background: #222; padding: 12px; border-radius: 8px; border: 1px solid #ffb300;">
+            📍 <strong>Você caiu em ${space.name} de ${owner.name}!</strong><br>
+            Escolha uma das ações abaixo:
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+            <button id="btn-pay-rent-g" style="padding: 8px 12px; font-size: 0.85rem; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Pagar Aluguel ($${rentAmount})
+            </button>
+            <button id="btn-give-tokens-g" style="padding: 8px 12px; font-size: 0.85rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Gerar 1 Ficha ${kind.toUpperCase()} para TODOS os Jogadores 🎁
+            </button>
+        </div>
+    `;
+
+    awaitingDecision = true;
+    updateUI();
+
+    document.getElementById("btn-pay-rent-g").addEventListener("click", () => {
+        player.money -= rentAmount;
+        owner.money += rentAmount;
+
+        if (player.money < 0) {
+            checkBankruptcy(player, owner.id);
+            return;
+        }
+
+        awaitingDecision = false;
+        document.getElementById("game-status").innerText = `${player.name} preferiu pagar o aluguel de $${rentAmount} para ${owner.name}.`;
+        nextTurn();
+    });
+
+    document.getElementById("btn-give-tokens-g").addEventListener("click", () => {
+        players.forEach(p => {
+            if (!p.isBankrupt) {
+                if (kind === "discreta") p.fichasDiscreta += 1;
+                else p.fichasContinua += 1;
+            }
+        });
+
+        awaitingDecision = false;
+        document.getElementById("game-status").innerText = `${player.name} acionou o benefício global! Todos os jogadores ganharam 1 Ficha de Grandeza ${kind.toUpperCase()}!`;
+        updateUI();
+        nextTurn();
+    });
+}
+
 function drawCard(player) {
     const randomIndex = Math.floor(Math.random() * CARDS.length);
     const card = CARDS[randomIndex];
@@ -400,10 +506,14 @@ function payRent(player, space) {
 
 function showPurchaseModal(player, space) {
     const statusDiv = document.getElementById("game-status");
+    
+    let isGrandeza = space.type === "grandeza";
+    let extraBonusText = isGrandeza ? `<br><small style="color: #2ed573;">✨ BÔNUS: Comprando esta casa, você ganha 1 Ficha de Grandeza ${space.grandezaKind.toUpperCase()} grátis!</small>` : "";
+
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px;">
             ${player.name} caiu em <strong>${space.name}</strong>!<br>
-            Preço de compra: <strong>$${space.price}</strong>. Deseja comprar?
+            Preço de compra: <strong>$${space.price}</strong>.${extraBonusText}
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button id="btn-buy-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Sim, Comprar</button>
@@ -420,6 +530,12 @@ function buyProperty(player, space) {
         player.money -= space.price;
         space.owner = player.id;
         
+        // 🆕 Bônus ao comprar primeira vez a casa de Grandeza
+        if (space.type === "grandeza") {
+            if (space.grandezaKind === "discreta") player.fichasDiscreta += 1;
+            else if (space.grandezaKind === "continua") player.fichasContinua += 1;
+        }
+
         const spaceDiv = document.getElementById(`space-${space.id}`);
         spaceDiv.style.border = `3px dashed ${player.color}`;
         
@@ -635,7 +751,9 @@ function initializePlayers(quantity) {
             color: PLAYER_PRESETS[i].color,
             inJail: false,
             jailTurns: 0,
-            isBankrupt: false
+            isBankrupt: false,
+            fichasDiscreta: 0,  // 🆕 Contador de Fichas de Grandeza Discreta
+            fichasContinua: 0   // 🆕 Contador de Fichas de Grandeza Contínua
         });
     }
     
@@ -658,7 +776,7 @@ function initializePlayers(quantity) {
 }
 
 // ==========================================
-// SISTEMA DE MONOPÓLIO E CONSTRUÇÃO DE CASAS
+// SISTEMA DE MONOPÓLIO E CONSTRUÇÃO COM FICHA DE GRANDEZA
 // ==========================================
 
 function hasMonopoly(player, colorClass) {
@@ -668,7 +786,7 @@ function hasMonopoly(player, colorClass) {
 }
 
 function calculateCurrentRent(space) {
-    if (space.type !== "property") {
+    if (space.type !== "property" && space.type !== "grandeza") {
         return space.rent;
     }
 
@@ -687,48 +805,60 @@ function calculateCurrentRent(space) {
     return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
 }
 
+// 🆕 REGRA: Construir exige dinheiro + 1 Ficha do Tipo Correto de Grandeza
 function showBuildModal(player, space) {
     const housePrice = Math.round(space.price / 2);
     const isHotel = space.houses === 4;
     const itemText = isHotel ? "um Hotel" : "uma Casa";
     
+    // Determinar qual o tipo de grandeza exigida para esta propriedade
+    const requiredType = space.grandezaType || (space.id % 2 === 0 ? "continua" : "discreta");
+    const requiredTypeLabel = requiredType === "discreta" ? "Grandeza Discreta 🎲" : "Grandeza Contínua 📈";
+    const playerHasToken = requiredType === "discreta" ? player.fichasDiscreta > 0 : player.fichasContinua > 0;
+
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px;">
-            🏰 <strong>Monopólio!</strong> Você caiu em <strong>${space.name}</strong> (${space.houses} casa(s)).<br>
-            Deseja construir ${itemText} por <strong>$${housePrice}</strong>?<br>
-            <small>Aluguel atual: $${calculateCurrentRent(space)} | Próximo aluguel: $${calculateUpcomingRent(space)}</small>
+            🏰 <strong>Monopólio!</strong> Você caiu em <strong>${space.name}</strong> (${space.houses} construções).<br>
+            Construir ${itemText} exige: <strong>$${housePrice} + 1 Ficha de ${requiredTypeLabel}</strong>.<br>
+            <small style="color: #bbb;">Seu saldo de fichas do tipo: ${requiredType === "discreta" ? player.fichasDiscreta : player.fichasContinua}</small>
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-build-yes" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer;">Sim, Construir</button>
-            <button id="btn-build-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; border: none; color: white; border-radius: 4px; cursor: pointer;">Não, Passar Vez</button>
+            <button id="btn-build-yes" ${!playerHasToken ? 'disabled style="opacity:0.5;"' : ''} style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; border: none; color: white; border-radius: 4px; cursor: pointer;">
+                ${playerHasToken ? "Construir" : "Falta Ficha de Grandeza"}
+            </button>
+            <button id="btn-build-no" style="padding: 6px 15px; font-size: 0.9rem; background: #c62828; border: none; color: white; border-radius: 4px; cursor: pointer;">Passar Vez</button>
         </div>
     `;
 
     const btnYes = document.getElementById("btn-build-yes");
     const btnNo = document.getElementById("btn-build-no");
 
-    btnYes.addEventListener("click", () => {
-        btnYes.disabled = true;
-        btnNo.disabled = true;
-        
-        if (player.money >= housePrice) {
-            player.money -= housePrice;
-            space.houses += 1;
+    if (playerHasToken) {
+        btnYes.addEventListener("click", () => {
+            btnYes.disabled = true;
+            btnNo.disabled = true;
             
-            updateSpaceVisualWithHouses(space);
-            
-            document.getElementById("game-status").innerText = `${player.name} construiu ${itemText} em ${space.name}!`;
-            awaitingDecision = false;
-            updateUI();
-            
-            setTimeout(() => { nextTurn(); }, 1500);
-        } else {
-            alert("Dinheiro insuficiente para construir!");
-            btnYes.disabled = false;
-            btnNo.disabled = false;
-        }
-    });
+            if (player.money >= housePrice) {
+                player.money -= housePrice;
+                if (requiredType === "discreta") player.fichasDiscreta -= 1;
+                else player.fichasContinua -= 1;
+
+                space.houses += 1;
+                updateSpaceVisualWithHouses(space);
+                
+                document.getElementById("game-status").innerText = `${player.name} usou 1 Ficha de ${requiredTypeLabel} e construiu ${itemText} em ${space.name}!`;
+                awaitingDecision = false;
+                updateUI();
+                
+                setTimeout(() => { nextTurn(); }, 1500);
+            } else {
+                alert("Dinheiro insuficiente para construir!");
+                btnYes.disabled = false;
+                btnNo.disabled = false;
+            }
+        });
+    }
 
     btnNo.addEventListener("click", () => {
         btnYes.disabled = true;
@@ -736,11 +866,6 @@ function showBuildModal(player, space) {
         awaitingDecision = false;
         nextTurn();
     });
-}
-
-function calculateUpcomingRent(space) {
-    const tempSpace = { ...space, houses: space.houses + 1 };
-    return calculateCurrentRent(tempSpace);
 }
 
 function updateSpaceVisualWithHouses(space) {
@@ -771,7 +896,9 @@ function updateSpaceVisualWithHouses(space) {
 function checkBankruptcy(player, creditorId) {
     player.isBankrupt = true;
     player.money = 0;
-    
+    player.fichasDiscreta = 0;
+    player.fichasContinua = 0;
+
     const statusDiv = document.getElementById("game-status");
     const creditor = creditorId !== null ? players.find(p => p.id === creditorId) : null;
     
@@ -866,7 +993,7 @@ function showWinModal(winner) {
 }
 
 // ==========================================
-// SISTEMA COMPLETO DE COMPRA E VENDA (TROCAS)
+// SISTEMA DE TROCAS COM TAXA DE NEGOCIAÇÃO E FICHAS DE GRANDEZA
 // ==========================================
 
 function openTradeModal() {
@@ -885,33 +1012,52 @@ function openTradeModal() {
     const tradeBox = document.createElement("div");
     tradeBox.style = `
         background: #1e1e1e; border: 3px solid #2e7d32; border-radius: 12px;
-        padding: 25px; color: white; max-width: 600px; width: 95%; max-height: 90vh; overflow-y: auto;
+        padding: 25px; color: white; max-width: 650px; width: 95%; max-height: 90vh; overflow-y: auto;
     `;
 
     tradeBox.innerHTML = `
-        <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.6rem; margin-bottom: 15px;">🤝 Proposta de Negócio</h3>
-        
+        <h3 style="margin-top: 0; color: #2e7d32; text-align: center; font-size: 1.6rem; margin-bottom: 5px;">🤝 Proposta de Negócio</h3>
+        <p style="text-align: center; color: #ffb300; font-size: 0.85rem; margin-bottom: 15px;">
+            ⚠️ Taxa de Corretagem do Banco: <strong>$${GAME_CONFIG.taxaTroca}</strong> (Cobrada do proponente ao concluir a troca).
+        </p>
+
         <div style="margin-bottom: 15px;">
             <label style="font-weight: bold; display: block; margin-bottom: 5px;">Negociar com:</label>
             <select id="trade-receiver-select" style="width: 100%; padding: 8px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 1rem;"></select>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+            <!-- O QUE OFERECE -->
             <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
                 <h4 style="margin: 0 0 10px 0; color: #1e90ff;">Você Oferece:</h4>
-                <label style="font-size: 0.9rem;">Dinheiro ($):</label>
+                
+                <label style="font-size: 0.85rem;">Dinheiro ($):</label>
                 <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
                 
-                <label style="font-size: 0.9rem; display: block; margin-bottom: 5px;">Propriedade:</label>
+                <label style="font-size: 0.85rem; display: block;">Fichas Discretas 🎲 (Possui: ${proposer.fichasDiscreta}):</label>
+                <input type="number" id="trade-offer-fd" value="0" min="0" max="${proposer.fichasDiscreta}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+                
+                <label style="font-size: 0.85rem; display: block;">Fichas Contínuas 📈 (Possui: ${proposer.fichasContinua}):</label>
+                <input type="number" id="trade-offer-fc" value="0" min="0" max="${proposer.fichasContinua}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+
+                <label style="font-size: 0.85rem; display: block; margin-bottom: 5px;">Propriedade:</label>
                 <select id="trade-offer-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
 
+            <!-- O QUE PEDE -->
             <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
                 <h4 style="margin: 0 0 10px 0; color: #ff4757;">Você Pede:</h4>
-                <label style="font-size: 0.9rem;">Dinheiro ($):</label>
+                
+                <label style="font-size: 0.85rem;">Dinheiro ($):</label>
                 <input type="number" id="trade-request-money" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
                 
-                <label style="font-size: 0.9rem; display: block; margin-bottom: 5px;">Propriedade:</label>
+                <label style="font-size: 0.85rem; display: block;">Fichas Discretas 🎲:</label>
+                <input type="number" id="trade-request-fd" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+                
+                <label style="font-size: 0.85rem; display: block;">Fichas Contínuas 📈:</label>
+                <input type="number" id="trade-request-fc" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+
+                <label style="font-size: 0.85rem; display: block; margin-bottom: 5px;">Propriedade:</label>
                 <select id="trade-request-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
         </div>
@@ -968,38 +1114,55 @@ function openTradeModal() {
         const offerMoney = parseInt(document.getElementById("trade-offer-money").value) || 0;
         const requestMoney = parseInt(document.getElementById("trade-request-money").value) || 0;
         
+        const offerFd = parseInt(document.getElementById("trade-offer-fd").value) || 0;
+        const offerFc = parseInt(document.getElementById("trade-offer-fc").value) || 0;
+        
+        const requestFd = parseInt(document.getElementById("trade-request-fd").value) || 0;
+        const requestFc = parseInt(document.getElementById("trade-request-fc").value) || 0;
+
         const offerPropId = offerPropSelect.value !== "" ? parseInt(offerPropSelect.value) : null;
         const requestPropId = requestPropSelect.value !== "" ? parseInt(requestPropSelect.value) : null;
 
-        if (offerMoney > proposer.money) {
-            alert("Você não tem essa quantia de dinheiro para oferecer!");
+        if (proposer.money < offerMoney + GAME_CONFIG.taxaTroca) {
+            alert(`Você precisa ter pelo menos $${offerMoney + GAME_CONFIG.taxaTroca} para cobrir sua oferta + a Taxa de Troca ($${GAME_CONFIG.taxaTroca})!`);
             return;
         }
         if (requestMoney > receiver.money) {
-            alert("O outro jogador não possui essa quantia de dinheiro para lhe dar!");
+            alert("O outro jogador não possui essa quantia em dinheiro!");
             return;
         }
-        if (offerMoney === 0 && requestMoney === 0 && offerPropId === null && requestPropId === null) {
-            alert("Uma proposta precisa conter pelo menos dinheiro ou uma propriedade!");
+        if (offerFd > proposer.fichasDiscreta || offerFc > proposer.fichasContinua) {
+            alert("Você ofereceu mais Fichas de Grandeza do que possui!");
+            return;
+        }
+        if (requestFd > receiver.fichasDiscreta || requestFc > receiver.fichasContinua) {
+            alert("O jogador escolhido não tem as Fichas de Grandeza solicitadas!");
             return;
         }
 
         document.body.removeChild(overlay);
-        sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId);
+        sendTradeProposalToUI(proposer, receiver, {
+            offerMoney, offerFd, offerFc, offerPropId,
+            requestMoney, requestFd, requestFc, requestPropId
+        });
     });
 }
 
-function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requestMoney, requestPropId) {
-    const offerProp = offerPropId !== null ? boardSpaces.find(s => s.id === offerPropId) : null;
-    const requestProp = requestPropId !== null ? boardSpaces.find(s => s.id === requestPropId) : null;
+function sendTradeProposalToUI(proposer, receiver, tradeData) {
+    const offerProp = tradeData.offerPropId !== null ? boardSpaces.find(s => s.id === tradeData.offerPropId) : null;
+    const requestProp = tradeData.requestPropId !== null ? boardSpaces.find(s => s.id === tradeData.requestPropId) : null;
 
     let offerDetails = [];
-    if (offerMoney > 0) offerDetails.push(`<strong>$${offerMoney}</strong>`);
+    if (tradeData.offerMoney > 0) offerDetails.push(`<strong>$${tradeData.offerMoney}</strong>`);
+    if (tradeData.offerFd > 0) offerDetails.push(`<strong>${tradeData.offerFd} Ficha(s) Discreta(s)</strong>`);
+    if (tradeData.offerFc > 0) offerDetails.push(`<strong>${tradeData.offerFc} Ficha(s) Contínua(s)</strong>`);
     if (offerProp) offerDetails.push(`<strong>${offerProp.name}</strong>`);
     if (offerDetails.length === 0) offerDetails.push("Nada");
 
     let requestDetails = [];
-    if (requestMoney > 0) requestDetails.push(`<strong>$${requestMoney}</strong>`);
+    if (tradeData.requestMoney > 0) requestDetails.push(`<strong>$${tradeData.requestMoney}</strong>`);
+    if (tradeData.requestFd > 0) requestDetails.push(`<strong>${tradeData.requestFd} Ficha(s) Discreta(s)</strong>`);
+    if (tradeData.requestFc > 0) requestDetails.push(`<strong>${tradeData.requestFc} Ficha(s) Contínua(s)</strong>`);
     if (requestProp) requestDetails.push(`<strong>${requestProp.name}</strong>`);
     if (requestDetails.length === 0) requestDetails.push("Nada");
 
@@ -1010,7 +1173,8 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
             ${proposer.name} oferece:<br>
             👉 ${offerDetails.join(" + ")}<br><br>
             Em troca de:<br>
-            👉 ${requestDetails.join(" + ")}
+            👉 ${requestDetails.join(" + ")}<br><br>
+            <small style="color: #ffb300;">* Ao aceitar, ${proposer.name} pagará a Taxa de Troca de $${GAME_CONFIG.taxaTroca}.</small>
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
             <button id="btn-accept-trade" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Aceitar Negócio</button>
@@ -1028,11 +1192,23 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
         acceptBtn.disabled = true;
         declineBtn.disabled = true;
 
-        proposer.money -= offerMoney;
-        proposer.money += requestMoney;
-        receiver.money += offerMoney;
-        receiver.money -= requestMoney;
+        // Deduzir taxa de corretagem do proponente
+        proposer.money -= GAME_CONFIG.taxaTroca;
 
+        // Dinheiro
+        proposer.money -= tradeData.offerMoney;
+        proposer.money += tradeData.requestMoney;
+        receiver.money += tradeData.offerMoney;
+        receiver.money -= tradeData.requestMoney;
+
+        // Fichas
+        proposer.fichasDiscreta = proposer.fichasDiscreta - tradeData.offerFd + tradeData.requestFd;
+        proposer.fichasContinua = proposer.fichasContinua - tradeData.offerFc + tradeData.requestFc;
+
+        receiver.fichasDiscreta = receiver.fichasDiscreta - tradeData.requestFd + tradeData.offerFd;
+        receiver.fichasContinua = receiver.fichasContinua - tradeData.requestFc + tradeData.offerFc;
+
+        // Propriedades
         if (offerProp) {
             offerProp.owner = receiver.id;
             updateTradeVisualProperty(offerProp, receiver);
@@ -1042,7 +1218,7 @@ function sendTradeProposalToUI(proposer, receiver, offerMoney, offerPropId, requ
             updateTradeVisualProperty(requestProp, proposer);
         }
 
-        statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Fechado com Sucesso!</div>`;
+        statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Concluído! Taxa de $${GAME_CONFIG.taxaTroca} recolhida pelo Banco.</div>`;
         awaitingDecision = false;
         updateUI();
 
@@ -1081,7 +1257,6 @@ function updateTradeVisualProperty(space, newOwner) {
 
 // Inicialização e Eventos da Tela Principal
 window.onload = () => {
-    // Evento do botão de Rolar Dados
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) {
         rollBtn.addEventListener("click", rollDice);
