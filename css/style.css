@@ -648,15 +648,65 @@ body {
 
 
 /* ==========================================
-   7. PALETA DE CORES DAS PROPRIEDADES (NEON)
+   7. PALETA DE CORES DAS PROPRIEDADES (GRADIENTE NEON)
    ========================================== */
-.cor-marrom       { background-color: #a855f7 !important; box-shadow: 0 0 6px rgba(168, 85, 247, 0.4); }
-.cor-azul-claro   { background-color: #38bdf8 !important; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); }
-.cor-rosa         { background-color: #ec4899 !important; box-shadow: 0 0 6px rgba(236, 72, 153, 0.4); }
-.cor-laranja      { background-color: #22c55e !important; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
-.cor-vermelho     { background-color: #ef4444 !important; box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
-.cor-amarelo      { background-color: #eab308 !important; box-shadow: 0 0 6px rgba(234, 179, 8, 0.4); }
-.cor-verde        { background-color: #10b981 !important; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
-.cor-azul-escuro  { background-color: #3b82f6 !important; box-shadow: 0 0 6px rgba(59, 130, 246, 0.4); }
-.cor-cinza        { background-color: #64748b !important; }
-.border-top { border-top: 1px solid #23354d; }
+
+/* Ajuste na casa para aceitar a cor de fundo com transparência */
+.space {
+    position: relative;
+    z-index: 1;
+}
+
+/* Esconde a barrinha antiga do topo para dar lugar ao gradiente total */
+.space .property-tag {
+    display: none;
+}
+
+/* Degradê em cada grupo de cor */
+.cor-marrom { 
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #a855f7 !important;
+}
+
+.cor-azul-claro { 
+    background: linear-gradient(180deg, rgba(56, 189, 248, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #38bdf8 !important;
+}
+
+.cor-rosa { 
+    background: linear-gradient(180deg, rgba(236, 72, 153, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #ec4899 !important;
+}
+
+.cor-laranja { 
+    background: linear-gradient(180deg, rgba(34, 197, 94, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #22c55e !important;
+}
+
+.cor-vermelho { 
+    background: linear-gradient(180deg, rgba(239, 68, 68, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #ef4444 !important;
+}
+
+.cor-amarelo { 
+    background: linear-gradient(180deg, rgba(234, 179, 8, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #eab308 !important;
+}
+
+.cor-verde { 
+    background: linear-gradient(180deg, rgba(16, 185, 129, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #10b981 !important;
+}
+
+.cor-azul-escuro { 
+    background: linear-gradient(180deg, rgba(59, 130, 246, 0.45) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+    border-top: 3px solid #3b82f6 !important;
+}
+
+.cor-cinza { 
+    background: linear-gradient(180deg, rgba(100, 116, 139, 0.3) 0%, rgba(22, 34, 51, 0.95) 80%) !important;
+}
+
+.border-top { 
+    border-top: 1px solid #23354d; 
+}
