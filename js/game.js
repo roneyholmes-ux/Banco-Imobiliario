@@ -1,14 +1,36 @@
 // ==========================================
-// CONFIGURAÇÕES GERAIS DO JOGO
+// CONFIGURAÇÕES GERAIS DO JOGO (Valores Dinâmicos)
 // ==========================================
-const GAME_CONFIG = {
+let GAME_CONFIG = {
     startingMoney: 25000,       // Dinheiro inicial de cada jogador
-    goBonus: 2000,              // Quanto ganha ao passar pela PARTIDA
+    goBonus: 2000,              // 🛑 AGORA É PENALIDADE: Valor PERDIDO ao passar pela PARTIDA
     rentMultiplier: 1.0,        // Multiplicador global de aluguéis
     impostoRenda: 2000,         // Valor cobrado na casa Imposto de Renda
     taxaLuxo: 1000,             // Valor cobrado na casa Taxa de Luxo
     fiancaPrisao: 500,          // Valor para pagar e sair da prisão
-    taxaTroca: 200              // 🆕 Taxa cobrada pelo banco ao realizar trocas entre jogadores
+    taxaTroca: 200              // Taxa cobrada pelo banco ao realizar trocas entre jogadores
+};
+
+// Presets pré-definidos para facilidade de escolha na criação da partida
+const PRESETS = {
+    standard: {
+        name: "Padrão",
+        startingMoney: 25000,
+        goBonus: 2000,
+        taxaTroca: 200
+    },
+    fast: {
+        name: "Jogo Rápido (Mais Dinheiro)",
+        startingMoney: 40000,
+        goBonus: 1000,
+        taxaTroca: 100
+    },
+    hardcore: {
+        name: "Desafio Escassez",
+        startingMoney: 15000,
+        goBonus: 3000,
+        taxaTroca: 500
+    }
 };
 
 // ==========================================
@@ -21,18 +43,7 @@ const CARDS = [
     { text: "Revés! Multa por excesso de velocidade. Pague $30", type: "pay", value: 30 }
 ];
 
-// ==========================================
-// Mapeamento do Tipo de Grandeza Exigido para Melhorias/Construções
-// 🧠 Regra Didática:
-// - Discreta: Propriedades contáveis (ex: Número de Exercícios, Pessoas, etc.)
-// - Contínua: Propriedades mensuráveis em escala contínua (ex: Área do Círculo, Horas de Estudo, Pressão Atmosférica)
-// ==========================================
-const PROPERTY_GRANDEZA_TYPES = {
-    "discreta": ["Rua Augusta", "Av. Pacaembu", "Av. Brasil", "Av. Brigadeiro"],
-    "continua": ["Av. do Estado", "Av. Novo Estado", "Av. Europa", "Av. Paulista", "Av. Interlagos"]
-};
-
-// Lista de casas atualizada incluindo as casas geradoras de Grandezas
+// Lista de casas incluindo as casas geradoras de Grandezas
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
     { id: 1, name: "Av. do Estado", type: "property", color: "cor-rosa", price: 100, rent: 10, owner: null, grandezaType: "continua" },
@@ -231,9 +242,16 @@ async function movePlayer(playerIndex, steps) {
     for (let i = 0; i < steps; i++) {
         player.position = (player.position + 1) % 40;
         
+        // 🛑 REGRA ALTERADA: Ao passar pela PARTIDA o jogador PERDE dinheiro ao invés de ganhar
         if (player.position === 0) {
-            player.money += GAME_CONFIG.goBonus;
-            document.getElementById("game-status").innerText = `${player.name} passou pelo início e ganhou $${GAME_CONFIG.goBonus}!`;
+            player.money -= GAME_CONFIG.goBonus;
+            document.getElementById("game-status").innerText = `💸 ${player.name} passou pela PARTIDA e pagou uma taxa de $${GAME_CONFIG.goBonus}!`;
+            
+            if (player.money < 0) {
+                checkBankruptcy(player, null);
+                isMoving = false;
+                return;
+            }
             updateUI();
         }
 
@@ -246,21 +264,153 @@ async function movePlayer(playerIndex, steps) {
 }
 
 // ==========================================
-// TRATAMENTO DA CHEGADA NAS CASAS (LANDING)
+// TELA DE SETUP E PRESETS INICIAIS
 // ==========================================
+function startPlayerSetup() {
+    let selectedPlayerCount = 2;
+
+    const overlay = document.createElement("div");
+    overlay.id = "setup-overlay";
+    overlay.style = `
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.92); display: flex; justify-content: center;
+        align-items: center; z-index: 9999; font-family: 'Montserrat', sans-serif;
+    `;
+
+    const setupBox = document.createElement("div");
+    setupBox.style = `
+        background: #1e1e1e; border: 3px solid #ff4757; border-radius: 12px;
+        padding: 30px; text-align: center; color: white; max-width: 480px; width: 90%;
+        box-shadow: 0px 10px 30px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto;
+    `;
+
+    // ETAPA 1: Quantidade de Jogadores
+    function renderStep1() {
+        setupBox.innerHTML = `
+            <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 10px;">BANCO IMOBILIÁRIO</h2>
+            <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Passo 1 de 2: Selecione a quantidade de participantes</p>
+            
+            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px;">
+                <button class="setup-qty-btn active-qty" data-qty="2">2</button>
+                <button class="setup-qty-btn" data-qty="3">3</button>
+                <button class="setup-qty-btn" data-qty="4">4</button>
+                <button class="setup-qty-btn" data-qty="5">5</button>
+                <button class="setup-qty-btn" data-qty="6">6</button>
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: center;">
+                <button id="btn-next-step" style="padding: 10px 25px; font-size: 1rem; background: #ff4757; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Avançar para Presets ➡️</button>
+            </div>
+            <button id="btn-back-to-menu" style="background: transparent; color: #aaa; border: none; cursor: pointer; text-decoration: underline; margin-top: 15px;">Voltar ao Menu</button>
+        `;
+
+        setupBox.querySelectorAll(".setup-qty-btn").forEach(btn => {
+            btn.addEventListener("click", (e) => {
+                setupBox.querySelectorAll(".setup-qty-btn").forEach(b => b.classList.remove("active-qty"));
+                e.target.classList.add("active-qty");
+                selectedPlayerCount = parseInt(e.target.getAttribute("data-qty"));
+            });
+        });
+
+        document.getElementById("btn-next-step").addEventListener("click", renderStep2);
+        document.getElementById("btn-back-to-menu").addEventListener("click", () => document.body.removeChild(overlay));
+    }
+
+    // ETAPA 2: Seleção e Edição de Presets
+    function renderStep2() {
+        setupBox.innerHTML = `
+            <h3 style="margin-top: 0; color: #ff4757; font-size: 1.5rem; margin-bottom: 5px;">⚙️ Presets & Configurações</h3>
+            <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 20px;">Passo 2 de 2: Escolha um preset ou personalize as regras</p>
+
+            <!-- Seleção de Presets Rápidos -->
+            <div style="margin-bottom: 15px; text-align: left;">
+                <label style="font-size: 0.85rem; color: #ddd; font-weight: bold;">Selecione um Preset:</label>
+                <select id="preset-selector" style="width: 100%; padding: 8px; margin-top: 5px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.95rem;">
+                    <option value="standard">Padrão ($25k iniciais / -$2k Partida / $200 Taxa Troca)</option>
+                    <option value="fast">Jogo Rápido ($40k iniciais / -$1k Partida / $100 Taxa Troca)</option>
+                    <option value="hardcore">Desafio Escassez ($15k iniciais / -$3k Partida / $500 Taxa Troca)</option>
+                    <option value="custom">Personalizado (Editar abaixo)</option>
+                </select>
+            </div>
+
+            <!-- Campos de Edição Customizada -->
+            <div style="background: #282828; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; margin-bottom: 20px;">
+                <label style="font-size: 0.8rem; display: block; margin-bottom: 4px;">Dinheiro Inicial de cada Jogador ($):</label>
+                <input type="number" id="input-start-money" value="${GAME_CONFIG.startingMoney}" style="width: 93%; padding: 6px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+
+                <label style="font-size: 0.8rem; display: block; margin-bottom: 4px; color: #ff4757; font-weight: bold;">
+                    🔻 Taxa Cobrada ao Passar na PARTIDA ($):
+                </label>
+                <input type="number" id="input-go-tax" value="${GAME_CONFIG.goBonus}" style="width: 93%; padding: 6px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
+
+                <label style="font-size: 0.8rem; display: block; margin-bottom: 4px;">Taxa do Banco para Trocas ($):</label>
+                <input type="number" id="input-trade-tax" value="${GAME_CONFIG.taxaTroca}" style="width: 93%; padding: 6px; background: #333; color: white; border: 1px solid #555; border-radius: 4px;">
+            </div>
+
+            <div style="display: flex; gap: 10px; justify-content: space-between;">
+                <button id="btn-prev-step" style="padding: 10px 15px; font-size: 0.9rem; background: #444; color: white; border: none; border-radius: 6px; cursor: pointer;">⬅️ Voltar</button>
+                <button id="btn-start-game" style="padding: 10px 25px; font-size: 1rem; background: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">Iniciar Partida 🚀</button>
+            </div>
+        `;
+
+        const presetSelector = document.getElementById("preset-selector");
+        const moneyInput = document.getElementById("input-start-money");
+        const goTaxInput = document.getElementById("input-go-tax");
+        const tradeTaxInput = document.getElementById("input-trade-tax");
+
+        presetSelector.addEventListener("change", (e) => {
+            const key = e.target.value;
+            if (key !== "custom" && PRESETS[key]) {
+                moneyInput.value = PRESETS[key].startingMoney;
+                goTaxInput.value = PRESETS[key].goBonus;
+                tradeTaxInput.value = PRESETS[key].taxaTroca;
+            }
+        });
+
+        document.getElementById("btn-prev-step").addEventListener("click", renderStep1);
+
+        document.getElementById("btn-start-game").addEventListener("click", () => {
+            // Atualiza o objeto de configurações globais com as opções do preset/editadas
+            GAME_CONFIG.startingMoney = parseInt(moneyInput.value) || 25000;
+            GAME_CONFIG.goBonus = parseInt(goTaxInput.value) || 2000;
+            GAME_CONFIG.taxaTroca = parseInt(tradeTaxInput.value) || 200;
+
+            document.body.removeChild(overlay);
+            initializePlayers(selectedPlayerCount);
+        });
+    }
+
+    overlay.appendChild(setupBox);
+    document.body.appendChild(overlay);
+
+    // Injeta os estilos CSS necessários para os botões do setup
+    const style = document.createElement("style");
+    style.innerHTML = `
+        .setup-qty-btn {
+            background: #2e2e2e; color: white; border: 2px solid #555;
+            padding: 12px 20px; font-size: 1.2rem; border-radius: 8px;
+            cursor: pointer; transition: all 0.2s ease; font-weight: bold; width: 55px;
+        }
+        .setup-qty-btn:hover, .setup-qty-btn.active-qty {
+            background: #ff4757; border-color: #ff4757; transform: scale(1.05);
+        }
+    `;
+    document.head.appendChild(style);
+
+    renderStep1();
+}
+
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
     const purchaseableTypes = ["property", "station", "utility", "grandeza"];
 
     if (purchaseableTypes.includes(currentSpace.type)) {
-        // CASO 1: A casa não tem dono -> Opção de compra
         if (currentSpace.owner === null) {
             awaitingDecision = true;
             updateUI();
             showPurchaseModal(player, currentSpace);
             return; 
         } 
-        // CASO 2: A casa pertence a OUTRO jogador -> Decisão do Aluguel vs Fichas Globais
         else if (currentSpace.owner !== player.id) {
             if (currentSpace.type === "grandeza") {
                 handleGrandezaLandingOtherPlayer(player, currentSpace);
@@ -269,7 +419,6 @@ function handleLanding(player) {
             }
             return; 
         } 
-        // CASO 3: O DONO cai na própria casa -> Ganha 1 Ficha de graça sem pagar taxa
         else {
             if (currentSpace.type === "grandeza") {
                 const kind = currentSpace.grandezaKind;
@@ -387,7 +536,6 @@ function handleLanding(player) {
     nextTurn();
 }
 
-// 🆕 REGRA: Outro jogador cai na casa de Grandeza
 function handleGrandezaLandingOtherPlayer(player, space) {
     const owner = players.find(p => p.id === space.owner);
     const rentAmount = calculateCurrentRent(space);
@@ -530,7 +678,6 @@ function buyProperty(player, space) {
         player.money -= space.price;
         space.owner = player.id;
         
-        // 🆕 Bônus ao comprar primeira vez a casa de Grandeza
         if (space.type === "grandeza") {
             if (space.grandezaKind === "discreta") player.fichasDiscreta += 1;
             else if (space.grandezaKind === "continua") player.fichasContinua += 1;
@@ -683,63 +830,6 @@ function rollDice() {
     movePlayer(currentPlayerIndex, totalSteps);
 }
 
-function startPlayerSetup() {
-    const overlay = document.createElement("div");
-    overlay.id = "setup-overlay";
-    overlay.style = `
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(0, 0, 0, 0.9); display: flex; justify-content: center;
-        align-items: center; z-index: 9999; font-family: 'Montserrat', sans-serif;
-    `;
-
-    const setupBox = document.createElement("div");
-    setupBox.style = `
-        background: #1e1e1e; border: 3px solid #ff4757; border-radius: 12px;
-        padding: 30px; text-align: center; color: white; max-width: 400px; width: 90%;
-        box-shadow: 0px 10px 30px rgba(0,0,0,0.5);
-    `;
-    setupBox.innerHTML = `
-        <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 20px;">BANCO IMOBILIÁRIO</h2>
-        <p style="font-size: 1.1rem; margin-bottom: 25px;">Quantos jogadores vão participar?</p>
-        <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 30px;">
-            <button class="setup-btn" data-qty="2">2</button>
-            <button class="setup-btn" data-qty="3">3</button>
-            <button class="setup-btn" data-qty="4">4</button>
-            <button class="setup-btn" data-qty="5">5</button>
-            <button class="setup-btn" data-qty="6">6</button>
-        </div>
-        <button id="btn-back-to-menu" style="background: transparent; color: #aaa; border: none; cursor: pointer; text-decoration: underline;">Voltar ao Menu</button>
-    `;
-
-    overlay.appendChild(setupBox);
-    document.body.appendChild(overlay);
-
-    const style = document.createElement("style");
-    style.innerHTML = `
-        .setup-btn {
-            background: #2e2e2e; color: white; border: 2px solid #555;
-            padding: 12px 20px; font-size: 1.2rem; border-radius: 8px;
-            cursor: pointer; transition: all 0.2s ease; font-weight: bold; width: 55px;
-        }
-        .setup-btn:hover {
-            background: #ff4757; border-color: #ff4757; transform: scale(1.1);
-        }
-    `;
-    document.head.appendChild(style);
-
-    setupBox.querySelectorAll(".setup-btn").forEach(button => {
-        button.addEventListener("click", (e) => {
-            const qty = parseInt(e.target.getAttribute("data-qty"));
-            initializePlayers(qty);
-            document.body.removeChild(overlay);
-        });
-    });
-
-    document.getElementById("btn-back-to-menu").addEventListener("click", () => {
-        document.body.removeChild(overlay);
-    });
-}
-
 function initializePlayers(quantity) {
     players = [];
     for (let i = 0; i < quantity; i++) {
@@ -752,8 +842,8 @@ function initializePlayers(quantity) {
             inJail: false,
             jailTurns: 0,
             isBankrupt: false,
-            fichasDiscreta: 0,  // 🆕 Contador de Fichas de Grandeza Discreta
-            fichasContinua: 0   // 🆕 Contador de Fichas de Grandeza Contínua
+            fichasDiscreta: 0,
+            fichasContinua: 0
         });
     }
     
@@ -774,10 +864,6 @@ function initializePlayers(quantity) {
 
     document.getElementById("game-status").innerHTML = `Partida iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
 }
-
-// ==========================================
-// SISTEMA DE MONOPÓLIO E CONSTRUÇÃO COM FICHA DE GRANDEZA
-// ==========================================
 
 function hasMonopoly(player, colorClass) {
     if (!colorClass) return false;
@@ -805,13 +891,11 @@ function calculateCurrentRent(space) {
     return Math.round(finalRent * GAME_CONFIG.rentMultiplier);
 }
 
-// 🆕 REGRA: Construir exige dinheiro + 1 Ficha do Tipo Correto de Grandeza
 function showBuildModal(player, space) {
     const housePrice = Math.round(space.price / 2);
     const isHotel = space.houses === 4;
     const itemText = isHotel ? "um Hotel" : "uma Casa";
     
-    // Determinar qual o tipo de grandeza exigida para esta propriedade
     const requiredType = space.grandezaType || (space.id % 2 === 0 ? "continua" : "discreta");
     const requiredTypeLabel = requiredType === "discreta" ? "Grandeza Discreta 🎲" : "Grandeza Contínua 📈";
     const playerHasToken = requiredType === "discreta" ? player.fichasDiscreta > 0 : player.fichasContinua > 0;
@@ -888,10 +972,6 @@ function updateSpaceVisualWithHouses(space) {
         tag.innerHTML = houseIcons;
     }
 }
-
-// ==========================================
-// SISTEMA DE FALÊNCIA E FIM DE JOGO
-// ==========================================
 
 function checkBankruptcy(player, creditorId) {
     player.isBankrupt = true;
@@ -992,10 +1072,6 @@ function showWinModal(winner) {
     });
 }
 
-// ==========================================
-// SISTEMA DE TROCAS COM TAXA DE NEGOCIAÇÃO E FICHAS DE GRANDEZA
-// ==========================================
-
 function openTradeModal() {
     const proposer = players[currentPlayerIndex];
     const otherPlayers = players.filter(p => p.id !== proposer.id && !p.isBankrupt);
@@ -1027,36 +1103,26 @@ function openTradeModal() {
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-            <!-- O QUE OFERECE -->
             <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
                 <h4 style="margin: 0 0 10px 0; color: #1e90ff;">Você Oferece:</h4>
-                
                 <label style="font-size: 0.85rem;">Dinheiro ($):</label>
                 <input type="number" id="trade-offer-money" value="0" min="0" max="${proposer.money}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
-                
                 <label style="font-size: 0.85rem; display: block;">Fichas Discretas 🎲 (Possui: ${proposer.fichasDiscreta}):</label>
                 <input type="number" id="trade-offer-fd" value="0" min="0" max="${proposer.fichasDiscreta}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
-                
                 <label style="font-size: 0.85rem; display: block;">Fichas Contínuas 📈 (Possui: ${proposer.fichasContinua}):</label>
                 <input type="number" id="trade-offer-fc" value="0" min="0" max="${proposer.fichasContinua}" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
-
                 <label style="font-size: 0.85rem; display: block; margin-bottom: 5px;">Propriedade:</label>
                 <select id="trade-offer-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
 
-            <!-- O QUE PEDE -->
             <div style="background: #2b2b2b; padding: 15px; border-radius: 8px; border: 1px solid #444;">
                 <h4 style="margin: 0 0 10px 0; color: #ff4757;">Você Pede:</h4>
-                
                 <label style="font-size: 0.85rem;">Dinheiro ($):</label>
                 <input type="number" id="trade-request-money" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
-                
                 <label style="font-size: 0.85rem; display: block;">Fichas Discretas 🎲:</label>
                 <input type="number" id="trade-request-fd" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
-                
                 <label style="font-size: 0.85rem; display: block;">Fichas Contínuas 📈:</label>
                 <input type="number" id="trade-request-fc" value="0" min="0" style="width: 90%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
-
                 <label style="font-size: 0.85rem; display: block; margin-bottom: 5px;">Propriedade:</label>
                 <select id="trade-request-prop" style="width: 100%; padding: 6px; background: #444; color: white; border: 1px solid #555; border-radius: 4px;"></select>
             </div>
@@ -1192,23 +1258,19 @@ function sendTradeProposalToUI(proposer, receiver, tradeData) {
         acceptBtn.disabled = true;
         declineBtn.disabled = true;
 
-        // Deduzir taxa de corretagem do proponente
         proposer.money -= GAME_CONFIG.taxaTroca;
 
-        // Dinheiro
         proposer.money -= tradeData.offerMoney;
         proposer.money += tradeData.requestMoney;
         receiver.money += tradeData.offerMoney;
         receiver.money -= tradeData.requestMoney;
 
-        // Fichas
         proposer.fichasDiscreta = proposer.fichasDiscreta - tradeData.offerFd + tradeData.requestFd;
         proposer.fichasContinua = proposer.fichasContinua - tradeData.offerFc + tradeData.requestFc;
 
         receiver.fichasDiscreta = receiver.fichasDiscreta - tradeData.requestFd + tradeData.offerFd;
         receiver.fichasContinua = receiver.fichasContinua - tradeData.requestFc + tradeData.offerFc;
 
-        // Propriedades
         if (offerProp) {
             offerProp.owner = receiver.id;
             updateTradeVisualProperty(offerProp, receiver);
@@ -1255,7 +1317,6 @@ function updateTradeVisualProperty(space, newOwner) {
     }
 }
 
-// Inicialização e Eventos da Tela Principal
 window.onload = () => {
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) {
