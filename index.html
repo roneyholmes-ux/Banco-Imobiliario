@@ -11,7 +11,7 @@
 
     <!-- 🧭 BARRA DE NAVEGAÇÃO FIXA (TOP NAV) -->
     <nav class="navbar">
-        <div class="nav-logo">🎲 BANCO IMOBILIÁRIO</div>
+        <div class="nav-logo">🎲 BANCO IMOBILIÁRIO <span class="version-badge" style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle;">v1.0.0</span></div>
         <ul class="nav-links">
             <li><a href="#home">Home</a></li>
             <li><a href="#about">O que é</a></li>
@@ -30,10 +30,11 @@
                 <p class="hero-description">O Banco Imobiliário é um simulador estratégico e financeiro que combina tomadas de decisão, negociações dinâmicas e gerenciamento de riscos de forma prática, desafiadora e significativa.</p>
                 <div class="hero-buttons">
                     <button class="hero-btn-primary" onclick="scrollToGame()">JOGAR AGORA</button>
-                    <button class="hero-btn-secondary" onclick="openRulesModal()">CONHECER REGRAS</button>
+                    <button class="hero-btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('hidden')">CONHECER REGRAS</button>
                 </div>
             </div>
             <div class="hero-visual">
+                <!-- Elemento ilustrativo à direita simétrico às cartas roxas da referência -->
                 <div class="visual-card-stack">
                     <div class="v-card c1">🏠<br>Hotéis</div>
                     <div class="v-card c2">🎲<br>Dados</div>
@@ -41,6 +42,7 @@
                 </div>
             </div>
         </div>
+        <!-- Seta de Rolagem Inferior -->
         <a href="#about" class="scroll-arrow">🔽</a>
     </section>
 
@@ -55,24 +57,18 @@
             <div class="cards-step-container">
                 <div class="step-card">
                     <div class="step-number">1</div>
-                    <div>
-                        <h3>Gerencie Capital</h3>
-                        <p>Controle seu saldo inicial, invista em ativos e previna-se contra taxas e falências iminentes.</p>
-                    </div>
+                    <h3>Gerencie Capital</h3>
+                    <p>Controle seu saldo inicial, invista em ativos e previna-se contra taxas e falências eminentes.</p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">2</div>
-                    <div>
-                        <h3>Construa Monopólios</h3>
-                        <p>Agrupe propriedades da mesma cor para evoluir construções de casas e hotéis visuais.</p>
-                    </div>
+                    <h3>Construa Monopólios</h3>
+                    <p>Agrupe propriedades da mesma cor para evoluir construções de casas e hotéis visuais.</p>
                 </div>
                 <div class="step-card">
                     <div class="step-number">3</div>
-                    <div>
-                        <h3>Negocie Ativos</h3>
-                        <p>Use a mesa de trocas integrada para comprar, vender e negociar ativos diretamente com rivais.</p>
-                    </div>
+                    <h3>Negocie Ativos</h3>
+                    <p>Use a mesa de trocas integrada para comprar, vender e negociar ativos diretamente com rivais.</p>
                 </div>
             </div>
         </div>
@@ -101,7 +97,7 @@
                 </div>
                 <div class="benefit-card">
                     <div class="b-number">4</div>
-                    <h3>Suporte Multiplayer</h3>
+                    <h3>Suporte a Multiplayer</h3>
                     <p>Mecânica escalável de 2 a 6 jogadores reais de forma circular e automatizada nativamente.</p>
                 </div>
             </div>
@@ -116,9 +112,9 @@
                 <div class="explore-item" onclick="scrollToGame()">
                     <div class="ex-icon">🎮</div>
                     <h4>Jogo</h4>
-                    <p>Jogue online e experimente.</p>
+                    <p>Jre online e experimente.</p>
                 </div>
-                <div class="explore-item" onclick="openRulesModal()">
+                <div class="explore-item" onclick="document.getElementById('rules-modal').classList.remove('hidden')">
                     <div class="ex-icon">📜</div>
                     <h4>Regras</h4>
                     <p>Aprenda a jogar passo a passo.</p>
@@ -137,9 +133,9 @@
         </div>
     </section>
 
-    <!-- 🎮 SEÇÃO DO TABULEIRO DE JOGO -->
+    <!-- 🎮 SEÇÃO DO TABULEIRO DE JOGO (ESCONDIDO ATÉ O CLICK) -->
     <section id="game-section-area" class="section-game hidden">
-        <div class="section-container text-center">
+        <div class="section-container">
             <h2 class="section-title text-white">Mesa de Jogo</h2>
             <div class="container">
                 <div id="board" class="board"></div>
@@ -147,9 +143,7 @@
                     <div class="status-box">
                         <h3>Painel de Controle</h3>
                         <div id="game-status">Escolha os jogadores para iniciar a partida!</div>
-                        <div style="margin-top: 15px; display: flex; gap: 10px;">
-                            <button id="rollDice" class="dice-btn">🎲 Jogar Dado</button>
-                        </div>
+                        <button id="rollDice" class="dice-btn">🎲 Jogar Dado</button>
                     </div>
                     <div class="players-box">
                         <h3>Jogadores</h3>
@@ -197,13 +191,13 @@
         </div>
     </footer>
 
-    <!-- 📖 MODAL DE REGRAS -->
+    <!-- 📖 MODAL DE REGRAS RE-ESTILIZADO -->
     <div id="rules-modal" class="modal-overlay hidden">
         <div class="rules-box">
             <h2>Como Jogar? 📖</h2>
             <div class="rules-content">
                 <p><strong>🎯 Objetivo:</strong> Ser o único jogador restante à mesa, forçando a quebra de capital de seus concorrentes.</p>
-                <hr style="margin: 10px 0; border-color: rgba(255,255,255,0.1);">
+                <hr>
                 <ul>
                     <li><strong>🎲 Dados:</strong> Avance casas somando o resultado de dois dados simultâneos.</li>
                     <li><strong>🏡 Monopólio:</strong> Obter todos os terrenos de uma mesma cor dobra os aluguéis bases recebidos daquela categoria.</li>
@@ -212,34 +206,12 @@
                     <li><strong>🤝 Negociações:</strong> Proponha intercâmbios bilaterais de moedas e terrenos antes da rolagem de sua vez clicando no botão de transação.</li>
                 </ul>
             </div>
-            <button id="btn-close-rules" class="menu-btn danger-btn" onclick="closeRulesModal()">Fechar Diretrizes</button>
+            <button id="btn-close-rules" class="menu-btn danger-btn" onclick="document.getElementById('rules-modal').classList.add('hidden')">Fechar Diretrizes</button>
         </div>
     </div>
 
-    <script src="js/script.js"></script>
-    <script>
-        function scrollToGame() {
-            const gameArea = document.getElementById('game-section-area');
-            gameArea.classList.remove('hidden');
-            if (typeof startPlayerSetup === 'function' && players.length === 0) {
-                startPlayerSetup();
-            }
-            gameArea.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function openRulesModal() {
-            document.getElementById('rules-modal').classList.remove('hidden');
-        }
-
-        function closeRulesModal() {
-            document.getElementById('rules-modal').classList.add('hidden');
-        }
-
-        function toggleFaq(element) {
-            element.classList.toggle('active');
-            const icon = element.querySelector('.faq-icon');
-            icon.innerText = element.classList.contains('active') ? '-' : '+';
-        }
-    </script>
+    <!-- SCRIPTS SEPARADOS -->
+    <script src="js/landing.js"></script>
+    <script src="js/game.js"></script>
 </body>
 </html>
