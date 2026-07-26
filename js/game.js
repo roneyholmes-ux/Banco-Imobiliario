@@ -95,7 +95,8 @@ function getGridPosition(index) {
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
-    boardElement.innerHTML = "";
+    
+    document.querySelectorAll(".space").forEach(e => e.remove());
     
     boardSpaces.forEach((space) => {
         const spaceDiv = document.createElement("div");
@@ -186,25 +187,20 @@ function updateUI() {
         tradeButton.id = "btn-open-trade";
         tradeButton.innerText = "🤝 Negociar";
         tradeButton.style = `
-            padding: 12px 20px; font-size: 1rem; font-weight: bold;
-            background: #2e7d32; color: white; border: none; border-radius: 6px;
-            cursor: pointer; flex: 1; transition: all 0.2s ease;
+            padding: 10px 20px; font-size: 1.1rem; font-weight: bold;
+            background: #2e7d32; color: white; border: none; border-radius: 5px;
+            cursor: pointer; margin-left: 10px; transition: all 0.2s ease;
         `;
         tradeButton.addEventListener("click", openTradeModal);
-        rollButton.parentNode.appendChild(tradeButton);
+        rollButton.parentNode.insertBefore(tradeButton, rollButton.nextSibling);
     }
 
-    const isDisabled = isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt;
-
-    if (rollButton) {
-        rollButton.disabled = isDisabled;
-        rollButton.style.opacity = isDisabled ? "0.5" : "1";
-        rollButton.style.cursor = isDisabled ? "not-allowed" : "pointer";
-    }
-    if (tradeButton) {
-        tradeButton.disabled = isDisabled;
-        tradeButton.style.opacity = isDisabled ? "0.5" : "1";
-        tradeButton.style.cursor = isDisabled ? "not-allowed" : "pointer";
+    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt) {
+        if (rollButton) { rollButton.disabled = true; rollButton.style.opacity = "0.5"; rollButton.style.cursor = "not-allowed"; }
+        if (tradeButton) { tradeButton.disabled = true; tradeButton.style.opacity = "0.5"; tradeButton.style.cursor = "not-allowed"; }
+    } else {
+        if (rollButton) { rollButton.disabled = false; rollButton.style.opacity = "1"; rollButton.style.cursor = "pointer"; }
+        if (tradeButton) { tradeButton.disabled = false; tradeButton.style.opacity = "1"; tradeButton.style.cursor = "pointer"; }
     }
 }
 
@@ -266,11 +262,11 @@ function handleLanding(player) {
         
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #ff4757;">
+            <div style="margin-bottom: 10px; color: #c62828;">
                 🚨 <strong>Vá para a Prisão!</strong><br>
-                ${player.name} foi enviado diretamente para a Prisão!
+                ${player.name} foi enviado diretamente para a Prisão e está preso!
             </div>
-            <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
+            <button id="btn-confirm-jail" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
         `;
         
         awaitingDecision = true;
@@ -292,11 +288,11 @@ function handleLanding(player) {
 
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #ff4757;">
+            <div style="margin-bottom: 10px; color: #c62828;">
                 💸 <strong>Imposto de Renda!</strong><br>
                 ${player.name} pagou <strong>$${GAME_CONFIG.impostoRenda}</strong> de impostos ao Leão!
             </div>
-            <button id="btn-confirm-tax" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
+            <button id="btn-confirm-tax" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
         `;
         
         awaitingDecision = true;
@@ -317,11 +313,11 @@ function handleLanding(player) {
 
         const statusDiv = document.getElementById("game-status");
         statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #ff4757;">
+            <div style="margin-bottom: 10px; color: #c62828;">
                 💎 <strong>Taxa de Luxo!</strong><br>
                 ${player.name} pagou <strong>$${GAME_CONFIG.taxaLuxo}</strong> de taxa de luxo!
             </div>
-            <button id="btn-confirm-luxury" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
+            <button id="btn-confirm-luxury" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, pagar</button>
         `;
         
         awaitingDecision = true;
@@ -356,11 +352,11 @@ function drawCard(player) {
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px; background: #2e2e2e; color: #fff; padding: 10px; border-radius: 5px; border: 2px solid #ffb300;">
+        <div style="margin-bottom: 10px; background: #fff8e1; color: #333; padding: 10px; border-radius: 5px; border: 2px solid #ffb300;">
             🃏 <strong>Carta Sorte ou Revés</strong><br><br>
             <em>"${card.text}"</em>
         </div>
-        <button id="btn-confirm-card" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
+        <button id="btn-confirm-card" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
     `;
     
     awaitingDecision = true; 
@@ -386,11 +382,11 @@ function payRent(player, space) {
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px; color: #ff4757;">
+        <div style="margin-bottom: 10px; color: #c62828;">
             💸 <strong>Pedágio!</strong><br>
             ${player.name} caiu em <strong>${space.name}</strong> e pagou <strong>$${rentAmount}</strong> de aluguel para ${owner.name}!
         </div>
-        <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
+        <button id="btn-confirm-rent" style="padding: 6px 15px; font-size: 0.9rem; background: #0d0d0d; color: white; border: none; border-radius: 4px; cursor: pointer;">Ok, continuar</button>
     `;
     
     awaitingDecision = true; 
@@ -473,9 +469,9 @@ function checkJailTurn(player) {
         player.jailTurns = 0;
         
         statusDiv.innerHTML = `
-            <div style="margin-bottom: 10px; color: #ff4757;">
+            <div style="margin-bottom: 10px; color: #c62828;">
                 🚨 <strong>Fim do Prazo!</strong><br>
-                ${player.name} completou 3 turnos na prisão e pagou <strong>$${GAME_CONFIG.fiancaPrisao}</strong> de fiança!
+                ${player.name} completou 3 turnos na prisão e foi obrigado a pagar a fiança de <strong>$${GAME_CONFIG.fiancaPrisao}</strong> para ser liberado!
             </div>
             <button id="btn-forced-jail-free" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Rolar Dados</button>
         `;
@@ -492,10 +488,10 @@ function checkJailTurn(player) {
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; color: #ffb300; background: #2e2e2e; padding: 10px; border-radius: 8px; border: 1px solid #ffb300;">
             ⛓️ <strong>${player.name} está na Prisão (Turno ${player.jailTurns + 1}/3)</strong><br>
-            O que deseja fazer?
+            O que deseja fazer para sair?
         </div>
         <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="btn-jail-roll" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Tentar Duplos 🎲</button>
+            <button id="btn-jail-roll" style="padding: 6px 15px; font-size: 0.9rem; background: #2e2e2e; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer;">Tentar Dados Duplos 🎲</button>
             <button id="btn-jail-pay" style="padding: 6px 15px; font-size: 0.9rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Pagar $${GAME_CONFIG.fiancaPrisao} 💸</button>
         </div>
     `;
@@ -514,7 +510,7 @@ function checkJailTurn(player) {
             player.inJail = false;
             player.jailTurns = 0;
             awaitingDecision = false;
-            statusDiv.innerHTML = `🎲 Dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
+            statusDiv.innerHTML = `🎲 Você tirou dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
             
             setTimeout(() => {
                 movePlayer(currentPlayerIndex, d1 + d2);
@@ -522,7 +518,7 @@ function checkJailTurn(player) {
         } else {
             player.jailTurns += 1;
             awaitingDecision = false;
-            statusDiv.innerHTML = `🎲 Você tirou ${d1} e ${d2} (Sem duplo). Continua preso!`;
+            statusDiv.innerHTML = `🎲 Você tirou ${d1} e ${d2} (Não foi duplo). Continua preso!`;
             
             setTimeout(() => {
                 nextTurn();
@@ -531,6 +527,9 @@ function checkJailTurn(player) {
     });
 
     document.getElementById("btn-jail-pay").addEventListener("click", () => {
+        document.getElementById("btn-jail-roll").disabled = true;
+        document.getElementById("btn-jail-pay").disabled = true;
+        
         if (player.money >= GAME_CONFIG.fiancaPrisao) {
             player.money -= GAME_CONFIG.fiancaPrisao;
             player.inJail = false;
@@ -538,9 +537,11 @@ function checkJailTurn(player) {
             awaitingDecision = false;
             updateUI();
             
-            statusDiv.innerText = `${player.name} pagou a fiança e está livre!`;
+            statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
         } else {
             alert("Você não tem dinheiro suficiente para pagar a fiança!");
+            document.getElementById("btn-jail-roll").disabled = false;
+            document.getElementById("btn-jail-pay").disabled = false;
         }
     });
 
@@ -567,8 +568,6 @@ function rollDice() {
 }
 
 function startPlayerSetup() {
-    if (document.getElementById("setup-overlay")) return;
-
     const overlay = document.createElement("div");
     overlay.id = "setup-overlay";
     overlay.style = `
@@ -600,7 +599,6 @@ function startPlayerSetup() {
     document.body.appendChild(overlay);
 
     const style = document.createElement("style");
-    style.id = "setup-btn-style";
     style.innerHTML = `
         .setup-btn {
             background: #2e2e2e; color: white; border: 2px solid #555;
@@ -628,8 +626,6 @@ function startPlayerSetup() {
 
 function initializePlayers(quantity) {
     players = [];
-    currentPlayerIndex = 0;
-    
     for (let i = 0; i < quantity; i++) {
         players.push({
             id: i,
@@ -644,7 +640,6 @@ function initializePlayers(quantity) {
     }
     
     boardSpaces.forEach(space => {
-        space.owner = null;
         if (space.type === "property") {
             space.houses = 0;
         }
@@ -759,11 +754,11 @@ function updateSpaceVisualWithHouses(space) {
     tag.style.gap = "2px";
 
     if (space.houses === 5) {
-        tag.innerHTML = `<span style="color: #ff4757; font-size: 14px; font-weight: bold;">🏨</span>`;
+        tag.innerHTML = `<span style="color: #ff4757; font-size: 14px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏨</span>`;
     } else {
         let houseIcons = "";
         for (let i = 0; i < space.houses; i++) {
-            houseIcons += `<span style="color: #2ed573; font-size: 10px; font-weight: bold;">🏠</span>`;
+            houseIcons += `<span style="color: #2ed573; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 1px black;">🏠</span>`;
         }
         tag.innerHTML = houseIcons;
     }
@@ -801,7 +796,7 @@ function checkBankruptcy(player, creditorId) {
                 updateSpaceVisualWithHouses(space);
                 
                 const spaceDiv = document.getElementById(`space-${space.id}`);
-                if (spaceDiv) spaceDiv.style.border = "1px solid #000";
+                if (spaceDiv) spaceDiv.style.border = "1px solid #ccc";
                 
                 const priceLabel = document.getElementById(`price-label-${space.id}`);
                 if (priceLabel) {
@@ -871,7 +866,7 @@ function showWinModal(winner) {
 }
 
 // ==========================================
-// SISTEMA DE TROCAS
+// SISTEMA COMPLETO DE COMPRA E VENDA (TROCAS)
 // ==========================================
 
 function openTradeModal() {
@@ -1084,10 +1079,11 @@ function updateTradeVisualProperty(space, newOwner) {
     }
 }
 
-// Inicialização de Eventos
-window.addEventListener("DOMContentLoaded", () => {
+// Inicialização e Eventos da Tela Principal
+window.onload = () => {
+    // Evento do botão de Rolar Dados
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) {
         rollBtn.addEventListener("click", rollDice);
     }
-});
+};
