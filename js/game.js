@@ -199,8 +199,9 @@ function updateUI() {
             row.innerHTML = `
                 <div>
                     <div>${p.name} ${idx === currentPlayerIndex ? "👉" : ""}</div>
-                    <div style="font-size: 0.8rem; color: #ddd; margin-top: 3px;">
-                        🎲 Discretas: <strong>${p.fichasDiscreta}</strong> | 📈 Contínuas: <strong>${p.fichasContinua}</strong>
+                    <div style="font-size: 0.8rem; color: #ddd; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                        <div>🎲 Discretas: <strong>${p.fichasDiscreta}</strong></div>
+                        <div>📈 Contínuas: <strong>${p.fichasContinua}</strong></div>
                     </div>
                 </div>
                 <span style="font-size: 1.1rem; font-weight: bold;">$${p.money}</span>
