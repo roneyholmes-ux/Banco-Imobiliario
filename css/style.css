@@ -185,11 +185,6 @@ body {
     padding: 90px 8%;
 }
 
-.section-game {
-    background: #111;
-    padding: 60px 2%;
-}
-
 .section-container {
     max-width: 1200px;
     margin: 0 auto;
@@ -418,134 +413,6 @@ body {
     max-height: 100px;
 }
 
-/* ==========================================
-   5. TABULEIRO DE JOGO E PAINEL CONTROL
-   ========================================== */
-.container {
-    display: flex;
-    gap: 30px;
-    justify-content: center;
-    align-items: flex-start;
-    margin-top: 30px;
-}
-
-/* Configuração Grid 11x11 Fixo */
-.board {
-    display: grid !important;
-    grid-template-columns: repeat(11, 55px);
-    grid-template-rows: repeat(11, 55px);
-    width: 605px;
-    height: 605px;
-    background: #cce0d0;
-    border: 5px solid #000;
-    position: relative;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-}
-
-/* Estilo individual de cada casa */
-.space {
-    border: 1px solid #000;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.55rem;
-    font-weight: bold;
-    color: #121212;
-    background: #f9f9f9;
-    padding: 2px;
-    text-align: center;
-    box-sizing: border-box;
-    overflow: hidden;
-    word-break: break-word;
-}
-
-.property-tag {
-    width: 100%;
-    height: 12px;
-    border-bottom: 1px solid #000;
-}
-
-.corner-space {
-    background: #e8f5e9;
-    justify-content: center !important;
-    font-weight: bold;
-}
-
-.tokens-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px;
-    justify-content: center;
-    margin-top: auto;
-    min-height: 15px;
-    width: 100%;
-}
-
-.pawn {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    border: 1px solid white;
-    box-shadow: 0 0 3px rgba(0,0,0,0.5);
-}
-
-/* Painel Lateral */
-.control-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-    width: 320px;
-}
-
-.status-box, .players-box {
-    background: #1e1e1e;
-    border: 2px solid #333;
-    border-radius: 8px;
-    padding: 20px;
-    position: relative;
-    overflow: hidden;
-}
-
-.status-box h3, .players-box h3 {
-    font-size: 1.1rem;
-    color: #ff4d4d;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #333;
-    padding-bottom: 5px;
-}
-
-#game-status {
-    font-size: 0.9rem;
-    min-height: 40px;
-    color: #ced6e0;
-}
-
-.dice-btn {
-    padding: 12px 20px;
-    font-size: 1rem;
-    font-weight: bold;
-    color: white;
-    background-color: #d32f2f;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    flex: 1;
-}
-
-.player-row {
-    font-size: 0.85rem;
-    background: #2b2b2b;
-    padding: 8px;
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-    border-radius: 4px;
-}
-
-.cor-cinza { background-color: #7f8c8d !important; }
-.border-top { border-top: 1px solid #e9ecef; }
-
 /* Ilustração Cartas Hero */
 .hero-visual { display: flex; justify-content: center; }
 .visual-card-stack { position: relative; width: 200px; height: 250px; }
@@ -566,6 +433,166 @@ body {
 .c1 { background: linear-gradient(135deg, #6c5ce7, #4834d4); transform: rotate(-15deg); left: -40px; z-index: 1; }
 .c2 { background: linear-gradient(135deg, #ff4757, #ff6b81); transform: rotate(5deg); top: -10px; z-index: 3; }
 .c3 { background: linear-gradient(135deg, #2ed573, #26de81); transform: rotate(20deg); left: 40px; z-index: 2; }
+
+
+/* ==========================================
+   5. TABULEIRO DE JOGO E PAINEL CONTROL (ESTILO CYBER/TECH)
+   ========================================== */
+.section-game {
+    background: #0b131e;
+    background-image: 
+        radial-gradient(circle at 50% 50%, #152538 0%, #070c14 100%),
+        linear-gradient(rgba(0, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 255, 0.02) 1px, transparent 1px);
+    background-size: 100% 100%, 30px 30px, 30px 30px;
+    padding: 60px 2%;
+}
+
+.container {
+    display: flex;
+    gap: 30px;
+    justify-content: center;
+    align-items: flex-start;
+    margin-top: 30px;
+}
+
+/* Configuração Grid 11x11 Fixo com Estilo Cyberpunk */
+.board {
+    display: grid !important;
+    grid-template-columns: repeat(11, 55px);
+    grid-template-rows: repeat(11, 55px);
+    width: 605px;
+    height: 605px;
+    background: #111a28;
+    border: 3px solid #1e2d42;
+    border-radius: 16px;
+    position: relative;
+    box-shadow: 0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 225, 255, 0.05);
+    padding: 4px;
+    gap: 2px;
+}
+
+/* Estilo individual de cada casa */
+.space {
+    background: #162233;
+    border: 1px solid #203148 !important;
+    border-radius: 4px;
+    color: #e0e6ed;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.55rem;
+    font-weight: 600;
+    padding: 3px 2px;
+    text-align: center;
+    box-sizing: border-box;
+    overflow: hidden;
+    word-break: break-word;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.space:hover {
+    border-color: #00d2ff !important;
+    box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+}
+
+.property-tag {
+    width: 100%;
+    height: 10px;
+    border-radius: 2px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
+    margin-bottom: 2px;
+}
+
+.corner-space {
+    background: #1a293d;
+    justify-content: center !important;
+    font-weight: bold;
+    border-color: #2c415e !important;
+}
+
+.tokens-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-content: center;
+    margin-top: auto;
+    min-height: 15px;
+    width: 100%;
+}
+
+.pawn {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1px solid white;
+    box-shadow: 0 0 5px rgba(0, 210, 255, 0.8);
+}
+
+/* Painel Lateral Cyberpunk */
+.control-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    width: 320px;
+}
+
+.status-box, .players-box {
+    background: linear-gradient(135deg, #182536 0%, #101926 100%);
+    border: 1px solid #283d59;
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.status-box h3, .players-box h3 {
+    font-size: 1.1rem;
+    color: #38bdf8;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #283d59;
+    padding-bottom: 5px;
+}
+
+#game-status {
+    font-size: 0.9rem;
+    min-height: 40px;
+    color: #e0e6ed;
+}
+
+.dice-btn {
+    padding: 12px 20px;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(180deg, #e11d48 0%, #9f1239 100%);
+    border: 1px solid #f43f5e;
+    border-radius: 8px;
+    box-shadow: 0 0 15px rgba(225, 29, 72, 0.4);
+    cursor: pointer;
+    flex: 1;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+
+.dice-btn:hover {
+    box-shadow: 0 0 20px rgba(225, 29, 72, 0.7);
+    transform: translateY(-1px);
+}
+
+.player-row {
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid #23354d;
+    padding: 10px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    border-radius: 8px;
+}
+
 
 /* ==========================================
    6. FOOTER E MODAIS
@@ -619,15 +646,17 @@ body {
     60% { transform: translateY(-7px) translateX(-50%); }
 }
 
+
 /* ==========================================
-   7. PALETA DE CORES DAS PROPRIEDADES
+   7. PALETA DE CORES DAS PROPRIEDADES (NEON)
    ========================================== */
-.cor-rosa        { background-color: #ff7675 !important; }
-.cor-azul-claro  { background-color: #74b9ff !important; }
-.cor-roxo        { background-color: #a29bfe !important; }
-.cor-laranja     { background-color: #fab1a0 !important; }
-.cor-vermelho    { background-color: #ff7675 !important; }
-.cor-amarelo     { background-color: #ffeaa7 !important; }
-.cor-verde       { background-color: #55efc4 !important; }
-.cor-azul-escuro { background-color: #0984e3 !important; }
-.cor-cinza       { background-color: #b2bec3 !important; }
+.cor-marrom       { background-color: #a855f7 !important; box-shadow: 0 0 6px rgba(168, 85, 247, 0.4); }
+.cor-azul-claro   { background-color: #38bdf8 !important; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); }
+.cor-rosa         { background-color: #ec4899 !important; box-shadow: 0 0 6px rgba(236, 72, 153, 0.4); }
+.cor-laranja      { background-color: #22c55e !important; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+.cor-vermelho     { background-color: #ef4444 !important; box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+.cor-amarelo      { background-color: #eab308 !important; box-shadow: 0 0 6px rgba(234, 179, 8, 0.4); }
+.cor-verde        { background-color: #10b981 !important; box-shadow: 0 0 6px rgba(16, 185, 129, 0.4); }
+.cor-azul-escuro  { background-color: #3b82f6 !important; box-shadow: 0 0 6px rgba(59, 130, 246, 0.4); }
+.cor-cinza        { background-color: #64748b !important; }
+.border-top { border-top: 1px solid #23354d; }
