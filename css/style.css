@@ -176,6 +176,7 @@ body {
 .actions-panel {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 #rollDice {
@@ -250,20 +251,4 @@ body {
 .player-money {
     color: #2ecc71;
     font-weight: bold;
-}
-
-/* Fichas de Propriedades Compradas */
-.player-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 4px;
-}
-
-.chip-badge {
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #fff;
 }
