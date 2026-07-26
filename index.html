@@ -3,14 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banco Imobiliário</title>
+    <title>Banco Imobiliário - Mundo</title>
     <link rel="stylesheet" href="css/style.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <!-- Container Principal da Partida -->
-    <div id="game-section-area">
+    <!-- MENU INICIAL / TELA DE BOAS-VINDAS -->
+    <div id="main-menu" class="menu-container">
+        <header class="main-header">
+            <h1>BANCO IMOBILIÁRIO MUNDO</h1>
+            <p class="subtitle">Aprenda grandezas discretas e contínuas negociando propriedades!</p>
+        </header>
+
+        <div class="menu-card">
+            <h2>Bem-vindo ao Jogo!</h2>
+            <p>Nesta versão educacional, você irá negociar propriedades e utilizar <strong>Fichas de Grandeza Discreta</strong> e <strong>Fichas de Grandeza Contínua</strong> para realizar compras, melhorias e negociações com outros jogadores.</p>
+            <button id="btn-start-game" class="btn-main">🎮 Iniciar Jogo</button>
+        </div>
+    </div>
+
+    <!-- CONTAINER PRINCIPAL DA PARTIDA (Oculto no carregamento inicial) -->
+    <div id="game-section-area" class="hidden">
         <main class="game-container">
             
             <!-- Tabuleiro Grid 11x11 (Renderizado dinamicamente via JS) -->
