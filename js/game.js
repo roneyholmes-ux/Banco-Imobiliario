@@ -1346,7 +1346,7 @@ window.onload = () => {
 };
 
 // ==========================================
-// MÓDULO MULTIPLAYER PEERJS (v1.1.3 - HANDSHAKE & NO-BLOCK)
+// MÓDULO MULTIPLAYER PEERJS (v1.1.4 - CONTROL & TURN LOCK)
 // ==========================================
 let peer = null;
 let connections = [];
@@ -1355,7 +1355,7 @@ let myPlayerId = 0;
 let roomCode = "";
 let gameStarted = false; 
 
-// Transmite o estado completo do jogo (Host -> Clientes) 
+// Transmite o estado completo do jogo (Host -> Clientes)
 function broadcastState() {
     if (!isHost) return;
     
@@ -1373,6 +1373,27 @@ function broadcastState() {
             conn.send(gameState);
         }
     });
+
+    // Atualiza a interface local do Host imediatamente
+    applyTurnSecurityUI();
+}
+
+// Bloqueia botões se não for o turno do jogador local
+function applyTurnSecurityUI() {
+    const diceBtn = document.getElementById("rollDice");
+    if (!diceBtn || typeof currentPlayerIndex === 'undefined') return;
+
+    const isMyTurn = (currentPlayerIndex === myPlayerId);
+
+    if (isMyTurn) {
+        diceBtn.disabled = false;
+        diceBtn.style.opacity = "1";
+        diceBtn.style.cursor = "pointer";
+    } else {
+        diceBtn.disabled = true;
+        diceBtn.style.opacity = "0.4";
+        diceBtn.style.cursor = "not-allowed";
+    }
 }
 
 // Transmite uma ação de cliente para Host ou vice-versa
@@ -1407,13 +1428,12 @@ function handleIncomingData(data, conn) {
             });
         }
 
-        // Se o jogo começou, revela a mesa para os convidados
         if (gameStarted) {
             const overlay = document.getElementById("online-modal-overlay");
             if (overlay) overlay.remove();
 
             const gameSection = document.getElementById("game-section-area");
-            if (gameSection) {
+            if (gameSection && gameSection.classList.contains("hidden")) {
                 gameSection.classList.remove("hidden");
                 gameSection.scrollIntoView({ behavior: 'smooth' });
             }
@@ -1422,14 +1442,17 @@ function handleIncomingData(data, conn) {
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
+        
+        applyTurnSecurityUI();
     } 
-    // 2. Novo jogador solicitando registro no Host
+    // 2. Registro do Jogador 2+ com todos os atributos corretos
     else if (data.type === 'REGISTER_PLAYER' && isHost) {
         const newPlayerId = players.length;
         const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
             ? PLAYER_PRESETS[newPlayerId].color 
             : "#" + Math.floor(Math.random()*16777215).toString(16);
 
+        // Estrutura idêntica à do jogo original (corrigindo o 'undefined')
         players.push({
             id: newPlayerId,
             name: `Jogador ${newPlayerId + 1}`,
@@ -1438,20 +1461,20 @@ function handleIncomingData(data, conn) {
             color: presetColor,
             inJail: false,
             jailTurns: 0,
-            isBankrupt: false
+            isBankrupt: false,
+            fichasDiscreta: 0,
+            fichasContinua: 0
         });
 
         updateLobbyUI();
         
-        // Confirma registro para o cliente recém-conectado
         if (conn && conn.open) {
             conn.send({ type: 'WELCOME_PLAYER', assignedId: newPlayerId });
         }
         
-        // Espalha a nova lista de jogadores para todos
         broadcastState();
     }
-    // 3. Resposta do Host ao Convidado
+    // 3. Resposta de Boas-Vindas ao Convidado
     else if (data.type === 'WELCOME_PLAYER') {
         myPlayerId = data.assignedId;
         const statusText = document.getElementById("guest-wait-status");
@@ -1459,10 +1482,12 @@ function handleIncomingData(data, conn) {
             statusText.innerHTML = `<span style="color: #2ed573;">✔ Conectado como Jogador ${myPlayerId + 1}!</span><br><small style="color: #aaa;">Aguardando o Host iniciar a partida...</small>`;
         }
     }
-    // 4. Jogada de Dado
+    // 4. Jogada de Dado Solicitada por Convidado
     else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
-        if (typeof rollDice === "function") rollDice();
-        broadcastState();
+        if (currentPlayerIndex === data.senderId) {
+            if (typeof rollDice === "function") rollDice();
+            broadcastState();
+        }
     }
 }
 
@@ -1473,7 +1498,7 @@ function attachNetworkTriggers() {
         const originalClick = diceBtn.onclick;
 
         diceBtn.onclick = (e) => {
-            if (typeof currentPlayerIndex !== 'undefined' && currentPlayerIndex !== myPlayerId) {
+            if (currentPlayerIndex !== myPlayerId) {
                 showToastNotification("Aguarde a sua vez de jogar!");
                 return;
             }
@@ -1516,7 +1541,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.3 - P2P MULTIPLAYER</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.4 - P2P MULTIPLAYER</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
@@ -1578,16 +1603,13 @@ function showOnlineModal() {
             }
 
             connections.push(conn);
-            
             conn.on('data', (data) => handleIncomingData(data, conn));
-            
             conn.on('open', () => {
-                // Solicita dados do novo jogador via Handshake
                 broadcastState();
             });
         });
 
-        peer.on('error', (err) => showToastNotification("Erro de Conexão Host: " + err.type));
+        peer.on('error', (err) => showToastNotification("Erro Host: " + err.type));
     };
 
     // --- 2. ENTRAR EM SALA (CONVIDADO) ---
@@ -1611,11 +1633,9 @@ function showOnlineModal() {
             connections = [conn];
 
             conn.on('open', () => {
-                // Alterna para tela de aguardar o host
                 document.getElementById("online-join-view").style.display = "none";
                 document.getElementById("online-wait-view").style.display = "block";
                 
-                // Registra jogador no Host
                 conn.send({ type: 'REGISTER_PLAYER' });
                 attachNetworkTriggers();
             });
@@ -1636,7 +1656,7 @@ function showLobbyModal(overlay, code) {
         initializePlayers(1);
     } else {
         players = [{
-            id: 0, name: "Jogador 1 (Host)", money: 1500, position: 0, color: "#6c5ce7", inJail: false, jailTurns: 0, isBankrupt: false
+            id: 0, name: "Jogador 1 (Host)", money: 1500, position: 0, color: "#6c5ce7", inJail: false, jailTurns: 0, isBankrupt: false, fichasDiscreta: 0, fichasContinua: 0
         }];
     }
     
