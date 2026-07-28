@@ -4,48 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banco Imobiliário - Landing Page</title>
+
+    <!-- Fontes e Estilos Padrão do seu Projeto -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     
-    <!-- Importante: Biblioteca do PeerJS deve ser carregada antes dos scripts locais -->
+    <!-- Biblioteca do PeerJS para o Multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
 
-    <main class="hero-container">
-        <div class="hero-content">
-            <h1>Estratégia se aprende <span>jogando</span></h1>
-            <p>
-                O Banco Imobiliário é um simulador estratégico e financeiro que combina 
-                tomadas de decisão, negociações dinâmicas e gerenciamento de riscos de forma prática, 
-                desafiadora e significativa.
-            </p>
+    <section class="hero" id="home">
+        <div class="hero-container">
+            <!-- Coluna de Texto e Botões -->
+            <div class="hero-text">
+                <h1 class="hero-title">
+                    Estratégia se aprende <br>
+                    <span class="highlight">jogando</span>
+                </h1>
+                
+                <p class="hero-description">
+                    O Banco Imobiliário é um simulador estratégico e financeiro que combina 
+                    tomadas de decisão, negociações dinâmicas e gerenciamento de riscos de forma prática, 
+                    desafiadora e significativa.
+                </p>
 
-            <div class="hero-buttons">
-                <button id="btn-jogar-agora" class="btn-primary" onclick="iniciarJogoLocal()">JOGAR AGORA</button>
-                <button id="btn-jogar-online" class="btn-secondary" onclick="abrirModalMultiplayer()">🌐 JOGAR ONLINE</button>
-                <button id="btn-regras" class="btn-outline" onclick="abrirRegras()">CONHECER REGRAS</button>
+                <div class="hero-buttons">
+                    <button id="btn-jogar-agora" class="btn btn-primary" onclick="iniciarJogoLocal()">JOGAR AGORA</button>
+                    <button id="btn-jogar-online" class="btn btn-online" onclick="abrirModalMultiplayer()">🌐 JOGAR ONLINE</button>
+                    <button id="btn-regras" class="btn btn-secondary" onclick="abrirRegras()">CONHECER REGRAS</button>
+                </div>
+            </div>
+
+            <!-- Coluna dos Cards Coloridos (Lado Direito) -->
+            <div class="hero-visual">
+                <div class="cards-stack">
+                    <div class="card card-purple"></div>
+                    <div class="card card-red">
+                        <div class="card-content">
+                            <span class="dice-icon">🎲</span>
+                            <span class="card-text">Dados</span>
+                        </div>
+                    </div>
+                    <div class="card card-green"></div>
+                </div>
             </div>
         </div>
+    </section>
 
-        <div class="hero-cards">
-            <div class="card card-purple"></div>
-            <div class="card card-red">
-                <span>🎲 Dados</span>
-            </div>
-            <div class="card card-green"></div>
-        </div>
-    </main>
-
-    <!-- Modal de Regras (Caso exista no seu layout) -->
+    <!-- Modal de Regras -->
     <div id="modal-regras" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close-button" onclick="fecharRegras()">&times;</span>
             <h2>Regras do Jogo</h2>
-            <p>Aqui ficam as instruções e regras do Banco Imobiliário...</p>
+            <p>O objetivo do jogo é conseguir o monopólio do mercado imobiliário e falir os oponentes.</p>
         </div>
     </div>
 
-    <!-- Scripts do Sistema na Ordem Correta de Dependência -->
+    <!-- Scripts do Sistema -->
     <script src="js/multiplayer.js"></script>
     <script src="js/landing.js"></script>
 </body>
