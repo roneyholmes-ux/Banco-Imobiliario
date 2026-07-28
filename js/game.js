@@ -1355,7 +1355,7 @@ let myPlayerId = 0;
 let roomCode = "";
 let gameStarted = false; 
 
-// Transmite o estado completo do jogo (Host -> Clientes)
+// Transmite o estado completo do jogo (Host -> Clientes) 
 function broadcastState() {
     if (!isHost) return;
     
