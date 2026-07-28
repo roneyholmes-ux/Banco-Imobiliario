@@ -3,7 +3,7 @@
  * Estado central e motor de regras do Banco Imobiliário (Host-Authoritative).
  */
 
-const Game = {
+const Game = { 
   state: {
     players: [],
     currentPlayerIndex: 0,
