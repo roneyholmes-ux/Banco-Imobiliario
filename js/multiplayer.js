@@ -1,6 +1,7 @@
-// ==========================================
-// MÓDULO MULTIPLAYER PEERJS (v1.1.8 - FIXED PANEL RENDER)
-// ==========================================
+// =================================================================
+// SYSTEM: P2P MULTIPLAYER ENGINE (v1.2.0 - ISOLATED ARCHITECTURE)
+// =================================================================
+
 let peer = null;
 let connections = [];
 let isHost = false;
@@ -9,7 +10,10 @@ let roomCode = "";
 let gameStarted = false; 
 let lastKnownStateJSON = "";
 
-// Transmite o estado completo do jogo (Host -> Clientes)
+// -----------------------------------------------------------------
+// 1. BROADCAST & SYNCRONIZATION (Host -> Guests)
+// -----------------------------------------------------------------
+
 function broadcastState() {
     if (!isHost) return;
     
@@ -37,7 +41,7 @@ function broadcastState() {
     applyTurnSecurityUI();
 }
 
-// Observador do Host para transmitção automática de alterações de estado
+// Loop contínuo de verificação de estado do Host (a cada 300ms)
 setInterval(() => {
     if (!isHost || !gameStarted || connections.length === 0) return;
 
@@ -52,21 +56,24 @@ setInterval(() => {
     }
 }, 300);
 
-// Trava do Painel de Controle: Impede que o jogador atue fora da sua vez
+// -----------------------------------------------------------------
+// 2. TURN SECURITY & INTERACTION LOCK
+// -----------------------------------------------------------------
+
 function applyTurnSecurityUI() {
-    if (typeof currentPlayerIndex === 'undefined') return;
+    if (typeof currentPlayerIndex === 'undefined' || !gameStarted) return;
 
     const isMyTurn = (currentPlayerIndex === myPlayerId);
 
-    // 1. Trava do botão de dados
+    // Trava/Libera botão de Rolar Dado
     const diceBtn = document.getElementById("rollDice");
     if (diceBtn) {
         diceBtn.disabled = !isMyTurn;
-        diceBtn.style.opacity = isMyTurn ? "1" : "0.4";
+        diceBtn.style.opacity = isMyTurn ? "1" : "0.3";
         diceBtn.style.cursor = isMyTurn ? "pointer" : "not-allowed";
     }
 
-    // 2. Trava de botões dinâmicos do Painel de Controle
+    // Trava/Libera botões dentro do Painel de Controle
     const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
     if (controlPanel) {
         const panelButtons = controlPanel.querySelectorAll("button");
@@ -88,6 +95,49 @@ function applyTurnSecurityUI() {
     }
 }
 
+// Intercepta cliques e envia para o Host se for ação remota
+function attachNetworkTriggers() {
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.id === "btn-close-online") return;
+
+        // Se o botão for de Rolar Dado
+        if (btn.id === "rollDice") {
+            if (currentPlayerIndex !== myPlayerId) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                showToastNotification("Aguarde o seu turno!");
+                return;
+            }
+
+            if (!isHost) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                sendNetworkAction('ACTION_ROLL_DICE');
+            } else {
+                setTimeout(() => { broadcastState(); }, 400);
+            }
+            return;
+        }
+
+        // Para outros botões do Painel de Controle
+        if (currentPlayerIndex !== myPlayerId) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            return;
+        }
+
+        if (!isHost && gameStarted) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            sendNetworkAction('ACTION_GENERIC_CLICK', { 
+                btnId: btn.id || null, 
+                btnText: btn.innerText 
+            });
+        }
+    }, true);
+}
+
 function sendNetworkAction(actionType, payload = {}) {
     const message = { type: actionType, senderId: myPlayerId, ...payload };
     
@@ -100,7 +150,10 @@ function sendNetworkAction(actionType, payload = {}) {
     }
 }
 
-// Tratamento de mensagens recebidas pelos Clientes
+// -----------------------------------------------------------------
+// 3. DATA RECEIVER & GAME ENGINE INTEGRATION
+// -----------------------------------------------------------------
+
 function handleIncomingData(data, conn) {
     if (!data) return;
 
@@ -129,7 +182,7 @@ function handleIncomingData(data, conn) {
             }
         }
 
-        // Renderiza tudo através do motor nativo do jogo
+        // Renderiza tudo via motor original do jogo
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
@@ -173,7 +226,7 @@ function handleIncomingData(data, conn) {
     else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
         if (currentPlayerIndex === data.senderId) {
             if (typeof rollDice === "function") rollDice();
-            setTimeout(() => { broadcastState(); }, 500);
+            setTimeout(() => { broadcastState(); }, 400);
         }
     }
     else if (data.type === 'ACTION_GENERIC_CLICK' && isHost) {
@@ -198,48 +251,9 @@ function handleIncomingData(data, conn) {
     }
 }
 
-// Hook Global para gerenciar cliques dos jogadoes
-function attachNetworkTriggers() {
-    document.addEventListener("click", (e) => {
-        const btn = e.target.closest("button");
-        if (!btn || btn.id === "btn-close-online") return;
-
-        // Se for o botão de rolar dado
-        if (btn.id === "rollDice") {
-            if (currentPlayerIndex !== myPlayerId) {
-                e.stopImmediatePropagation();
-                e.preventDefault();
-                showToastNotification("Aguarde a sua vez de jogar!");
-                return;
-            }
-
-            if (!isHost) {
-                e.stopImmediatePropagation();
-                e.preventDefault();
-                sendNetworkAction('ACTION_ROLL_DICE');
-            } else {
-                setTimeout(() => { broadcastState(); }, 500);
-            }
-            return;
-        }
-
-        // Se for outro botão de ação dentro do painel
-        if (currentPlayerIndex !== myPlayerId) {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            return;
-        }
-
-        if (!isHost && gameStarted) {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            sendNetworkAction('ACTION_GENERIC_CLICK', { 
-                btnId: btn.id || null, 
-                btnText: btn.innerText 
-            });
-        }
-    }, true);
-}
+// -----------------------------------------------------------------
+// 4. LOBBY & PEERJS INITIALIZATION
+// -----------------------------------------------------------------
 
 function generateRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -253,7 +267,6 @@ function showToastNotification(msg) {
     setTimeout(() => toast.remove(), 3000);
 }
 
-// Modal Principal Online
 function showOnlineModal() {
     const existingModal = document.getElementById("online-modal-overlay");
     if (existingModal) existingModal.remove();
@@ -268,7 +281,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.8 - P2P MULTIPLAYER</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.2.0 - MULTIPLAYER ISOLADO</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
