@@ -1,5 +1,5 @@
 // =================================================================
-// SYSTEM: P2P MULTIPLAYER ENGINE (v1.2.0 - ISOLATED ARCHITECTURE)
+// SYSTEM: P2P MULTIPLAYER ENGINE (v1.2.1 - DIALOG SYNC FIX)
 // =================================================================
 
 let peer = null;
@@ -9,6 +9,16 @@ let myPlayerId = 0;
 let roomCode = "";
 let gameStarted = false; 
 let lastKnownStateJSON = "";
+
+// Função para capturar o conteúdo dinâmico do painel de controle do Host
+function getPanelContentHTML() {
+    const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
+    if (!controlPanel) return "";
+    
+    // Captura o bloco de mensagem/decisão (ex: texto de compra + botões Sim/Não)
+    // Preserva a estrutura mas pega o conteúdo interno
+    return controlPanel.innerHTML;
+}
 
 // -----------------------------------------------------------------
 // 1. BROADCAST & SYNCRONIZATION (Host -> Guests)
@@ -22,6 +32,7 @@ function broadcastState() {
         players: typeof players !== 'undefined' ? JSON.parse(JSON.stringify(players)) : [],
         boardSpaces: typeof boardSpaces !== 'undefined' ? JSON.parse(JSON.stringify(boardSpaces)) : [],
         currentPlayerIndex: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
+        panelHTML: getPanelContentHTML(), // Envia a tela de decisão/ação do painel
         GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {},
         gameStarted: gameStarted
     };
@@ -29,6 +40,7 @@ function broadcastState() {
     lastKnownStateJSON = JSON.stringify({
         p: gameState.players,
         c: gameState.currentPlayerIndex,
+        html: gameState.panelHTML,
         b: gameState.boardSpaces ? gameState.boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
     });
 
@@ -41,20 +53,22 @@ function broadcastState() {
     applyTurnSecurityUI();
 }
 
-// Loop contínuo de verificação de estado do Host (a cada 300ms)
+// Loop contínuo de verificação de estado do Host (a cada 250ms)
 setInterval(() => {
     if (!isHost || !gameStarted || connections.length === 0) return;
 
+    const currentPanelHTML = getPanelContentHTML();
     const currentStateJSON = JSON.stringify({
         p: typeof players !== 'undefined' ? players : [],
         c: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
+        html: currentPanelHTML,
         b: typeof boardSpaces !== 'undefined' ? boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
     });
 
     if (currentStateJSON !== lastKnownStateJSON) {
         broadcastState();
     }
-}, 300);
+}, 250);
 
 // -----------------------------------------------------------------
 // 2. TURN SECURITY & INTERACTION LOCK
@@ -65,7 +79,7 @@ function applyTurnSecurityUI() {
 
     const isMyTurn = (currentPlayerIndex === myPlayerId);
 
-    // Trava/Libera botão de Rolar Dado
+    // 1. Trava/Libera botão de Rolar Dado
     const diceBtn = document.getElementById("rollDice");
     if (diceBtn) {
         diceBtn.disabled = !isMyTurn;
@@ -73,7 +87,7 @@ function applyTurnSecurityUI() {
         diceBtn.style.cursor = isMyTurn ? "pointer" : "not-allowed";
     }
 
-    // Trava/Libera botões dentro do Painel de Controle
+    // 2. Trava/Libera botões dinâmicos de decisão (Sim/Não/Passar)
     const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
     if (controlPanel) {
         const panelButtons = controlPanel.querySelectorAll("button");
@@ -120,7 +134,7 @@ function attachNetworkTriggers() {
             return;
         }
 
-        // Para outros botões do Painel de Controle
+        // Para outros botões do Painel de Controle (ex: "Sim, Comprar", "Não, Passar Vez")
         if (currentPlayerIndex !== myPlayerId) {
             e.stopImmediatePropagation();
             e.preventDefault();
@@ -182,11 +196,19 @@ function handleIncomingData(data, conn) {
             }
         }
 
-        // Renderiza tudo via motor original do jogo
+        // Renderiza tabuleiro e elementos estáticos
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
         
+        // Sincroniza com precisão as opções e botões de decisão no painel do Convidado
+        if (!isHost && data.panelHTML) {
+            const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
+            if (controlPanel && controlPanel.innerHTML !== data.panelHTML) {
+                controlPanel.innerHTML = data.panelHTML;
+            }
+        }
+
         applyTurnSecurityUI();
     } 
     else if (data.type === 'REGISTER_PLAYER' && isHost) {
@@ -281,7 +303,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.2.0 - MULTIPLAYER ISOLADO</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.2.1 - DIALOG SYNC</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
