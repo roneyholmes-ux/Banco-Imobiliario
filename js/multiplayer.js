@@ -1,5 +1,5 @@
 // =================================================================
-// SYSTEM: P2P MULTIPLAYER ENGINE (v1.2.1 - DIALOG SYNC FIX)
+// SYSTEM: P2P MULTIPLAYER ENGINE (v1.3.0 - ADVANCED SYNC & TRADES)
 // =================================================================
 
 let peer = null;
@@ -10,14 +10,10 @@ let roomCode = "";
 let gameStarted = false; 
 let lastKnownStateJSON = "";
 
-// Função para capturar o conteúdo dinâmico do painel de controle do Host
+// Captura do Painel de Decisão + Modais Ativas (Trocas/Notificações)
 function getPanelContentHTML() {
-    const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
-    if (!controlPanel) return "";
-    
-    // Captura o bloco de mensagem/decisão (ex: texto de compra + botões Sim/Não)
-    // Preserva a estrutura mas pega o conteúdo interno
-    return controlPanel.innerHTML;
+    const controlPanel = document.getElementById("game-status");
+    return controlPanel ? controlPanel.innerHTML : "";
 }
 
 // -----------------------------------------------------------------
@@ -32,7 +28,8 @@ function broadcastState() {
         players: typeof players !== 'undefined' ? JSON.parse(JSON.stringify(players)) : [],
         boardSpaces: typeof boardSpaces !== 'undefined' ? JSON.parse(JSON.stringify(boardSpaces)) : [],
         currentPlayerIndex: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
-        panelHTML: getPanelContentHTML(), // Envia a tela de decisão/ação do painel
+        awaitingDecision: typeof awaitingDecision !== 'undefined' ? awaitingDecision : false,
+        panelHTML: getPanelContentHTML(),
         GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {},
         gameStarted: gameStarted
     };
@@ -41,6 +38,7 @@ function broadcastState() {
         p: gameState.players,
         c: gameState.currentPlayerIndex,
         html: gameState.panelHTML,
+        a: gameState.awaitingDecision,
         b: gameState.boardSpaces ? gameState.boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
     });
 
@@ -53,7 +51,7 @@ function broadcastState() {
     applyTurnSecurityUI();
 }
 
-// Loop contínuo de verificação de estado do Host (a cada 250ms)
+// Loop contínuo de sincronização (Host -> Clientes)
 setInterval(() => {
     if (!isHost || !gameStarted || connections.length === 0) return;
 
@@ -62,13 +60,14 @@ setInterval(() => {
         p: typeof players !== 'undefined' ? players : [],
         c: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
         html: currentPanelHTML,
+        a: typeof awaitingDecision !== 'undefined' ? awaitingDecision : false,
         b: typeof boardSpaces !== 'undefined' ? boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
     });
 
     if (currentStateJSON !== lastKnownStateJSON) {
         broadcastState();
     }
-}, 250);
+}, 200);
 
 // -----------------------------------------------------------------
 // 2. TURN SECURITY & INTERACTION LOCK
@@ -79,7 +78,7 @@ function applyTurnSecurityUI() {
 
     const isMyTurn = (currentPlayerIndex === myPlayerId);
 
-    // 1. Trava/Libera botão de Rolar Dado
+    // Trava/Libera botão de Rolar Dado
     const diceBtn = document.getElementById("rollDice");
     if (diceBtn) {
         diceBtn.disabled = !isMyTurn;
@@ -87,35 +86,39 @@ function applyTurnSecurityUI() {
         diceBtn.style.cursor = isMyTurn ? "pointer" : "not-allowed";
     }
 
-    // 2. Trava/Libera botões dinâmicos de decisão (Sim/Não/Passar)
-    const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
-    if (controlPanel) {
-        const panelButtons = controlPanel.querySelectorAll("button");
-        panelButtons.forEach(btn => {
-            if (btn.id === "btn-close-online" || btn.id === "rollDice") return;
+    // Trava/Libera botão de Negociar
+    const tradeBtn = document.getElementById("btn-open-trade");
+    if (tradeBtn) {
+        tradeBtn.disabled = !isMyTurn;
+        tradeBtn.style.opacity = isMyTurn ? "1" : "0.3";
+        tradeBtn.style.cursor = isMyTurn ? "pointer" : "not-allowed";
+    }
 
+    // Interceptação e travamento do Painel de Status/Ações
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) {
+        const panelButtons = statusDiv.querySelectorAll("button");
+        panelButtons.forEach(btn => {
             if (!isMyTurn) {
                 btn.disabled = true;
-                btn.style.opacity = "0.3";
+                btn.style.opacity = "0.4";
                 btn.style.cursor = "not-allowed";
-                btn.style.pointerEvents = "none";
             } else {
                 btn.disabled = false;
                 btn.style.opacity = "1";
                 btn.style.cursor = "pointer";
-                btn.style.pointerEvents = "auto";
             }
         });
     }
 }
 
-// Intercepta cliques e envia para o Host se for ação remota
+// Intercepta cliques e repassa comandos pela rede
 function attachNetworkTriggers() {
     document.addEventListener("click", (e) => {
         const btn = e.target.closest("button");
         if (!btn || btn.id === "btn-close-online") return;
 
-        // Se o botão for de Rolar Dado
+        // Rolar Dado
         if (btn.id === "rollDice") {
             if (currentPlayerIndex !== myPlayerId) {
                 e.stopImmediatePropagation();
@@ -129,25 +132,31 @@ function attachNetworkTriggers() {
                 e.preventDefault();
                 sendNetworkAction('ACTION_ROLL_DICE');
             } else {
-                setTimeout(() => { broadcastState(); }, 400);
+                setTimeout(() => { broadcastState(); }, 300);
             }
             return;
         }
 
-        // Para outros botões do Painel de Controle (ex: "Sim, Comprar", "Não, Passar Vez")
-        if (currentPlayerIndex !== myPlayerId) {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            return;
-        }
+        // Botoes Genéricos do Painel de Ações
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv && statusDiv.contains(btn)) {
+            if (currentPlayerIndex !== myPlayerId) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                showToastNotification("Ação permitida apenas no seu turno!");
+                return;
+            }
 
-        if (!isHost && gameStarted) {
-            e.stopImmediatePropagation();
-            e.preventDefault();
-            sendNetworkAction('ACTION_GENERIC_CLICK', { 
-                btnId: btn.id || null, 
-                btnText: btn.innerText 
-            });
+            if (!isHost && gameStarted) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
+                sendNetworkAction('ACTION_GENERIC_CLICK', { 
+                    btnId: btn.id || null, 
+                    btnText: btn.innerText.trim() 
+                });
+            } else if (isHost) {
+                setTimeout(() => { broadcastState(); }, 200);
+            }
         }
     }, true);
 }
@@ -174,6 +183,7 @@ function handleIncomingData(data, conn) {
     if (data.type === 'GAME_STATE') {
         if (typeof players !== 'undefined') players = data.players;
         if (typeof currentPlayerIndex !== 'undefined') currentPlayerIndex = data.currentPlayerIndex;
+        if (typeof awaitingDecision !== 'undefined') awaitingDecision = data.awaitingDecision;
         gameStarted = data.gameStarted;
         
         if (data.boardSpaces && typeof boardSpaces !== 'undefined') {
@@ -196,16 +206,16 @@ function handleIncomingData(data, conn) {
             }
         }
 
-        // Renderiza tabuleiro e elementos estáticos
+        // Renderização Estática do Tabuleiro e Peças
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
         
-        // Sincroniza com precisão as opções e botões de decisão no painel do Convidado
+        // Sincronização do painel interativo no Convidado
         if (!isHost && data.panelHTML) {
-            const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
-            if (controlPanel && controlPanel.innerHTML !== data.panelHTML) {
-                controlPanel.innerHTML = data.panelHTML;
+            const statusDiv = document.getElementById("game-status");
+            if (statusDiv && statusDiv.innerHTML !== data.panelHTML) {
+                statusDiv.innerHTML = data.panelHTML;
             }
         }
 
@@ -220,7 +230,7 @@ function handleIncomingData(data, conn) {
         players.push({
             id: newPlayerId,
             name: `Jogador ${newPlayerId + 1}`,
-            money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 1500,
+            money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 25000,
             position: 0,
             color: presetColor,
             inJail: false,
@@ -248,23 +258,22 @@ function handleIncomingData(data, conn) {
     else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
         if (currentPlayerIndex === data.senderId) {
             if (typeof rollDice === "function") rollDice();
-            setTimeout(() => { broadcastState(); }, 400);
+            setTimeout(() => { broadcastState(); }, 300);
         }
     }
     else if (data.type === 'ACTION_GENERIC_CLICK' && isHost) {
         if (currentPlayerIndex === data.senderId) {
             let targetBtn = null;
             if (data.btnId) targetBtn = document.getElementById(data.btnId);
+            
             if (!targetBtn && data.btnText) {
-                const buttons = document.querySelectorAll("button");
+                const buttons = document.querySelectorAll("#game-status button");
                 buttons.forEach(b => {
-                    if (b.innerText.trim() === data.btnText.trim()) targetBtn = b;
+                    if (b.innerText.trim() === data.btnText) targetBtn = b;
                 });
             }
 
-            if (targetBtn && typeof targetBtn.onclick === "function") {
-                targetBtn.onclick();
-            } else if (targetBtn) {
+            if (targetBtn) {
                 targetBtn.click();
             }
             
@@ -303,7 +312,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.2.1 - DIALOG SYNC</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.3.0 - ADVANCED SYNC</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
@@ -413,7 +422,7 @@ function showLobbyModal(overlay, code) {
         initializePlayers(1);
     } else {
         players = [{
-            id: 0, name: "Jogador 1 (Host)", money: 1500, position: 0, color: "#6c5ce7", inJail: false, jailTurns: 0, isBankrupt: false, fichasDiscreta: 0, fichasContinua: 0
+            id: 0, name: "Jogador 1 (Host)", money: 25000, position: 0, color: "#6c5ce7", inJail: false, jailTurns: 0, isBankrupt: false, fichasDiscreta: 0, fichasContinua: 0
         }];
     }
     
