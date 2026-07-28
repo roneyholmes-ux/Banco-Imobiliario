@@ -1346,7 +1346,7 @@ window.onload = () => {
 };
 
 // ==========================================
-// MÓDULO MULTIPLAYER PEERJS (v1.1.4 - CONTROL & TURN LOCK)
+// MÓDULO MULTIPLAYER PEERJS (v1.1.5 - REALTIME STATE OBSERVER)
 // ==========================================
 let peer = null;
 let connections = [];
@@ -1354,6 +1354,7 @@ let isHost = false;
 let myPlayerId = 0; 
 let roomCode = "";
 let gameStarted = false; 
+let lastKnownStateJSON = "";
 
 // Transmite o estado completo do jogo (Host -> Clientes)
 function broadcastState() {
@@ -1368,17 +1369,38 @@ function broadcastState() {
         gameStarted: gameStarted
     };
 
+    // Guarda hash do último estado enviado
+    lastKnownStateJSON = JSON.stringify({
+        p: gameState.players,
+        c: gameState.currentPlayerIndex,
+        b: gameState.boardSpaces ? gameState.boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
+    });
+
     connections.forEach(conn => {
         if (conn && conn.open) {
             conn.send(gameState);
         }
     });
 
-    // Atualiza a interface local do Host imediatamente
     applyTurnSecurityUI();
 }
 
-// Bloqueia botões se não for o turno do jogador local
+// LOOP OBSERVADOR DO HOST: Se qualquer dado mudar no Host, sincroniza automaticamente
+setInterval(() => {
+    if (!isHost || !gameStarted || connections.length === 0) return;
+
+    const currentStateJSON = JSON.stringify({
+        p: typeof players !== 'undefined' ? players : [],
+        c: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
+        b: typeof boardSpaces !== 'undefined' ? boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
+    });
+
+    if (currentStateJSON !== lastKnownStateJSON) {
+        broadcastState();
+    }
+}, 250); // Checa mudanças 4 vezes por segundo
+
+// Bloqueia / Libera controles de acordo com o turno do jogador
 function applyTurnSecurityUI() {
     const diceBtn = document.getElementById("rollDice");
     if (!diceBtn || typeof currentPlayerIndex === 'undefined') return;
@@ -1396,7 +1418,6 @@ function applyTurnSecurityUI() {
     }
 }
 
-// Transmite uma ação de cliente para Host ou vice-versa
 function sendNetworkAction(actionType, payload = {}) {
     const message = { type: actionType, senderId: myPlayerId, ...payload };
     
@@ -1409,16 +1430,17 @@ function sendNetworkAction(actionType, payload = {}) {
     }
 }
 
-// Recebe e trata mensagens
+// Recebe e renderiza os dados enviados pelo Host
 function handleIncomingData(data, conn) {
     if (!data) return;
 
-    // 1. Recebimento do Estado Global
+    // 1. Recebimento de Atualização do Estado do Jogo (Enviado do Host)
     if (data.type === 'GAME_STATE') {
         if (typeof players !== 'undefined') players = data.players;
         if (typeof currentPlayerIndex !== 'undefined') currentPlayerIndex = data.currentPlayerIndex;
         gameStarted = data.gameStarted;
         
+        // Sincroniza estado das casas/propriedades no tabuleiro
         if (data.boardSpaces && typeof boardSpaces !== 'undefined') {
             data.boardSpaces.forEach((space, idx) => {
                 if (boardSpaces[idx]) {
@@ -1428,6 +1450,7 @@ function handleIncomingData(data, conn) {
             });
         }
 
+        // Revela mesa para o convidado
         if (gameStarted) {
             const overlay = document.getElementById("online-modal-overlay");
             if (overlay) overlay.remove();
@@ -1439,20 +1462,20 @@ function handleIncomingData(data, conn) {
             }
         }
 
+        // Força re-renderização completa da tela no Convidado
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
         
         applyTurnSecurityUI();
     } 
-    // 2. Registro do Jogador 2+ com todos os atributos corretos
+    // 2. Registro do Jogador Conectado
     else if (data.type === 'REGISTER_PLAYER' && isHost) {
         const newPlayerId = players.length;
         const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
             ? PLAYER_PRESETS[newPlayerId].color 
             : "#" + Math.floor(Math.random()*16777215).toString(16);
 
-        // Estrutura idêntica à do jogo original (corrigindo o 'undefined')
         players.push({
             id: newPlayerId,
             name: `Jogador ${newPlayerId + 1}`,
@@ -1474,7 +1497,7 @@ function handleIncomingData(data, conn) {
         
         broadcastState();
     }
-    // 3. Resposta de Boas-Vindas ao Convidado
+    // 3. Boas-Vindas ao Convidado
     else if (data.type === 'WELCOME_PLAYER') {
         myPlayerId = data.assignedId;
         const statusText = document.getElementById("guest-wait-status");
@@ -1482,7 +1505,7 @@ function handleIncomingData(data, conn) {
             statusText.innerHTML = `<span style="color: #2ed573;">✔ Conectado como Jogador ${myPlayerId + 1}!</span><br><small style="color: #aaa;">Aguardando o Host iniciar a partida...</small>`;
         }
     }
-    // 4. Jogada de Dado Solicitada por Convidado
+    // 4. Solicitação do Convidado para Rolar o Dado
     else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
         if (currentPlayerIndex === data.senderId) {
             if (typeof rollDice === "function") rollDice();
@@ -1541,7 +1564,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.4 - P2P MULTIPLAYER</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.5 - P2P MULTIPLAYER</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
@@ -1650,7 +1673,6 @@ function showOnlineModal() {
     };
 }
 
-// Tela de Espera no Lobby do Host
 function showLobbyModal(overlay, code) {
     if (typeof initializePlayers === "function") {
         initializePlayers(1);
