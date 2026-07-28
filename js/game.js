@@ -1346,7 +1346,7 @@ window.onload = () => {
 };
 
 // ==========================================
-// MÓDULO MULTIPLAYER PEERJS (v1.1.5 - REALTIME STATE OBSERVER)
+// MÓDULO MULTIPLAYER PEERJS (v1.1.7 - HOST PANEL AUTHORITY & TURN LOCK)
 // ==========================================
 let peer = null;
 let connections = [];
@@ -1356,23 +1356,34 @@ let roomCode = "";
 let gameStarted = false; 
 let lastKnownStateJSON = "";
 
-// Transmite o estado completo do jogo (Host -> Clientes)
+// Captura o HTML atual das mensagens do painel de controle
+function getPanelMessageHTML() {
+    const messageContainer = document.querySelector("#control-panel, .control-panel, [class*='painel']");
+    if (!messageContainer) return "";
+    
+    // Procura por blocos de texto ou caixas de diálogo ativas no painel
+    const cardOrMsg = messageContainer.querySelector(".card, .message, .dialog, p, h3, h4");
+    return cardOrMsg ? cardOrMsg.outerHTML : "";
+}
+
+// Transmite o estado completo + HTML do painel (Host -> Clientes)
 function broadcastState() {
     if (!isHost) return;
     
     const gameState = {
         type: 'GAME_STATE',
-        players: typeof players !== 'undefined' ? players : [],
-        boardSpaces: typeof boardSpaces !== 'undefined' ? boardSpaces : [],
+        players: typeof players !== 'undefined' ? JSON.parse(JSON.stringify(players)) : [],
+        boardSpaces: typeof boardSpaces !== 'undefined' ? JSON.parse(JSON.stringify(boardSpaces)) : [],
         currentPlayerIndex: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
+        panelHTML: getPanelMessageHTML(),
         GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {},
         gameStarted: gameStarted
     };
 
-    // Guarda hash do último estado enviado
     lastKnownStateJSON = JSON.stringify({
         p: gameState.players,
         c: gameState.currentPlayerIndex,
+        html: gameState.panelHTML,
         b: gameState.boardSpaces ? gameState.boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
     });
 
@@ -1385,37 +1396,56 @@ function broadcastState() {
     applyTurnSecurityUI();
 }
 
-// LOOP OBSERVADOR DO HOST: Se qualquer dado mudar no Host, sincroniza automaticamente
+// Observador do Host para transmitir mudanças de estado/mensagens
 setInterval(() => {
     if (!isHost || !gameStarted || connections.length === 0) return;
 
+    const currentPanelHTML = getPanelMessageHTML();
     const currentStateJSON = JSON.stringify({
         p: typeof players !== 'undefined' ? players : [],
         c: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
+        html: currentPanelHTML,
         b: typeof boardSpaces !== 'undefined' ? boardSpaces.map(s => ({ o: s.owner, h: s.houses })) : []
     });
 
     if (currentStateJSON !== lastKnownStateJSON) {
         broadcastState();
     }
-}, 250); // Checa mudanças 4 vezes por segundo
+}, 250);
 
-// Bloqueia / Libera controles de acordo com o turno do jogador
+// Trava Geral do Painel de Controle: Impede interferência fora do turno
 function applyTurnSecurityUI() {
-    const diceBtn = document.getElementById("rollDice");
-    if (!diceBtn || typeof currentPlayerIndex === 'undefined') return;
+    if (typeof currentPlayerIndex === 'undefined') return;
 
     const isMyTurn = (currentPlayerIndex === myPlayerId);
 
-    if (isMyTurn) {
-        diceBtn.disabled = false;
-        diceBtn.style.opacity = "1";
-        diceBtn.style.cursor = "pointer";
-    } else {
-        diceBtn.disabled = true;
-        diceBtn.style.opacity = "0.4";
-        diceBtn.style.cursor = "not-allowed";
+    // 1. Trava do botão de dados
+    const diceBtn = document.getElementById("rollDice");
+    if (diceBtn) {
+        diceBtn.disabled = !isMyTurn;
+        diceBtn.style.opacity = isMyTurn ? "1" : "0.4";
+        diceBtn.style.cursor = isMyTurn ? "pointer" : "not-allowed";
     }
+
+    // 2. Trava de botões dinâmicos do Painel (ex: "Ok, continuar", "Comprar", etc.)
+    const controlPanel = document.querySelector(".control-panel, #control-panel, [class*='painel']");
+    const panelButtons = controlPanel ? controlPanel.querySelectorAll("button") : document.querySelectorAll("button");
+
+    panelButtons.forEach(btn => {
+        if (btn.id === "btn-close-online" || btn.id === "rollDice") return;
+
+        if (!isMyTurn) {
+            btn.disabled = true;
+            btn.style.opacity = "0.3";
+            btn.style.cursor = "not-allowed";
+            btn.style.pointerEvents = "none";
+        } else {
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
+            btn.style.pointerEvents = "auto";
+        }
+    });
 }
 
 function sendNetworkAction(actionType, payload = {}) {
@@ -1430,17 +1460,16 @@ function sendNetworkAction(actionType, payload = {}) {
     }
 }
 
-// Recebe e renderiza os dados enviados pelo Host
+// Tratamento de mensagens recebidas pelos Clientes
 function handleIncomingData(data, conn) {
     if (!data) return;
 
-    // 1. Recebimento de Atualização do Estado do Jogo (Enviado do Host)
+    // 1. O Convidado recebe e aplica o estado e a mensagem EXATOS gerados pelo Host
     if (data.type === 'GAME_STATE') {
         if (typeof players !== 'undefined') players = data.players;
         if (typeof currentPlayerIndex !== 'undefined') currentPlayerIndex = data.currentPlayerIndex;
         gameStarted = data.gameStarted;
         
-        // Sincroniza estado das casas/propriedades no tabuleiro
         if (data.boardSpaces && typeof boardSpaces !== 'undefined') {
             data.boardSpaces.forEach((space, idx) => {
                 if (boardSpaces[idx]) {
@@ -1450,7 +1479,6 @@ function handleIncomingData(data, conn) {
             });
         }
 
-        // Revela mesa para o convidado
         if (gameStarted) {
             const overlay = document.getElementById("online-modal-overlay");
             if (overlay) overlay.remove();
@@ -1462,14 +1490,24 @@ function handleIncomingData(data, conn) {
             }
         }
 
-        // Força re-renderização completa da tela no Convidado
+        // Renderiza tabuleiro, peões e UI do jogo local
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
         
+        // Se o Host enviou a mensagem oficial do painel, injeta diretamente no Convidado
+        if (!isHost && data.panelHTML) {
+            const messageContainer = document.querySelector("#control-panel, .control-panel, [class*='painel']");
+            if (messageContainer) {
+                const targetBox = messageContainer.querySelector(".card, .message, .dialog, p") || messageContainer;
+                if (targetBox && targetBox.outerHTML !== data.panelHTML) {
+                    targetBox.outerHTML = data.panelHTML;
+                }
+            }
+        }
+
         applyTurnSecurityUI();
     } 
-    // 2. Registro do Jogador Conectado
     else if (data.type === 'REGISTER_PLAYER' && isHost) {
         const newPlayerId = players.length;
         const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
@@ -1497,7 +1535,6 @@ function handleIncomingData(data, conn) {
         
         broadcastState();
     }
-    // 3. Boas-Vindas ao Convidado
     else if (data.type === 'WELCOME_PLAYER') {
         myPlayerId = data.assignedId;
         const statusText = document.getElementById("guest-wait-status");
@@ -1505,36 +1542,77 @@ function handleIncomingData(data, conn) {
             statusText.innerHTML = `<span style="color: #2ed573;">✔ Conectado como Jogador ${myPlayerId + 1}!</span><br><small style="color: #aaa;">Aguardando o Host iniciar a partida...</small>`;
         }
     }
-    // 4. Solicitação do Convidado para Rolar o Dado
+    // 2. Convidado solicita ação -> Host processa e retransmite
     else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
         if (currentPlayerIndex === data.senderId) {
             if (typeof rollDice === "function") rollDice();
-            broadcastState();
+            setTimeout(() => { broadcastState(); }, 400);
+        }
+    }
+    else if (data.type === 'ACTION_GENERIC_CLICK' && isHost) {
+        if (currentPlayerIndex === data.senderId) {
+            let targetBtn = null;
+            if (data.btnId) targetBtn = document.getElementById(data.btnId);
+            if (!targetBtn && data.btnText) {
+                const buttons = document.querySelectorAll("button");
+                buttons.forEach(b => {
+                    if (b.innerText.trim() === data.btnText.trim()) targetBtn = b;
+                });
+            }
+
+            if (targetBtn && typeof targetBtn.onclick === "function") {
+                targetBtn.onclick();
+            } else if (targetBtn) {
+                targetBtn.click();
+            }
+            
+            setTimeout(() => { broadcastState(); }, 200);
         }
     }
 }
 
+// Hook Global para redirecionar cliques de convidados ao Host
 function attachNetworkTriggers() {
-    const diceBtn = document.getElementById("rollDice");
-    if (diceBtn && !diceBtn.dataset.networkHooked) {
-        diceBtn.dataset.networkHooked = "true";
-        const originalClick = diceBtn.onclick;
+    document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button");
+        if (!btn || btn.id === "btn-close-online") return;
 
-        diceBtn.onclick = (e) => {
+        // Se for o botão de dado
+        if (btn.id === "rollDice") {
             if (currentPlayerIndex !== myPlayerId) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
                 showToastNotification("Aguarde a sua vez de jogar!");
                 return;
             }
 
-            if (isHost) {
-                if (originalClick) originalClick(e);
-                else if (typeof rollDice === "function") rollDice();
-                broadcastState();
-            } else {
+            if (!isHost) {
+                e.stopImmediatePropagation();
+                e.preventDefault();
                 sendNetworkAction('ACTION_ROLL_DICE');
+            } else {
+                setTimeout(() => { broadcastState(); }, 400);
             }
-        };
-    }
+            return;
+        }
+
+        // Se for outro botão (ex: "Ok, continuar") e não for o turno do jogador local, bloqueia
+        if (currentPlayerIndex !== myPlayerId) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            return;
+        }
+
+        // Se for o convidado no seu próprio turno, avisa o Host sobre o clique
+        if (!isHost && gameStarted) {
+            e.stopImmediatePropagation();
+            e.preventDefault();
+            sendNetworkAction('ACTION_GENERIC_CLICK', { 
+                btnId: btn.id || null, 
+                btnText: btn.innerText 
+            });
+        }
+    }, true);
 }
 
 function generateRoomCode() {
@@ -1564,7 +1642,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.5 - P2P MULTIPLAYER</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.7 - P2P MULTIPLAYER</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
@@ -1578,7 +1656,6 @@ function showOnlineModal() {
                 </div>
             </div>
 
-            <!-- SUB-VIEW: DIGITAR CÓDIGO -->
             <div id="online-join-view" style="display: none; margin-bottom: 20px;">
                 <p style="margin-bottom: 10px; color: #ccc;">Digite o código da sala de 4 dígitos:</p>
                 <input type="text" id="join-room-input" maxlength="4" placeholder="EX: X9W2" style="text-transform: uppercase; font-size: 1.5rem; text-align: center; letter-spacing: 4px; width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #6c5ce7; background: #0f0c1b; color: white; margin-bottom: 15px;">
@@ -1586,7 +1663,6 @@ function showOnlineModal() {
                 <button id="btn-confirm-join" style="width: 100%; padding: 12px; background: #2ed573; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem;">CONECTAR À SALA</button>
             </div>
 
-            <!-- SUB-VIEW: ESPERANDO START DO HOST -->
             <div id="online-wait-view" style="display: none; margin-bottom: 20px;">
                 <div id="guest-wait-status" style="font-size: 1.1rem; color: #eccc68; margin: 20px 0;">Conectando ao servidor da sala...</div>
             </div>
@@ -1604,7 +1680,6 @@ function showOnlineModal() {
         document.getElementById("online-join-view").style.display = "block";
     };
 
-    // --- 1. CRIAR SALA (HOST) ---
     document.getElementById("btn-create-room").onclick = () => {
         isHost = true;
         myPlayerId = 0;
@@ -1635,7 +1710,6 @@ function showOnlineModal() {
         peer.on('error', (err) => showToastNotification("Erro Host: " + err.type));
     };
 
-    // --- 2. ENTRAR EM SALA (CONVIDADO) ---
     document.getElementById("btn-confirm-join").onclick = () => {
         const errorDiv = document.getElementById("join-error-msg");
         errorDiv.style.display = "none";
