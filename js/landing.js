@@ -13,15 +13,17 @@ function toggleFaq(element) {
     const icon = element.querySelector('.faq-icon');
     icon.innerText = element.classList.contains('active') ? '-' : '+';
 }
-// Atrelamento genérico dos botões de ação à camada Network
-document.getElementById('btn-roll-dice')?.addEventListener('click', () => {
-  Network.sendAction('ROLL_DICE');
-});
+// Atrelamento genérico dos botões de ação à camada Network assim que a página carregar
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btn-roll-dice')?.addEventListener('click', () => {
+    Network.sendAction('ROLL_DICE');
+  });
 
-document.getElementById('btn-buy-property')?.addEventListener('click', () => {
-  Network.sendAction('BUY_PROPERTY');
-});
+  document.getElementById('btn-buy-property')?.addEventListener('click', () => {
+    Network.sendAction('BUY_PROPERTY');
+  });
 
-document.getElementById('btn-end-turn')?.addEventListener('click', () => {
-  Network.sendAction('END_TURN');
+  document.getElementById('btn-end-turn')?.addEventListener('click', () => {
+    Network.sendAction('END_TURN');
+  });
 });
