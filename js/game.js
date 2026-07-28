@@ -1346,24 +1346,28 @@ window.onload = () => {
 };
 
 // ==========================================
-// MÓDULO MULTIPLAYER PEERJS (v1.1.1)
+// MÓDULO MULTIPLAYER PEERJS (v1.1.2 - REPOSITÓRIO E SINCRONIA)
 // ==========================================
 let peer = null;
 let connections = [];
 let isHost = false;
-let myPlayerId = null;
+let myPlayerId = 0; // Host é sempre 0, convidados recebem id > 0
 let roomCode = "";
+let gameStarted = false; // Trava de segurança para não aceitar entrada pós-início
 
-// Transmite o estado atual do jogo para todos os convidados
+// Transmite o estado completo do jogo (Host -> Clientes)
 function broadcastState() {
     if (!isHost) return;
+    
     const gameState = {
         type: 'GAME_STATE',
-        players: typeof players !== 'undefined' ? players : [],
-        boardSpaces: typeof boardSpaces !== 'undefined' ? boardSpaces : [],
-        currentPlayerIndex: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
-        GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {}
+        players: players,
+        boardSpaces: boardSpaces,
+        currentPlayerIndex: currentPlayerIndex,
+        GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {},
+        gameStarted: gameStarted
     };
+
     connections.forEach(conn => {
         if (conn && conn.open) {
             conn.send(gameState);
@@ -1371,16 +1375,32 @@ function broadcastState() {
     });
 }
 
-// Recebe as ações e atualizações da rede
+// Transmite uma ação individual de um cliente para o Host ou vice-versa
+function sendNetworkAction(actionType, payload = {}) {
+    const message = { type: actionType, senderId: myPlayerId, ...payload };
+    
+    if (isHost) {
+        // Se o host fez a ação, avisa todos os convidados
+        connections.forEach(conn => { if (conn && conn.open) conn.send(message); });
+    } else {
+        // Se o convidado fez a ação, avisa o Host
+        if (connections[0] && connections[0].open) {
+            connections[0].send(message);
+        }
+    }
+}
+
+// Trata mensagens recebidas pela rede
 function handleIncomingData(data) {
     if (!data) return;
 
+    // 1. Recebimento de Estado Global (Sincronização de Tela)
     if (data.type === 'GAME_STATE') {
-        if (typeof players !== 'undefined') players = data.players;
-        if (typeof currentPlayerIndex !== 'undefined') currentPlayerIndex = data.currentPlayerIndex;
-        if (data.GAME_CONFIG && typeof GAME_CONFIG !== 'undefined') GAME_CONFIG = data.GAME_CONFIG;
+        players = data.players;
+        currentPlayerIndex = data.currentPlayerIndex;
+        gameStarted = data.gameStarted;
         
-        if (typeof boardSpaces !== 'undefined' && data.boardSpaces) {
+        if (data.boardSpaces && typeof boardSpaces !== 'undefined') {
             data.boardSpaces.forEach((space, idx) => {
                 if (boardSpaces[idx]) {
                     boardSpaces[idx].owner = space.owner;
@@ -1388,29 +1408,53 @@ function handleIncomingData(data) {
                 }
             });
         }
-        
-        // Garante a renderização para os jogadores que entraram
+
+        // Atualiza a interface gráfica de todos
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
-
-        // Revela a mesa de jogo se estiver escondida
-        const gameSection = document.getElementById("game-section-area");
-        if (gameSection && gameSection.classList.contains("hidden")) {
-            gameSection.classList.remove("hidden");
-            gameSection.scrollIntoView({ behavior: 'smooth' });
+    } 
+    
+    // 2. Pedido de Rolagem de Dados (Cliente -> Host)
+    else if (data.type === 'ACTION_ROLL_DICE') {
+        if (isHost) {
+            if (typeof rollDice === "function") rollDice();
+            broadcastState(); // Espalha o novo resultado do dado para todos
         }
-    } else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
-        if (typeof rollDice === "function") rollDice();
     }
 }
 
-// Gera código de sala amigável (4 letras/números)
+// Hook nos botões nativos do jogo para transmitir ações via rede
+function attachNetworkTriggers() {
+    const diceBtn = document.getElementById("rollDice");
+    if (diceBtn && !diceBtn.dataset.networkHooked) {
+        diceBtn.dataset.networkHooked = "true";
+        const originalClick = diceBtn.onclick;
+
+        diceBtn.onclick = (e) => {
+            // Se não for a vez do jogador atual, impede a jogada
+            if (typeof currentPlayerIndex !== 'undefined' && currentPlayerIndex !== myPlayerId) {
+                alert("Aguarde a sua vez de jogar!");
+                return;
+            }
+
+            if (isHost) {
+                if (originalClick) originalClick(e);
+                else if (typeof rollDice === "function") rollDice();
+                broadcastState();
+            } else {
+                sendNetworkAction('ACTION_ROLL_DICE');
+            }
+        };
+    }
+}
+
+// Gera código de sala amigável (4 letras)
 function generateRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-// Interface Modal Geral Online
+// Modal Principal Online
 function showOnlineModal() {
     const existingModal = document.getElementById("online-modal-overlay");
     if (existingModal) existingModal.remove();
@@ -1419,30 +1463,30 @@ function showOnlineModal() {
     overlay.id = "online-modal-overlay";
     overlay.style = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(10, 10, 25, 0.92); display: flex; justify-content: center;
+        background: rgba(10, 10, 25, 0.94); display: flex; justify-content: center;
         align-items: center; z-index: 10000; font-family: 'Montserrat', sans-serif;
     `;
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.1 - REDE P2P</span>
-            <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Jogar Online</h2>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.2 - P2P MULTIPLAYER</span>
+            <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
                 <div style="display: flex; gap: 15px; margin-bottom: 20px;">
                     <button id="btn-create-room" style="flex: 1; padding: 20px 10px; background: #2d264a; border: 2px solid #6c5ce7; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">
-                        🏠 Criar Sala<br><small style="font-weight: normal; color: #aaa;">Inicie uma partida</small>
+                        🏠 Criar Sala<br><small style="font-weight: normal; color: #aaa;">Seja o Anfitrião</small>
                     </button>
                     <button id="btn-join-view" style="flex: 1; padding: 20px 10px; background: #2d264a; border: 2px solid #6c5ce7; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">
-                        🔑 Entrar em Sala<br><small style="font-weight: normal; color: #aaa;">Com código</small>
+                        🔑 Entrar em Sala<br><small style="font-weight: normal; color: #aaa;">Entrar com Código</small>
                     </button>
                 </div>
             </div>
 
-            <!-- SUB-VIEW: ENTRAR EM SALA -->
+            <!-- SUB-VIEW: DIGITAR CÓDIGO -->
             <div id="online-join-view" style="display: none; margin-bottom: 20px;">
-                <p style="margin-bottom: 10px; color: #ccc;">Digite o código de 4 dígitos da sala:</p>
-                <input type="text" id="join-room-input" maxlength="4" placeholder="EX: A1B2" style="text-transform: uppercase; font-size: 1.5rem; text-align: center; letter-spacing: 4px; width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #6c5ce7; background: #0f0c1b; color: white; margin-bottom: 15px;">
+                <p style="margin-bottom: 10px; color: #ccc;">Digite o código da sala de 4 dígitos:</p>
+                <input type="text" id="join-room-input" maxlength="4" placeholder="EX: X9W2" style="text-transform: uppercase; font-size: 1.5rem; text-align: center; letter-spacing: 4px; width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #6c5ce7; background: #0f0c1b; color: white; margin-bottom: 15px;">
                 <button id="btn-confirm-join" style="width: 100%; padding: 12px; background: #2ed573; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem;">CONECTAR À SALA</button>
             </div>
 
@@ -1454,16 +1498,16 @@ function showOnlineModal() {
 
     document.getElementById("btn-close-online").onclick = () => overlay.remove();
 
-    // Ação: Mostrar tela de digitar código
     document.getElementById("btn-join-view").onclick = () => {
         document.getElementById("online-actions-view").style.display = "none";
         document.getElementById("online-join-view").style.display = "block";
     };
 
-    // Ação: Criar Sala
+    // --- 1. CRIAR SALA (HOST) ---
     document.getElementById("btn-create-room").onclick = () => {
         isHost = true;
         myPlayerId = 0;
+        gameStarted = false;
         roomCode = generateRoomCode();
         
         if (peer) peer.destroy();
@@ -1474,41 +1518,48 @@ function showOnlineModal() {
         });
 
         peer.on('connection', (conn) => {
-            connections.push(conn);
-            conn.on('data', (data) => handleIncomingData(data));
-            conn.on('open', () => {
-                if (typeof players !== 'undefined') {
-                    const newPlayerId = players.length;
-                    const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
-                        ? PLAYER_PRESETS[newPlayerId].color 
-                        : "#" + Math.floor(Math.random()*16777215).toString(16);
+            // TRAVA DE SEGURANÇA: Recusa conexões se o jogo já começou
+            if (gameStarted) {
+                conn.send({ type: 'ERROR', message: 'A partida nesta sala já foi iniciada.' });
+                setTimeout(() => conn.close(), 500);
+                return;
+            }
 
-                    players.push({
-                        id: newPlayerId,
-                        name: `Jogador ${newPlayerId + 1}`,
-                        money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 1500,
-                        position: 0,
-                        color: presetColor,
-                        inJail: false,
-                        jailTurns: 0,
-                        isBankrupt: false
-                    });
-                }
+            connections.push(conn);
+            
+            conn.on('data', (data) => handleIncomingData(data));
+            
+            conn.on('open', () => {
+                // Adiciona o novo jogador na lista do Host
+                const newPlayerId = players.length;
+                const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
+                    ? PLAYER_PRESETS[newPlayerId].color 
+                    : "#" + Math.floor(Math.random()*16777215).toString(16);
+
+                players.push({
+                    id: newPlayerId,
+                    name: `Jogador ${newPlayerId + 1}`,
+                    money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 1500,
+                    position: 0,
+                    color: presetColor,
+                    inJail: false,
+                    jailTurns: 0,
+                    isBankrupt: false
+                });
+
                 updateLobbyUI();
-                broadcastState();
+                broadcastState(); // Atualiza contagem nos outros
             });
         });
 
-        peer.on('error', (err) => {
-            alert("Erro de conexão no servidor de sinalização P2P: " + err.type);
-        });
+        peer.on('error', (err) => alert("Erro PeerJS Host: " + err.type));
     };
 
-    // Ação: Confirmar Entrada na Sala por Código
+    // --- 2. ENTRAR EM SALA (CONVIDADO) ---
     document.getElementById("btn-confirm-join").onclick = () => {
         const inputCode = document.getElementById("join-room-input").value.trim().toUpperCase();
         if (!inputCode || inputCode.length < 4) {
-            alert("Por favor, digite um código de sala válido com 4 caracteres.");
+            alert("Código de sala inválido!");
             return;
         }
 
@@ -1522,38 +1573,64 @@ function showOnlineModal() {
 
             conn.on('open', () => {
                 overlay.remove();
-                alert("Conectado com sucesso! A mesa de jogo será carregada assim que o anfitrião iniciar.");
+                alert("Conectado com sucesso à sala! Aguarde o Host iniciar a partida.");
+                attachNetworkTriggers();
             });
 
-            conn.on('data', (data) => handleIncomingData(data));
-
-            conn.on('error', (err) => {
-                alert("Não foi possível conectar a esta sala. Verifique o código e tente novamente.");
+            conn.on('data', (data) => {
+                if (data.type === 'ERROR') {
+                    alert(data.message);
+                    location.reload();
+                } else {
+                    handleIncomingData(data);
+                }
             });
-        });
 
-        peer.on('error', (err) => {
-            alert("Erro ao conectar à rede: " + err.type);
+            conn.on('error', () => alert("Erro ao conectar na sala. Verifique se o código está correto."));
         });
     };
 }
 
+// Tela de Espera no Lobby do Host
 function showLobbyModal(overlay, code) {
-    if (typeof initializePlayers === "function") initializePlayers(1);
+    // Inicializa Host como Jogador 1 no array global de jogadores
+    if (typeof initializePlayers === "function") {
+        initializePlayers(1);
+    } else {
+        players = [{
+            id: 0, name: "Jogador 1 (Host)", money: 1500, position: 0, color: "#6c5ce7", inJail: false, jailTurns: 0, isBankrupt: false
+        }];
+    }
     
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%;">
-            <h3>Sala Criada! Aguardando Amigos</h3>
-            <p style="margin-top: 10px; color: #aaa;">Passe este código para os outros jogadores:</p>
+            <h3>Sala Aberta!</h3>
+            <p style="margin-top: 10px; color: #aaa;">Compartilhe este código com os amigos:</p>
             <h1 style="font-size: 2.8rem; letter-spacing: 5px; color: #a29bfe; margin: 15px 0; background: #2d264a; padding: 10px; border-radius: 8px; user-select: all;">${code}</h1>
-            <div id="lobby-players-count" style="margin: 15px 0 20px; font-weight: bold; color: #00b894;">1 Jogador Conectado (Você)</div>
-            <button id="btn-start-online-game" style="width: 100%; padding: 14px; background: #6c5ce7; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem;">INICIAR PARTIDA 🚀</button>
+            <div id="lobby-players-count" style="margin: 15px 0 20px; font-weight: bold; color: #00b894;">1 Jogador Conectado</div>
+            <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">Espere todos entrarem na sala antes de clicar abaixo!</p>
+            <button id="btn-start-online-game" style="width: 100%; padding: 14px; background: #2ed573; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem;">INICIAR PARTIDA 🚀</button>
         </div>
     `;
 
     document.getElementById("btn-start-online-game").onclick = () => {
+        if (connections.length === 0) {
+            if (!confirm("Nenhum amigo se conectou ainda. Deseja iniciar sozinho mesmo assim?")) {
+                return;
+            }
+        }
+        
+        // Tranca a sala para não entrar mais ninguém
+        gameStarted = true;
         overlay.remove();
+        
+        // Liga os gatilhos dos botões no Host
+        attachNetworkTriggers();
+
+        // Envia o estado inicial sincronizado para todos os convidados
         broadcastState();
+
+        // Exibe o tabuleiro na tela
         const gameSection = document.getElementById("game-section-area");
         if (gameSection) {
             gameSection.classList.remove("hidden");
@@ -1565,6 +1642,6 @@ function showLobbyModal(overlay, code) {
 function updateLobbyUI() {
     const lobbyCount = document.getElementById("lobby-players-count");
     if (lobbyCount && typeof players !== 'undefined') {
-        lobbyCount.innerText = `${players.length} Jogadores Conectados`;
+        lobbyCount.innerText = `${players.length} Jogador(es) Conectado(s)`;
     }
 }
