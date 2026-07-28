@@ -19,7 +19,7 @@
             <li><a href="#benefits">Por que jogar</a></li>
             <li><a href="#explore">Explorar</a></li>
             <li><a href="#faq">FAQ</a></li>
-            <li><button class="nav-play-btn" onclick="showOnlineModal()">Jogar agora</button></li>
+            <li><button class="nav-play-btn" onclick="scrollToGame()">Jogar agora</button></li>
         </ul>
     </nav>
 
@@ -30,9 +30,9 @@
                 <h1 class="main-hero-title">Estratégia se aprende <br><span>jogando</span></h1>
                 <p class="hero-description">O Banco Imobiliário é um simulador estratégico e financeiro que combina tomadas de decisão, negociações dinâmicas e gerenciamento de riscos de forma prática, desafiadora e significativa.</p>
                 <div class="hero-buttons">
-                    <button class="hero-btn-primary" onclick="showOnlineModal()">🌐 JOGAR ONLINE</button>
-                    <button class="hero-btn-primary" style="background: #2ed573;" onclick="scrollToGame()">🎮 JOGO LOCAL</button>
-                    <button class="hero-btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('hidden')">REGRAS</button>
+                    <button class="hero-btn-primary" onclick="scrollToGame()">JOGAR AGORA</button>
+                    <button class="hero-btn-primary" style="background: #6c5ce7;" onclick="showOnlineModal()">🌐 JOGAR ONLINE</button>
+                    <button class="hero-btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('hidden')">CONHECER REGRAS</button>
                 </div>
             </div>
             <div class="hero-visual">
@@ -109,10 +109,10 @@
         <div class="section-container text-center">
             <h2 class="section-title">Explore o Banco</h2>
             <div class="explore-row">
-                <div class="explore-item" onclick="showOnlineModal()">
-                    <div class="ex-icon">🌐</div>
-                    <h4>Jogar Online</h4>
-                    <p>Crie uma sala e jogue com amigos.</p>
+                <div class="explore-item" onclick="scrollToGame()">
+                    <div class="ex-icon">🎮</div>
+                    <h4>Jogo</h4>
+                    <p>Jogue online e experimente.</p>
                 </div>
                 <div class="explore-item" onclick="document.getElementById('rules-modal').classList.remove('hidden')">
                     <div class="ex-icon">📜</div>
@@ -133,7 +133,7 @@
         </div>
     </section>
 
-    <!-- 🎮 SEÇÃO DO TABULEIRO DE JOGO -->
+    <!-- 🎮 SEÇÃO DO TABULEIRO DE JOGO (ESCONDIDO ATÉ O CLICK) -->
     <section id="game-section-area" class="section-game hidden">
         <div class="section-container">
             <h2 class="section-title text-white">Mesa de Jogo</h2>
