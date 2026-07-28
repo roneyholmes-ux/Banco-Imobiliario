@@ -1346,14 +1346,14 @@ window.onload = () => {
 };
 
 // ==========================================
-// MÓDULO MULTIPLAYER PEERJS (v1.1.2 - REPOSITÓRIO E SINCRONIA)
+// MÓDULO MULTIPLAYER PEERJS (v1.1.3 - HANDSHAKE & NO-BLOCK)
 // ==========================================
 let peer = null;
 let connections = [];
 let isHost = false;
-let myPlayerId = 0; // Host é sempre 0, convidados recebem id > 0
+let myPlayerId = 0; 
 let roomCode = "";
-let gameStarted = false; // Trava de segurança para não aceitar entrada pós-início
+let gameStarted = false; 
 
 // Transmite o estado completo do jogo (Host -> Clientes)
 function broadcastState() {
@@ -1361,9 +1361,9 @@ function broadcastState() {
     
     const gameState = {
         type: 'GAME_STATE',
-        players: players,
-        boardSpaces: boardSpaces,
-        currentPlayerIndex: currentPlayerIndex,
+        players: typeof players !== 'undefined' ? players : [],
+        boardSpaces: typeof boardSpaces !== 'undefined' ? boardSpaces : [],
+        currentPlayerIndex: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
         GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {},
         gameStarted: gameStarted
     };
@@ -1375,29 +1375,27 @@ function broadcastState() {
     });
 }
 
-// Transmite uma ação individual de um cliente para o Host ou vice-versa
+// Transmite uma ação de cliente para Host ou vice-versa
 function sendNetworkAction(actionType, payload = {}) {
     const message = { type: actionType, senderId: myPlayerId, ...payload };
     
     if (isHost) {
-        // Se o host fez a ação, avisa todos os convidados
         connections.forEach(conn => { if (conn && conn.open) conn.send(message); });
     } else {
-        // Se o convidado fez a ação, avisa o Host
         if (connections[0] && connections[0].open) {
             connections[0].send(message);
         }
     }
 }
 
-// Trata mensagens recebidas pela rede
-function handleIncomingData(data) {
+// Recebe e trata mensagens
+function handleIncomingData(data, conn) {
     if (!data) return;
 
-    // 1. Recebimento de Estado Global (Sincronização de Tela)
+    // 1. Recebimento do Estado Global
     if (data.type === 'GAME_STATE') {
-        players = data.players;
-        currentPlayerIndex = data.currentPlayerIndex;
+        if (typeof players !== 'undefined') players = data.players;
+        if (typeof currentPlayerIndex !== 'undefined') currentPlayerIndex = data.currentPlayerIndex;
         gameStarted = data.gameStarted;
         
         if (data.boardSpaces && typeof boardSpaces !== 'undefined') {
@@ -1409,22 +1407,65 @@ function handleIncomingData(data) {
             });
         }
 
-        // Atualiza a interface gráfica de todos
+        // Se o jogo começou, revela a mesa para os convidados
+        if (gameStarted) {
+            const overlay = document.getElementById("online-modal-overlay");
+            if (overlay) overlay.remove();
+
+            const gameSection = document.getElementById("game-section-area");
+            if (gameSection) {
+                gameSection.classList.remove("hidden");
+                gameSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
     } 
-    
-    // 2. Pedido de Rolagem de Dados (Cliente -> Host)
-    else if (data.type === 'ACTION_ROLL_DICE') {
-        if (isHost) {
-            if (typeof rollDice === "function") rollDice();
-            broadcastState(); // Espalha o novo resultado do dado para todos
+    // 2. Novo jogador solicitando registro no Host
+    else if (data.type === 'REGISTER_PLAYER' && isHost) {
+        const newPlayerId = players.length;
+        const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
+            ? PLAYER_PRESETS[newPlayerId].color 
+            : "#" + Math.floor(Math.random()*16777215).toString(16);
+
+        players.push({
+            id: newPlayerId,
+            name: `Jogador ${newPlayerId + 1}`,
+            money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 1500,
+            position: 0,
+            color: presetColor,
+            inJail: false,
+            jailTurns: 0,
+            isBankrupt: false
+        });
+
+        updateLobbyUI();
+        
+        // Confirma registro para o cliente recém-conectado
+        if (conn && conn.open) {
+            conn.send({ type: 'WELCOME_PLAYER', assignedId: newPlayerId });
         }
+        
+        // Espalha a nova lista de jogadores para todos
+        broadcastState();
+    }
+    // 3. Resposta do Host ao Convidado
+    else if (data.type === 'WELCOME_PLAYER') {
+        myPlayerId = data.assignedId;
+        const statusText = document.getElementById("guest-wait-status");
+        if (statusText) {
+            statusText.innerHTML = `<span style="color: #2ed573;">✔ Conectado como Jogador ${myPlayerId + 1}!</span><br><small style="color: #aaa;">Aguardando o Host iniciar a partida...</small>`;
+        }
+    }
+    // 4. Jogada de Dado
+    else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
+        if (typeof rollDice === "function") rollDice();
+        broadcastState();
     }
 }
 
-// Hook nos botões nativos do jogo para transmitir ações via rede
 function attachNetworkTriggers() {
     const diceBtn = document.getElementById("rollDice");
     if (diceBtn && !diceBtn.dataset.networkHooked) {
@@ -1432,9 +1473,8 @@ function attachNetworkTriggers() {
         const originalClick = diceBtn.onclick;
 
         diceBtn.onclick = (e) => {
-            // Se não for a vez do jogador atual, impede a jogada
             if (typeof currentPlayerIndex !== 'undefined' && currentPlayerIndex !== myPlayerId) {
-                alert("Aguarde a sua vez de jogar!");
+                showToastNotification("Aguarde a sua vez de jogar!");
                 return;
             }
 
@@ -1449,9 +1489,16 @@ function attachNetworkTriggers() {
     }
 }
 
-// Gera código de sala amigável (4 letras)
 function generateRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
+}
+
+function showToastNotification(msg) {
+    const toast = document.createElement("div");
+    toast.style = "position: fixed; bottom: 20px; right: 20px; background: #6c5ce7; color: white; padding: 12px 20px; border-radius: 8px; font-weight: bold; z-index: 99999; box-shadow: 0 4px 15px rgba(0,0,0,0.4);";
+    toast.innerText = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
 }
 
 // Modal Principal Online
@@ -1469,7 +1516,7 @@ function showOnlineModal() {
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.2 - P2P MULTIPLAYER</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.3 - P2P MULTIPLAYER</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Lobby Online</h2>
             
             <div id="online-actions-view">
@@ -1487,7 +1534,13 @@ function showOnlineModal() {
             <div id="online-join-view" style="display: none; margin-bottom: 20px;">
                 <p style="margin-bottom: 10px; color: #ccc;">Digite o código da sala de 4 dígitos:</p>
                 <input type="text" id="join-room-input" maxlength="4" placeholder="EX: X9W2" style="text-transform: uppercase; font-size: 1.5rem; text-align: center; letter-spacing: 4px; width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #6c5ce7; background: #0f0c1b; color: white; margin-bottom: 15px;">
+                <div id="join-error-msg" style="color: #ff4757; font-size: 0.85rem; margin-bottom: 10px; display: none;"></div>
                 <button id="btn-confirm-join" style="width: 100%; padding: 12px; background: #2ed573; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem;">CONECTAR À SALA</button>
+            </div>
+
+            <!-- SUB-VIEW: ESPERANDO START DO HOST -->
+            <div id="online-wait-view" style="display: none; margin-bottom: 20px;">
+                <div id="guest-wait-status" style="font-size: 1.1rem; color: #eccc68; margin: 20px 0;">Conectando ao servidor da sala...</div>
             </div>
 
             <button id="btn-close-online" style="background: transparent; border: 1px solid #444; color: #ccc; padding: 8px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px;">Voltar</button>
@@ -1518,7 +1571,6 @@ function showOnlineModal() {
         });
 
         peer.on('connection', (conn) => {
-            // TRAVA DE SEGURANÇA: Recusa conexões se o jogo já começou
             if (gameStarted) {
                 conn.send({ type: 'ERROR', message: 'A partida nesta sala já foi iniciada.' });
                 setTimeout(() => conn.close(), 500);
@@ -1527,39 +1579,26 @@ function showOnlineModal() {
 
             connections.push(conn);
             
-            conn.on('data', (data) => handleIncomingData(data));
+            conn.on('data', (data) => handleIncomingData(data, conn));
             
             conn.on('open', () => {
-                // Adiciona o novo jogador na lista do Host
-                const newPlayerId = players.length;
-                const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
-                    ? PLAYER_PRESETS[newPlayerId].color 
-                    : "#" + Math.floor(Math.random()*16777215).toString(16);
-
-                players.push({
-                    id: newPlayerId,
-                    name: `Jogador ${newPlayerId + 1}`,
-                    money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 1500,
-                    position: 0,
-                    color: presetColor,
-                    inJail: false,
-                    jailTurns: 0,
-                    isBankrupt: false
-                });
-
-                updateLobbyUI();
-                broadcastState(); // Atualiza contagem nos outros
+                // Solicita dados do novo jogador via Handshake
+                broadcastState();
             });
         });
 
-        peer.on('error', (err) => alert("Erro PeerJS Host: " + err.type));
+        peer.on('error', (err) => showToastNotification("Erro de Conexão Host: " + err.type));
     };
 
     // --- 2. ENTRAR EM SALA (CONVIDADO) ---
     document.getElementById("btn-confirm-join").onclick = () => {
+        const errorDiv = document.getElementById("join-error-msg");
+        errorDiv.style.display = "none";
+
         const inputCode = document.getElementById("join-room-input").value.trim().toUpperCase();
         if (!inputCode || inputCode.length < 4) {
-            alert("Código de sala inválido!");
+            errorDiv.innerText = "Digite um código válido de 4 caracteres.";
+            errorDiv.style.display = "block";
             return;
         }
 
@@ -1572,28 +1611,27 @@ function showOnlineModal() {
             connections = [conn];
 
             conn.on('open', () => {
-                overlay.remove();
-                alert("Conectado com sucesso à sala! Aguarde o Host iniciar a partida.");
+                // Alterna para tela de aguardar o host
+                document.getElementById("online-join-view").style.display = "none";
+                document.getElementById("online-wait-view").style.display = "block";
+                
+                // Registra jogador no Host
+                conn.send({ type: 'REGISTER_PLAYER' });
                 attachNetworkTriggers();
             });
 
-            conn.on('data', (data) => {
-                if (data.type === 'ERROR') {
-                    alert(data.message);
-                    location.reload();
-                } else {
-                    handleIncomingData(data);
-                }
-            });
+            conn.on('data', (data) => handleIncomingData(data, conn));
 
-            conn.on('error', () => alert("Erro ao conectar na sala. Verifique se o código está correto."));
+            conn.on('error', () => {
+                errorDiv.innerText = "Não foi possível encontrar essa sala.";
+                errorDiv.style.display = "block";
+            });
         });
     };
 }
 
 // Tela de Espera no Lobby do Host
 function showLobbyModal(overlay, code) {
-    // Inicializa Host como Jogador 1 no array global de jogadores
     if (typeof initializePlayers === "function") {
         initializePlayers(1);
     } else {
@@ -1607,30 +1645,19 @@ function showLobbyModal(overlay, code) {
             <h3>Sala Aberta!</h3>
             <p style="margin-top: 10px; color: #aaa;">Compartilhe este código com os amigos:</p>
             <h1 style="font-size: 2.8rem; letter-spacing: 5px; color: #a29bfe; margin: 15px 0; background: #2d264a; padding: 10px; border-radius: 8px; user-select: all;">${code}</h1>
-            <div id="lobby-players-count" style="margin: 15px 0 20px; font-weight: bold; color: #00b894;">1 Jogador Conectado</div>
+            <div id="lobby-players-count" style="margin: 15px 0 20px; font-weight: bold; color: #00b894;">1 Jogador Conectado (Você)</div>
             <p style="font-size: 0.8rem; color: #888; margin-bottom: 15px;">Espere todos entrarem na sala antes de clicar abaixo!</p>
             <button id="btn-start-online-game" style="width: 100%; padding: 14px; background: #2ed573; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem;">INICIAR PARTIDA 🚀</button>
         </div>
     `;
 
     document.getElementById("btn-start-online-game").onclick = () => {
-        if (connections.length === 0) {
-            if (!confirm("Nenhum amigo se conectou ainda. Deseja iniciar sozinho mesmo assim?")) {
-                return;
-            }
-        }
-        
-        // Tranca a sala para não entrar mais ninguém
         gameStarted = true;
         overlay.remove();
         
-        // Liga os gatilhos dos botões no Host
         attachNetworkTriggers();
-
-        // Envia o estado inicial sincronizado para todos os convidados
         broadcastState();
 
-        // Exibe o tabuleiro na tela
         const gameSection = document.getElementById("game-section-area");
         if (gameSection) {
             gameSection.classList.remove("hidden");
