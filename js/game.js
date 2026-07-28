@@ -124,15 +124,6 @@ let currentPlayerIndex = 0;
 let isMoving = false; 
 let awaitingDecision = false; 
 
-// ==========================================
-// INTEGRAÇÃO MULTIPLAYER (Sincronização)
-// ==========================================
-function notifyNetworkStateChange() {
-    if (typeof isHost !== 'undefined' && isHost && typeof broadcastState === 'function') {
-        broadcastState();
-    }
-}
-
 function getGridPosition(index) {
     if (index >= 0 && index <= 10) {
         return { row: 11, col: 11 - index };
@@ -173,14 +164,7 @@ function renderBoard() {
         if (space.price) {
             const priceText = document.createElement("div");
             priceText.id = `price-label-${space.id}`;
-            priceText.innerText = space.owner !== null ? "COMPRADO" : `$${space.price}`;
-            if (space.owner !== null) {
-                const ownerPlayer = players.find(p => p.id === space.owner);
-                if (ownerPlayer) {
-                    priceText.style.color = ownerPlayer.color;
-                    spaceDiv.style.border = `3px dashed ${ownerPlayer.color}`;
-                }
-            }
+            priceText.innerText = `$${space.price}`;
             priceText.style.marginTop = "auto";
             spaceDiv.appendChild(priceText);
         }
@@ -212,7 +196,6 @@ function renderPawns() {
 
 function updateUI() {
     const playersList = document.getElementById("players-list");
-    if (!playersList) return;
     playersList.innerHTML = "";
     
     players.forEach((p, idx) => {
@@ -288,14 +271,12 @@ async function movePlayer(playerIndex, steps) {
             if (player.money < 0) {
                 checkBankruptcy(player, null);
                 isMoving = false;
-                notifyNetworkStateChange();
                 return;
             }
             updateUI();
         }
 
         renderPawns();
-        notifyNetworkStateChange();
         await new Promise(resolve => setTimeout(resolve, 250));
     }
     
@@ -410,6 +391,7 @@ function startPlayerSetup() {
         document.getElementById("btn-prev-step").addEventListener("click", renderStep1);
 
         document.getElementById("btn-start-game").addEventListener("click", () => {
+            // Atualiza o objeto de configurações globais com as opções do preset/editadas
             GAME_CONFIG.startingMoney = parseInt(moneyInput.value) || 25000;
             GAME_CONFIG.goBonus = parseInt(goTaxInput.value) || 2000;
             GAME_CONFIG.taxaTroca = parseInt(tradeTaxInput.value) || 200;
@@ -422,6 +404,7 @@ function startPlayerSetup() {
     overlay.appendChild(setupBox);
     document.body.appendChild(overlay);
 
+    // Injeta os estilos CSS necessários para os botões do setup
     const style = document.createElement("style");
     style.innerHTML = `
         .setup-qty-btn {
@@ -446,7 +429,6 @@ function handleLanding(player) {
         if (currentSpace.owner === null) {
             awaitingDecision = true;
             updateUI();
-            notifyNetworkStateChange();
             showPurchaseModal(player, currentSpace);
             return; 
         } 
@@ -474,7 +456,6 @@ function handleLanding(player) {
                 `;
                 awaitingDecision = true;
                 updateUI();
-                notifyNetworkStateChange();
 
                 document.getElementById("btn-owner-ok").addEventListener("click", () => {
                     awaitingDecision = false;
@@ -512,7 +493,6 @@ function handleLanding(player) {
         
         awaitingDecision = true;
         updateUI();
-        notifyNetworkStateChange();
         
         document.getElementById("btn-confirm-jail").addEventListener("click", () => {
             awaitingDecision = false;
@@ -539,7 +519,6 @@ function handleLanding(player) {
         
         awaitingDecision = true;
         updateUI();
-        notifyNetworkStateChange();
         
         document.getElementById("btn-confirm-tax").addEventListener("click", () => {
             awaitingDecision = false;
@@ -565,7 +544,6 @@ function handleLanding(player) {
         
         awaitingDecision = true;
         updateUI();
-        notifyNetworkStateChange();
         
         document.getElementById("btn-confirm-luxury").addEventListener("click", () => {
             awaitingDecision = false;
@@ -595,14 +573,13 @@ function handleGrandezaLandingOtherPlayer(player, space) {
                 Pagar Aluguel ($${rentAmount})
             </button>
             <button id="btn-give-tokens-g" style="padding: 8px 12px; font-size: 0.85rem; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                Gerar 1 Ficha ${kind ? kind.toUpperCase() : ''} para TODOS os Jogadores 🎁
+                Gerar 1 Ficha ${kind.toUpperCase()} para TODOS os Jogadores 🎁
             </button>
         </div>
     `;
 
     awaitingDecision = true;
     updateUI();
-    notifyNetworkStateChange();
 
     document.getElementById("btn-pay-rent-g").addEventListener("click", () => {
         player.money -= rentAmount;
@@ -627,7 +604,7 @@ function handleGrandezaLandingOtherPlayer(player, space) {
         });
 
         awaitingDecision = false;
-        document.getElementById("game-status").innerText = `${player.name} acionou o benefício global! Todos os jogadores ganharam 1 Ficha de Grandeza ${kind ? kind.toUpperCase() : ''}!`;
+        document.getElementById("game-status").innerText = `${player.name} acionou o benefício global! Todos os jogadores ganharam 1 Ficha de Grandeza ${kind.toUpperCase()}!`;
         updateUI();
         nextTurn();
     });
@@ -659,7 +636,6 @@ function drawCard(player) {
     
     awaitingDecision = true; 
     updateUI();
-    notifyNetworkStateChange();
     
     document.getElementById("btn-confirm-card").addEventListener("click", () => {
         awaitingDecision = false;
@@ -690,7 +666,6 @@ function payRent(player, space) {
     
     awaitingDecision = true; 
     updateUI();
-    notifyNetworkStateChange();
     
     document.getElementById("btn-confirm-rent").addEventListener("click", () => {
         awaitingDecision = false;
@@ -730,7 +705,7 @@ function buyProperty(player, space) {
         }
 
         const spaceDiv = document.getElementById(`space-${space.id}`);
-        if (spaceDiv) spaceDiv.style.border = `3px dashed ${player.color}`;
+        spaceDiv.style.border = `3px dashed ${player.color}`;
         
         const priceLabel = document.getElementById(`price-label-${space.id}`);
         if (priceLabel) {
@@ -761,7 +736,6 @@ function nextTurn() {
 
     document.getElementById("game-status").innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
     updateUI();
-    notifyNetworkStateChange();
 }
 
 function checkJailTurn(player) {
@@ -787,12 +761,10 @@ function checkJailTurn(player) {
         `;
         awaitingDecision = true;
         updateUI();
-        notifyNetworkStateChange();
         
         document.getElementById("btn-forced-jail-free").addEventListener("click", () => {
             awaitingDecision = false;
             updateUI();
-            notifyNetworkStateChange();
         });
         return true;
     }
@@ -810,7 +782,6 @@ function checkJailTurn(player) {
     
     awaitingDecision = true;
     updateUI();
-    notifyNetworkStateChange();
 
     document.getElementById("btn-jail-roll").addEventListener("click", () => {
         document.getElementById("btn-jail-roll").disabled = true;
@@ -824,7 +795,6 @@ function checkJailTurn(player) {
             player.jailTurns = 0;
             awaitingDecision = false;
             statusDiv.innerHTML = `🎲 Você tirou dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
-            notifyNetworkStateChange();
             
             setTimeout(() => {
                 movePlayer(currentPlayerIndex, d1 + d2);
@@ -833,7 +803,6 @@ function checkJailTurn(player) {
             player.jailTurns += 1;
             awaitingDecision = false;
             statusDiv.innerHTML = `🎲 Você tirou ${d1} e ${d2} (Não foi duplo). Continua preso!`;
-            notifyNetworkStateChange();
             
             setTimeout(() => {
                 nextTurn();
@@ -851,7 +820,6 @@ function checkJailTurn(player) {
             player.jailTurns = 0;
             awaitingDecision = false;
             updateUI();
-            notifyNetworkStateChange();
             
             statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
         } else {
@@ -903,21 +871,19 @@ function initializePlayers(quantity) {
     boardSpaces.forEach(space => {
         if (space.type === "property") {
             space.houses = 0;
-            space.owner = null;
         }
     });
 
     const gameArea = document.getElementById("game-section-area");
-    if (gameArea) gameArea.classList.remove("hidden");
+    gameArea.classList.remove("hidden");
 
     renderBoard();
     renderPawns();
     updateUI();
 
-    if (gameArea) gameArea.scrollIntoView({ behavior: "smooth" });
+    gameArea.scrollIntoView({ behavior: "smooth" });
 
     document.getElementById("game-status").innerHTML = `Partida iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
-    notifyNetworkStateChange();
 }
 
 function hasMonopoly(player, colorClass) {
@@ -939,7 +905,7 @@ function calculateCurrentRent(space) {
     else if (space.houses === 3) finalRent = space.rent * 40;
     else if (space.houses === 4) finalRent = space.rent * 80;
     else if (space.houses === 5) finalRent = space.rent * 120;
-    else if (owner && hasMonopoly(owner, space.color)) {
+    else if (hasMonopoly(owner, space.color)) {
         finalRent = space.rent * 2;
     }
 
@@ -989,7 +955,6 @@ function showBuildModal(player, space) {
                 document.getElementById("game-status").innerText = `${player.name} usou 1 Ficha de ${requiredTypeLabel} e construiu ${itemText} em ${space.name}!`;
                 awaitingDecision = false;
                 updateUI();
-                notifyNetworkStateChange();
                 
                 setTimeout(() => { nextTurn(); }, 1500);
             } else {
@@ -1076,7 +1041,6 @@ function checkBankruptcy(player, creditorId) {
     const activePlayers = players.filter(p => !p.isBankrupt);
     if (activePlayers.length === 1) {
         showWinModal(activePlayers[0]);
-        notifyNetworkStateChange();
         return true;
     }
 
@@ -1090,7 +1054,6 @@ function checkBankruptcy(player, creditorId) {
     
     awaitingDecision = true;
     updateUI();
-    notifyNetworkStateChange();
 
     document.getElementById("btn-confirm-bankruptcy").addEventListener("click", () => {
         awaitingDecision = false;
@@ -1128,56 +1091,6 @@ function showWinModal(winner) {
     document.getElementById("btn-restart-game").addEventListener("click", () => {
         location.reload();
     });
-}
-
-// ==========================================
-// SISTEMA DE TROCAS / NEGOCIAÇÕES
-// ==========================================
-function executeTradeTransaction(proposerId, receiverId, tradeData) {
-    const proposer = players.find(p => p.id === proposerId);
-    const receiver = players.find(p => p.id === receiverId);
-    
-    if (!proposer || !receiver) return;
-
-    const offerProp = tradeData.offerPropId !== null ? boardSpaces.find(s => s.id === tradeData.offerPropId) : null;
-    const requestProp = tradeData.requestPropId !== null ? boardSpaces.find(s => s.id === tradeData.requestPropId) : null;
-
-    proposer.money -= GAME_CONFIG.taxaTroca;
-
-    proposer.money -= tradeData.offerMoney;
-    proposer.money += tradeData.requestMoney;
-    receiver.money += tradeData.offerMoney;
-    receiver.money -= tradeData.requestMoney;
-
-    proposer.fichasDiscreta = proposer.fichasDiscreta - tradeData.offerFd + tradeData.requestFd;
-    proposer.fichasContinua = proposer.fichasContinua - tradeData.offerFc + tradeData.requestFc;
-
-    receiver.fichasDiscreta = receiver.fichasDiscreta - tradeData.requestFd + tradeData.offerFd;
-    receiver.fichasContinua = receiver.fichasContinua - tradeData.requestFc + tradeData.offerFc;
-
-    if (offerProp) {
-        offerProp.owner = receiver.id;
-        updateTradeVisualProperty(offerProp, receiver);
-    }
-    if (requestProp) {
-        requestProp.owner = proposer.id;
-        updateTradeVisualProperty(requestProp, proposer);
-    }
-
-    const statusDiv = document.getElementById("game-status");
-    if (statusDiv) {
-        statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Concluído! Taxa de $${GAME_CONFIG.taxaTroca} recolhida pelo Banco.</div>`;
-    }
-
-    awaitingDecision = false;
-    updateUI();
-    notifyNetworkStateChange();
-
-    setTimeout(() => {
-        if (statusDiv) statusDiv.innerHTML = `É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
-        updateUI();
-        notifyNetworkStateChange();
-    }, 2000);
 }
 
 function openTradeModal() {
@@ -1266,14 +1179,12 @@ function openTradeModal() {
         });
 
         requestPropSelect.innerHTML = `<option value="">Nenhuma propriedade</option>`;
-        if (receiver) {
-            boardSpaces.forEach(space => {
-                if (space.owner === receiver.id) {
-                    if (space.houses && space.houses > 0) return;
-                    requestPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
-                }
-            });
-        }
+        boardSpaces.forEach(space => {
+            if (space.owner === receiver.id) {
+                if (space.houses && space.houses > 0) return;
+                requestPropSelect.innerHTML += `<option value="${space.id}">${space.name}</option>`;
+            }
+        });
     }
 
     receiverSelect.addEventListener("change", updatePropertiesDropdowns);
@@ -1360,7 +1271,6 @@ function sendTradeProposalToUI(proposer, receiver, tradeData) {
 
     awaitingDecision = true;
     updateUI();
-    notifyNetworkStateChange();
 
     const acceptBtn = document.getElementById("btn-accept-trade");
     const declineBtn = document.getElementById("btn-decline-trade");
@@ -1368,7 +1278,37 @@ function sendTradeProposalToUI(proposer, receiver, tradeData) {
     acceptBtn.addEventListener("click", () => {
         acceptBtn.disabled = true;
         declineBtn.disabled = true;
-        executeTradeTransaction(proposer.id, receiver.id, tradeData);
+
+        proposer.money -= GAME_CONFIG.taxaTroca;
+
+        proposer.money -= tradeData.offerMoney;
+        proposer.money += tradeData.requestMoney;
+        receiver.money += tradeData.offerMoney;
+        receiver.money -= tradeData.requestMoney;
+
+        proposer.fichasDiscreta = proposer.fichasDiscreta - tradeData.offerFd + tradeData.requestFd;
+        proposer.fichasContinua = proposer.fichasContinua - tradeData.offerFc + tradeData.requestFc;
+
+        receiver.fichasDiscreta = receiver.fichasDiscreta - tradeData.requestFd + tradeData.offerFd;
+        receiver.fichasContinua = receiver.fichasContinua - tradeData.requestFc + tradeData.offerFc;
+
+        if (offerProp) {
+            offerProp.owner = receiver.id;
+            updateTradeVisualProperty(offerProp, receiver);
+        }
+        if (requestProp) {
+            requestProp.owner = proposer.id;
+            updateTradeVisualProperty(requestProp, proposer);
+        }
+
+        statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Concluído! Taxa de $${GAME_CONFIG.taxaTroca} recolhida pelo Banco.</div>`;
+        awaitingDecision = false;
+        updateUI();
+
+        setTimeout(() => {
+            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
+            updateUI();
+        }, 2000);
     });
 
     declineBtn.addEventListener("click", () => {
@@ -1378,12 +1318,10 @@ function sendTradeProposalToUI(proposer, receiver, tradeData) {
         statusDiv.innerHTML = `<div style="color: #ff4757; font-weight: bold;">❌ ${receiver.name} recusou a proposta de negócio.</div>`;
         awaitingDecision = false;
         updateUI();
-        notifyNetworkStateChange();
 
         setTimeout(() => {
             statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
             updateUI();
-            notifyNetworkStateChange();
         }, 2000);
     });
 }
@@ -1406,3 +1344,4 @@ window.onload = () => {
         rollBtn.addEventListener("click", rollDice);
     }
 };
+
