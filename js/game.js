@@ -13,7 +13,7 @@ let GAME_CONFIG = {
 
 // Presets pré-definidos para facilidade de escolha na criação da partida
 const PRESETS = {
-    standard: {
+    standard: { 
         name: "Padrão",
         startingMoney: 25000,
         goBonus: 2000,
