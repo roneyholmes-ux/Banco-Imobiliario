@@ -1346,7 +1346,7 @@ window.onload = () => {
 };
 
 // ==========================================
-// MÓDULO MULTIPLAYER PEERJS (SEM SERVIDOR)
+// MÓDULO MULTIPLAYER PEERJS (v1.1.1)
 // ==========================================
 let peer = null;
 let connections = [];
@@ -1359,77 +1359,116 @@ function broadcastState() {
     if (!isHost) return;
     const gameState = {
         type: 'GAME_STATE',
-        players: players,
-        boardSpaces: boardSpaces,
-        currentPlayerIndex: currentPlayerIndex,
-        GAME_CONFIG: GAME_CONFIG
+        players: typeof players !== 'undefined' ? players : [],
+        boardSpaces: typeof boardSpaces !== 'undefined' ? boardSpaces : [],
+        currentPlayerIndex: typeof currentPlayerIndex !== 'undefined' ? currentPlayerIndex : 0,
+        GAME_CONFIG: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG : {}
     };
-    connections.forEach(conn => conn.send(gameState));
+    connections.forEach(conn => {
+        if (conn && conn.open) {
+            conn.send(gameState);
+        }
+    });
 }
 
 // Recebe as ações e atualizações da rede
 function handleIncomingData(data) {
+    if (!data) return;
+
     if (data.type === 'GAME_STATE') {
-        players = data.players;
-        currentPlayerIndex = data.currentPlayerIndex;
-        if (data.GAME_CONFIG) GAME_CONFIG = data.GAME_CONFIG;
+        if (typeof players !== 'undefined') players = data.players;
+        if (typeof currentPlayerIndex !== 'undefined') currentPlayerIndex = data.currentPlayerIndex;
+        if (data.GAME_CONFIG && typeof GAME_CONFIG !== 'undefined') GAME_CONFIG = data.GAME_CONFIG;
         
-        data.boardSpaces.forEach((space, idx) => {
-            if (boardSpaces[idx]) {
-                boardSpaces[idx].owner = space.owner;
-                boardSpaces[idx].houses = space.houses;
-            }
-        });
+        if (typeof boardSpaces !== 'undefined' && data.boardSpaces) {
+            data.boardSpaces.forEach((space, idx) => {
+                if (boardSpaces[idx]) {
+                    boardSpaces[idx].owner = space.owner;
+                    boardSpaces[idx].houses = space.houses;
+                }
+            });
+        }
         
+        // Garante a renderização para os jogadores que entraram
         if (typeof renderBoard === "function") renderBoard();
         if (typeof renderPawns === "function") renderPawns();
         if (typeof updateUI === "function") updateUI();
+
+        // Revela a mesa de jogo se estiver escondida
+        const gameSection = document.getElementById("game-section-area");
+        if (gameSection && gameSection.classList.contains("hidden")) {
+            gameSection.classList.remove("hidden");
+            gameSection.scrollIntoView({ behavior: 'smooth' });
+        }
     } else if (data.type === 'ACTION_ROLL_DICE' && isHost) {
         if (typeof rollDice === "function") rollDice();
     }
 }
 
-// Gera um código simples de 4 letras (ex: W9XZ)
+// Gera código de sala amigável (4 letras/números)
 function generateRoomCode() {
     return Math.random().toString(36).substring(2, 6).toUpperCase();
 }
 
-// Interface Modal para criar ou entrar em sala
+// Interface Modal Geral Online
 function showOnlineModal() {
+    const existingModal = document.getElementById("online-modal-overlay");
+    if (existingModal) existingModal.remove();
+
     const overlay = document.createElement("div");
     overlay.id = "online-modal-overlay";
     overlay.style = `
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(10, 10, 25, 0.95); display: flex; justify-content: center;
+        background: rgba(10, 10, 25, 0.92); display: flex; justify-content: center;
         align-items: center; z-index: 10000; font-family: 'Montserrat', sans-serif;
     `;
 
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%; box-shadow: 0 0 30px rgba(108, 92, 231, 0.3);">
-            <span style="font-size: 0.8rem; background: #6c5ce7; padding: 4px 10px; border-radius: 12px; font-weight: bold; text-transform: uppercase;">Modo Online P2P</span>
+            <span style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 3px 10px; border-radius: 12px; font-weight: bold;">v1.1.1 - REDE P2P</span>
             <h2 style="margin: 15px 0 20px; font-size: 1.8rem;">Jogar Online</h2>
-            <div style="display: flex; gap: 15px; margin-bottom: 20px;">
-                <button id="btn-create-room" style="flex: 1; padding: 20px 10px; background: #2d264a; border: 2px solid #6c5ce7; color: white; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">
-                    🏠 Criar Sala<br><small style="font-weight: normal; color: #aaa;">Abra uma sala online</small>
-                </button>
-                <button id="btn-join-room" style="flex: 1; padding: 20px 10px; background: #2d264a; border: 2px solid #6c5ce7; color: white; border-radius: 12px; cursor: pointer; font-weight: bold; font-size: 0.95rem;">
-                    🔑 Entrar em Sala<br><small style="font-weight: normal; color: #aaa;">Com código de amigo</small>
-                </button>
+            
+            <div id="online-actions-view">
+                <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                    <button id="btn-create-room" style="flex: 1; padding: 20px 10px; background: #2d264a; border: 2px solid #6c5ce7; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">
+                        🏠 Criar Sala<br><small style="font-weight: normal; color: #aaa;">Inicie uma partida</small>
+                    </button>
+                    <button id="btn-join-view" style="flex: 1; padding: 20px 10px; background: #2d264a; border: 2px solid #6c5ce7; color: white; border-radius: 12px; cursor: pointer; font-weight: bold;">
+                        🔑 Entrar em Sala<br><small style="font-weight: normal; color: #aaa;">Com código</small>
+                    </button>
+                </div>
             </div>
-            <button id="btn-close-online" style="background: transparent; border: 1px solid #444; color: #ccc; padding: 8px 20px; border-radius: 8px; cursor: pointer;">Voltar ao Jogo Local</button>
+
+            <!-- SUB-VIEW: ENTRAR EM SALA -->
+            <div id="online-join-view" style="display: none; margin-bottom: 20px;">
+                <p style="margin-bottom: 10px; color: #ccc;">Digite o código de 4 dígitos da sala:</p>
+                <input type="text" id="join-room-input" maxlength="4" placeholder="EX: A1B2" style="text-transform: uppercase; font-size: 1.5rem; text-align: center; letter-spacing: 4px; width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #6c5ce7; background: #0f0c1b; color: white; margin-bottom: 15px;">
+                <button id="btn-confirm-join" style="width: 100%; padding: 12px; background: #2ed573; border: none; border-radius: 8px; color: white; font-weight: bold; cursor: pointer; font-size: 1rem;">CONECTAR À SALA</button>
+            </div>
+
+            <button id="btn-close-online" style="background: transparent; border: 1px solid #444; color: #ccc; padding: 8px 20px; border-radius: 8px; cursor: pointer; margin-top: 10px;">Voltar</button>
         </div>
     `;
 
     document.body.appendChild(overlay);
 
     document.getElementById("btn-close-online").onclick = () => overlay.remove();
-    
+
+    // Ação: Mostrar tela de digitar código
+    document.getElementById("btn-join-view").onclick = () => {
+        document.getElementById("online-actions-view").style.display = "none";
+        document.getElementById("online-join-view").style.display = "block";
+    };
+
+    // Ação: Criar Sala
     document.getElementById("btn-create-room").onclick = () => {
         isHost = true;
         myPlayerId = 0;
         roomCode = generateRoomCode();
-        peer = new Peer(`banco-imobiliario-${roomCode}`);
         
+        if (peer) peer.destroy();
+        peer = new Peer(`banco-imobiliario-${roomCode}`);
+
         peer.on('open', () => {
             showLobbyModal(overlay, roomCode);
         });
@@ -1438,46 +1477,63 @@ function showOnlineModal() {
             connections.push(conn);
             conn.on('data', (data) => handleIncomingData(data));
             conn.on('open', () => {
-                const newPlayerId = players.length;
-                const preset = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
-                    ? PLAYER_PRESETS[newPlayerId] 
-                    : { color: "#" + Math.floor(Math.random()*16777215).toString(16) };
-                    
-                players.push({
-                    id: newPlayerId,
-                    name: `Jogador ${newPlayerId + 1}`,
-                    money: GAME_CONFIG.startingMoney,
-                    position: 0,
-                    color: preset.color,
-                    inJail: false,
-                    jailTurns: 0,
-                    isBankrupt: false,
-                    fichasDiscreta: 0,
-                    fichasContinua: 0
-                });
+                if (typeof players !== 'undefined') {
+                    const newPlayerId = players.length;
+                    const presetColor = (typeof PLAYER_PRESETS !== 'undefined' && PLAYER_PRESETS[newPlayerId]) 
+                        ? PLAYER_PRESETS[newPlayerId].color 
+                        : "#" + Math.floor(Math.random()*16777215).toString(16);
+
+                    players.push({
+                        id: newPlayerId,
+                        name: `Jogador ${newPlayerId + 1}`,
+                        money: typeof GAME_CONFIG !== 'undefined' ? GAME_CONFIG.startingMoney : 1500,
+                        position: 0,
+                        color: presetColor,
+                        inJail: false,
+                        jailTurns: 0,
+                        isBankrupt: false
+                    });
+                }
                 updateLobbyUI();
                 broadcastState();
             });
         });
+
+        peer.on('error', (err) => {
+            alert("Erro de conexão no servidor de sinalização P2P: " + err.type);
+        });
     };
 
-    document.getElementById("btn-join-room").onclick = () => {
-        const inputCode = prompt("Digite o código da sala (ex: Y6ZD):");
-        if (!inputCode) return;
-        
+    // Ação: Confirmar Entrada na Sala por Código
+    document.getElementById("btn-confirm-join").onclick = () => {
+        const inputCode = document.getElementById("join-room-input").value.trim().toUpperCase();
+        if (!inputCode || inputCode.length < 4) {
+            alert("Por favor, digite um código de sala válido com 4 caracteres.");
+            return;
+        }
+
         isHost = false;
+        if (peer) peer.destroy();
         peer = new Peer();
-        
+
         peer.on('open', () => {
-            const conn = peer.connect(`banco-imobiliario-${inputCode.toUpperCase().trim()}`);
-            connections.push(conn);
-            
+            const conn = peer.connect(`banco-imobiliario-${inputCode}`);
+            connections = [conn];
+
             conn.on('open', () => {
                 overlay.remove();
-                alert("Conectado com sucesso! Aguarde o criador dar início à partida.");
+                alert("Conectado com sucesso! A mesa de jogo será carregada assim que o anfitrião iniciar.");
             });
 
             conn.on('data', (data) => handleIncomingData(data));
+
+            conn.on('error', (err) => {
+                alert("Não foi possível conectar a esta sala. Verifique o código e tente novamente.");
+            });
+        });
+
+        peer.on('error', (err) => {
+            alert("Erro ao conectar à rede: " + err.type);
         });
     };
 }
@@ -1487,9 +1543,9 @@ function showLobbyModal(overlay, code) {
     
     overlay.innerHTML = `
         <div style="background: #181528; border: 2px solid #6c5ce7; border-radius: 16px; padding: 30px; text-align: center; color: white; max-width: 450px; width: 90%;">
-            <h3>Aguardando Amigos Conectarem</h3>
-            <p style="margin-top: 10px; color: #aaa;">Compartilhe este código:</p>
-            <h1 style="font-size: 2.8rem; letter-spacing: 5px; color: #a29bfe; margin: 10px 0; background: #2d264a; padding: 10px; border-radius: 8px; user-select: all;">${code}</h1>
+            <h3>Sala Criada! Aguardando Amigos</h3>
+            <p style="margin-top: 10px; color: #aaa;">Passe este código para os outros jogadores:</p>
+            <h1 style="font-size: 2.8rem; letter-spacing: 5px; color: #a29bfe; margin: 15px 0; background: #2d264a; padding: 10px; border-radius: 8px; user-select: all;">${code}</h1>
             <div id="lobby-players-count" style="margin: 15px 0 20px; font-weight: bold; color: #00b894;">1 Jogador Conectado (Você)</div>
             <button id="btn-start-online-game" style="width: 100%; padding: 14px; background: #6c5ce7; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1.1rem;">INICIAR PARTIDA 🚀</button>
         </div>
@@ -1498,12 +1554,17 @@ function showLobbyModal(overlay, code) {
     document.getElementById("btn-start-online-game").onclick = () => {
         overlay.remove();
         broadcastState();
+        const gameSection = document.getElementById("game-section-area");
+        if (gameSection) {
+            gameSection.classList.remove("hidden");
+            gameSection.scrollIntoView({ behavior: 'smooth' });
+        }
     };
 }
 
 function updateLobbyUI() {
     const lobbyCount = document.getElementById("lobby-players-count");
-    if (lobbyCount) {
+    if (lobbyCount && typeof players !== 'undefined') {
         lobbyCount.innerText = `${players.length} Jogadores Conectados`;
     }
 }
