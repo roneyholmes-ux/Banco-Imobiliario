@@ -482,6 +482,11 @@ function handleLanding(player) {
             }
         }
     } else if (currentSpace.name === "Sorte ou Revés") {
+        if (isMultiplayer && window.Network) {
+            const cardIndex = Math.floor(Math.random() * CARDS.length);
+            window.Network.sendGameAction('DRAW_CARD', { playerIndex: player.id, cardIndex: cardIndex });
+            return;
+        }
         drawCard(player);
         return; 
     } else if (currentSpace.name === "VÁ PARA A PRISÃO") {
@@ -640,8 +645,8 @@ function executeGrandezaChoice(choice, playerIndex, spaceId) {
     }
 }
 
-function drawCard(player) {
-    const randomIndex = Math.floor(Math.random() * CARDS.length);
+function drawCard(player, cardIndex = null) {
+    const randomIndex = cardIndex !== null ? cardIndex : Math.floor(Math.random() * CARDS.length);
     const card = CARDS[randomIndex];
     
     if (card.type === "earn") {
@@ -834,7 +839,9 @@ function checkJailTurn(player) {
 
     document.getElementById("btn-jail-roll").addEventListener("click", () => {
         if (isMultiplayer && window.Network) {
-            window.Network.sendGameAction('JAIL_ACTION', { action: 'ROLL', playerIndex: player.id });
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            window.Network.sendGameAction('JAIL_ACTION', { action: 'ROLL', playerIndex: player.id, d1: d1, d2: d2 });
             return;
         }
         executeJailAction('ROLL', player.id);
@@ -1534,6 +1541,9 @@ window.executeMultiplayerAction = function(action, payload) {
             break;
         case 'TRADE_RESPONSE':
             executeTradeResolution(payload.accepted, payload.proposerId, payload.receiverId, payload.tradeData);
+            break;
+        case 'DRAW_CARD':
+            drawCard(players[payload.playerIndex], payload.cardIndex);
             break;
     }
 };
