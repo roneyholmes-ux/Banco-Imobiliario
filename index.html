@@ -228,13 +228,24 @@
         </div>
     </div>
     
-    <!-- SCRIPTS SEPARADOS -->
-    <script src="js/landing.js"></script>
-    <script src="js/network.js"></script>
-    <script src="js/actions.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/multiplayer.js"></script>
+<!-- ==========================================
+     SCRIPTS DO JOGO
+     ========================================== -->
+
+<script src="js/landing.js"></script>
+
+<!-- Multiplayer deve carregar antes da camada de rede -->
+<script src="js/multiplayer.js"></script>
+
+<script src="js/network.js"></script>
+
+<script src="js/actions.js"></script>
+
+<script src="js/ui.js"></script>
+
+<script src="js/game.js"></script>
+```
+
     
 </body>
 </html>
