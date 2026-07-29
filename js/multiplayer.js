@@ -1,6 +1,6 @@
 /**
  * multiplayer.js
- * Gerenciador de conexão P2P utilizando PeerJS.
+ * Gerenciador de conexão P2P utilizando PeerJS. 
  */
 
 class MultiplayerManager {
