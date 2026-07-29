@@ -210,6 +210,39 @@
         </div>
     </div>
 
+<!-- 🌐 MODAL DE JOGAR ONLINE -->
+    <div id="online-modal" class="modal-overlay hidden">
+        <div class="rules-box" style="text-align: center; max-width: 450px;">
+            <h2>Jogar Online 🌐</h2>
+            <p style="margin-bottom: 20px; color: #cbd5e1;">Crie uma sala para convidar amigos ou digite um código para se conectar.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px;">
+                <button id="btn-host-game" class="hero-btn-primary" style="background: #6c5ce7; width: 100%;">
+                    ➕ Criar Nova Sala (Host)
+                </button>
+                
+                <div id="room-created-info" class="hidden" style="background: rgba(108, 92, 231, 0.2); padding: 10px; border-radius: 8px; border: 1px solid #6c5ce7;">
+                    <p style="margin: 0; font-size: 0.9rem;">Código da sua sala:</p>
+                    <h3 id="display-room-code" style="font-size: 1.8rem; color: #a29bfe; margin: 5px 0;">-----</h3>
+                    <small>Compartilhe este código com os outros jogadores!</small>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #334155; margin: 10px 0;">
+
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="join-room-code" placeholder="Código da sala (ex: X7K2P)" style="padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; width: 65%; font-size: 1rem; text-transform: uppercase;">
+                    <button id="btn-connect-game" class="hero-btn-primary" style="width: 35%; padding: 10px;">
+                        Entrar
+                    </button>
+                </div>
+            </div>
+
+            <button class="menu-btn danger-btn" onclick="document.getElementById('online-modal').classList.add('hidden')">
+                Fechar
+            </button>
+        </div>
+    </div>
+    
     <!-- SCRIPTS SEPARADOS -->
 <script src="js/landing.js"></script>
 <script src="js/network.js"></script>
