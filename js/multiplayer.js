@@ -1,243 +1,199 @@
-/**
- * multiplayer.js
- * Gerencia a conexão PeerJS, o Lobby e a entrada de novos jogadores na partida.
- */
+// ==========================================
+// GERENCIADOR MULTIPLAYER (multiplayer.js)
+// ==========================================
 
-window.multiplayerConnection = null;
+class MultiplayerManager {
+  constructor() {
+    this.peer = null;
+    this.conn = null; // Conexão ativa (para quem é Cliente)
+    this.connections = []; // Lista de conexões ativas (para quem é Host)
+    this.isHost = false;
+    this.lobbyState = {
+      players: []
+    };
+    this.playerName = "Jogador " + Math.floor(Math.random() * 1000);
+  }
 
-window.showOnlineModal = function() {
-  const modal = document.getElementById('online-modal');
-  if (modal) modal.classList.remove('hidden');
-};
-
-const Multiplayer = {
-  peer: null,
-  roomCode: null,
-  lobbyState: {
-    players: [] // Guarda os jogadores que estão na sala de espera
-  },
-
+  // Inicializa os botões da interface
   init() {
-    document.addEventListener('DOMContentLoaded', () => {
-      this.bindUIEvents();
-    });
-  },
+    this.bindUI();
+  }
 
-  bindUIEvents() {
-    // ---------------------------------------------------------
-    // 1. Lógica do Botão Criar Sala (HOST)
-    // ---------------------------------------------------------
+  bindUI() {
     const btnHost = document.getElementById('btn-host-game');
-    if (btnHost) {
-      btnHost.addEventListener('click', () => {
-        // Captura o nome e avatar digitados pelo Host
-        const nameInput = document.getElementById('host-player-name');
-        const avatarInput = document.getElementById('host-player-avatar');
-        
-        const hostName = nameInput && nameInput.value.trim() !== '' ? nameInput.value.trim() : 'Jogador 1';
-        const hostAvatar = avatarInput ? avatarInput.value : 'avatar1';
-
-        this.createRoom(hostName, hostAvatar);
-      });
-    }
-
-    // ---------------------------------------------------------
-    // 2. Lógica do Botão Entrar na Sala (CLIENTE)
-    // ---------------------------------------------------------
-    const btnConnect = document.getElementById('btn-connect-game');
-    if (btnConnect) {
-      btnConnect.addEventListener('click', () => {
-        // Captura o código da sala, nome e avatar digitados pelo Cliente
-        const inputCode = document.getElementById('join-room-code');
-        const nameInput = document.getElementById('join-player-name');
-        const avatarInput = document.getElementById('join-player-avatar');
-
-        const code = inputCode ? inputCode.value.trim() : '';
-        const guestName = nameInput && nameInput.value.trim() !== '' ? nameInput.value.trim() : 'Visitante';
-        const guestAvatar = avatarInput ? avatarInput.value : 'avatar2';
-
-        if (code) {
-          this.joinRoom(code, guestName, guestAvatar);
-        } else {
-          alert('Por favor, digite o código da sala!');
-        }
-      });
-    }
-
-    // ---------------------------------------------------------
-    // 3. Lógica do Botão Começar Partida (HOST)
-    // ---------------------------------------------------------
-    const btnStart = document.getElementById('btn-start-game');
-    if (btnStart) {
-      btnStart.addEventListener('click', () => {
-        this.startGame();
-      });
-    }
-  },
-
-  /**
-   * Inicia a partida e avisa todos os clientes (HOST)
-   */
-  startGame() {
-    console.log('[Multiplayer] O Host iniciou a partida!');
-
-    // 1. Esconde o modal de online e mostra o tabuleiro para o Host
-    document.getElementById('online-modal')?.classList.add('hidden');
-    document.getElementById('game-section-area')?.classList.remove('hidden');
-    if (typeof window.scrollToGame === 'function') window.scrollToGame();
-
-    // 2. Aqui nós vamos conectar com o game.js para criar o estado inicial
-    // Por enquanto, vamos disparar um alerta para confirmar que chegamos até aqui
-    alert('Lobby concluído! Jogadores prontos: ' + this.lobbyState.players.length);
+    const btnJoin = document.getElementById('btn-join-game');
+    const btnStart = document.getElementById('btn-start-multiplayer');
     
-    // O próximo passo será trocar esse alert por uma chamada ao game.js 
-    // e enviar o SYNC_GAME_STATE pela rede.
-  },
+    if(btnHost) btnHost.addEventListener('click', () => this.hostGame());
+    if(btnJoin) btnJoin.addEventListener('click', () => this.joinGame());
+    if(btnStart) btnStart.addEventListener('click', () => this.startGame());
+  }
 
-  /**
-   * Cria a sala e aguarda conexões no Lobby (HOST)
-   */
-  createRoom(hostName, hostAvatar) {
-    this.roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
-
-    // Limpa o lobby e adiciona o criador como o primeiro jogador
-    this.lobbyState.players = [{
-        id: 'host',
-        name: hostName,
-        avatar: hostAvatar,
-        isHost: true
-    }];
-
-    this.peer = new Peer(`banco-imob-${this.roomCode}`);
-
+  // ==========================================
+  // LÓGICA DO HOST (CRIAR SALA)
+  // ==========================================
+  hostGame() {
+    this.isHost = true;
+    this.playerName = prompt("Qual o seu nome?", this.playerName) || this.playerName;
+    
+    // Inicializa o PeerJS
+    this.peer = new Peer(); 
+    
     this.peer.on('open', (id) => {
-      console.log(`[Multiplayer] Sala criada! Código: ${this.roomCode}`);
+      console.log('[Multiplayer] Host criado com ID:', id);
+      alert(`Sala criada!\nCompartilhe este ID com seus amigos:\n\n${id}`);
+      
+      // Adiciona o próprio Host na lista do Lobby
+      this.lobbyState.players.push({ id: id, name: this.playerName, isHost: true });
+      this.updateLobbyUI();
+      this.showLobby();
+    });
 
-      if (window.Network) window.Network.init(true, this.peer);
+    // Escuta novas pessoas se conectando
+    this.peer.on('connection', (conn) => {
+      this.connections.push(conn);
+      this.setupHostListeners(conn);
+    });
+  }
 
-      // Atualiza a tela exibindo o código para convidar amigos
-      const displayCode = document.getElementById('display-room-code');
-      const infoBox = document.getElementById('room-created-info');
-      if (displayCode) displayCode.innerText = this.roomCode;
-      if (infoBox) infoBox.classList.remove('hidden');
-
-      // Pede para a interface atualizar o Lobby visualmente com o Host na lista
-      if (window.UI && typeof window.UI.updateLobby === 'function') {
-        window.UI.updateLobby(this.lobbyState.players);
+  // Escuta as mensagens que os Clientes enviam para o Host
+  setupHostListeners(conn) {
+    conn.on('data', (data) => {
+      // Quando um cliente novo entra
+      if (data.type === 'PLAYER_JOINED') {
+        this.lobbyState.players.push(data.payload);
+        this.broadcastLobbyUpdate(); // Avisa todos da nova lista
+        this.updateLobbyUI(); // Atualiza a tela do Host
       }
     });
+  }
 
-    this.peer.on('connection', (conn) => {
-      console.log(`[Multiplayer] Cliente conectado: ${conn.peer}`);
-      if (window.Network) window.Network.connections.push(conn);
-      this.setupListeners(conn, true);
-    });
-
-    this.peer.on('error', (err) => {
-      console.error('[Multiplayer] Erro ao criar sala:', err);
-      alert('Erro ao criar sala. Verifique a sua conexão.');
-    });
-  },
-
-  /**
-   * Entra na sala e se apresenta para o Lobby (CLIENTE)
-   */
-  joinRoom(code, guestName, guestAvatar) {
-    this.roomCode = code.toUpperCase();
-    this.peer = new Peer();
-
-    this.peer.on('open', () => {
-      console.log(`[Multiplayer] Conectando à sala ${this.roomCode}...`);
-      const hostPeerId = `banco-imob-${this.roomCode}`;
-      const conn = this.peer.connect(hostPeerId);
-
-      window.multiplayerConnection = conn;
-
-      conn.on('open', () => {
-        console.log('[Multiplayer] Conectado ao Host com sucesso!');
-        if (window.Network) window.Network.init(false, this.peer);
-        this.setupListeners(conn, false);
-
-        // Oculta o modal antigo de online
-        document.getElementById('online-modal')?.classList.add('hidden');
-
-        // Envia os dados do Cliente para o Host o adicionar no Lobby
-        conn.send({
-          type: 'JOIN_LOBBY',
-          payload: {
-            id: this.peer.id,
-            name: guestName,
-            avatar: guestAvatar,
-            isHost: false
-          }
-        });
+  // Avisa todos os clientes sobre mudanças no Lobby
+  broadcastLobbyUpdate() {
+    this.connections.forEach(conn => {
+      conn.send({
+        type: 'LOBBY_UPDATE',
+        payload: this.lobbyState
       });
     });
+  }
 
-    this.peer.on('error', (err) => {
-      console.error('[Multiplayer] Erro ao conectar:', err);
-      alert('Não foi possível encontrar essa sala. Confirme se o código está correto!');
+  // ==========================================
+  // LÓGICA DO CLIENTE (ENTRAR NA SALA)
+  // ==========================================
+  joinGame() {
+    this.isHost = false;
+    const hostId = prompt("Digite o ID da sala:");
+    if (!hostId) return;
+
+    this.playerName = prompt("Qual o seu nome?", this.playerName) || this.playerName;
+    
+    this.peer = new Peer();
+    this.peer.on('open', (id) => {
+      this.conn = this.peer.connect(hostId);
+      
+      this.conn.on('open', () => {
+        console.log('[Multiplayer] Conectado ao Host!');
+        // Avisa o host quem acabou de entrar
+        this.conn.send({
+          type: 'PLAYER_JOINED',
+          payload: { id: id, name: this.playerName, isHost: false }
+        });
+        
+        this.setupClientListeners();
+        this.showLobby();
+      });
     });
-  },
+  }
 
-  /**
-   * Configura os ouvintes de eventos da rede (LOBBY + JOGO)
-   */
-  setupListeners(conn, isHost) {
-    conn.on('data', (data) => {
-      console.log('[Multiplayer] Dados recebidos:', data);
-
-      if (isHost) {
-        // --- LÓGICA DO HOST ---
-        if (data.type === 'JOIN_LOBBY') {
-          // 1. Um novo cliente pediu para entrar no Lobby, então adicionamos na lista
-          this.lobbyState.players.push(data.payload);
-          
-          // 2. O Host atualiza sua própria tela
-          if (window.UI && typeof window.UI.updateLobby === 'function') {
-            window.UI.updateLobby(this.lobbyState.players);
-          }
-
-          // 3. O Host avisa TODOS os clientes conectados da nova lista do Lobby
-          if (window.Network) {
-            window.Network.connections.forEach(connection => {
-              connection.send({
-                type: 'SYNC_LOBBY',
-                payload: this.lobbyState.players
-              });
-            });
-          }
-        } else {
-          // Se não for Lobby, é uma ação normal do jogo em andamento
-          if (window.Actions) window.Actions.handleAction(data);
-        }
-
-      } else {
-        // --- LÓGICA DO CLIENTE ---
-        if (data.type === 'SYNC_LOBBY') {
-          // O Host mandou a lista atualizada de quem está no Lobby, atualiza a tela
-          if (window.UI && typeof window.UI.updateLobby === 'function') {
-            window.UI.updateLobby(data.payload);
-          }
-        } else if (data.type === 'SYNC_GAME_STATE') {
-          // O Host clicou em "Começar Jogo" e mandou o estado inicial. 
-          // Ocultamos os modais de lobby/setup e abrimos o jogo
-          const setupModal = document.getElementById('setup-modal') || document.querySelector('.setup-overlay');
-          const lobbyModal = document.getElementById('tela-lobby'); // Adapte para o ID da sua tela de lobby
-          
-          if (setupModal) setupModal.classList.add('hidden');
-          if (lobbyModal) lobbyModal.classList.add('hidden');
-          
-          const gameArea = document.getElementById('game-section-area');
-          if (gameArea) gameArea.classList.remove('hidden');
-
-          if (typeof window.scrollToGame === 'function') window.scrollToGame();
-          if (window.UI) window.UI.update(data.payload);
+  // Escuta as mensagens que o Host envia para o Cliente
+  setupClientListeners() {
+    this.conn.on('data', (data) => {
+      
+      // Recebeu a atualização da lista do Lobby
+      if (data.type === 'LOBBY_UPDATE') {
+        this.lobbyState = data.payload;
+        this.updateLobbyUI();
+      } 
+      
+      // Recebeu o aviso para COMEÇAR O JOGO
+      else if (data.type === 'SYNC_GAME_STATE') {
+        console.log('[Multiplayer] O Host começou o jogo! Carregando tabuleiro...');
+        
+        // Esconde os menus
+        document.getElementById('setup-modal')?.classList.add('hidden');
+        document.querySelector('.setup-overlay')?.classList.add('hidden');
+        document.getElementById('online-modal')?.classList.add('hidden');
+        
+        // Inicia o jogo no cliente usando a função do game.js
+        if (window.startMultiplayerGame) {
+          window.startMultiplayerGame(data.payload.players, data.payload.config);
         }
       }
     });
   }
-};
 
-Multiplayer.init();
-window.Multiplayer = Multiplayer;
+  // ==========================================
+  // ATUALIZAÇÃO DE INTERFACE E INÍCIO DE JOGO
+  // ==========================================
+  updateLobbyUI() {
+    const lobbyList = document.getElementById('lobby-players-list');
+    if (!lobbyList) return;
+    
+    lobbyList.innerHTML = '';
+    this.lobbyState.players.forEach(p => {
+      const li = document.createElement('li');
+      li.textContent = p.name + (p.isHost ? " (👑 Host)" : "");
+      lobbyList.appendChild(li);
+    });
+  }
+
+  showLobby() {
+    // Esconde o setup inicial
+    document.getElementById('setup-modal')?.classList.add('hidden');
+    document.querySelector('.setup-overlay')?.classList.add('hidden');
+    
+    // Mostra o modal de espera do Lobby
+    const onlineModal = document.getElementById('online-modal');
+    if (onlineModal) onlineModal.classList.remove('hidden');
+
+    // Somente o Host pode ver o botão de começar a partida
+    const btnStart = document.getElementById('btn-start-multiplayer');
+    if (btnStart) {
+      btnStart.style.display = this.isHost ? 'block' : 'none';
+    }
+  }
+
+  // Função disparada quando o Host clica em "Começar Partida"
+  startGame() {
+    if (!this.isHost) return;
+    console.log('[Multiplayer] O Host iniciou a partida!');
+
+    // 1. Esconde o modal na tela do Host
+    document.getElementById('online-modal')?.classList.add('hidden');
+    
+    // 2. Inicia o jogo localmente na tela do Host
+    if (window.startMultiplayerGame) {
+      window.startMultiplayerGame(this.lobbyState.players, window.GAME_CONFIG);
+    }
+
+    // 3. Dispara a ordem de Iniciar Jogo para todos os Clientes conectados
+    this.connections.forEach(conn => {
+      conn.send({
+        type: 'SYNC_GAME_STATE',
+        payload: {
+          players: this.lobbyState.players,
+          config: window.GAME_CONFIG 
+        }
+      });
+    });
+  }
+}
+
+// Cria a instância global para que o game.js consiga acessar depois
+window.Network = new MultiplayerManager();
+
+// Inicializa os botões assim que a página carregar
+window.addEventListener('DOMContentLoaded', () => {
+  window.Network.init();
+});
