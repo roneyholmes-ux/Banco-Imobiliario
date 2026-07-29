@@ -9,7 +9,7 @@ let GAME_CONFIG = {
     rentMultiplier: 1.0,
     impostoRenda: 2000,
     taxaLuxo: 1000,
-    fiancaPrisao: 500,
+    fiancaPrisao: 500, 
     taxaTroca: 200
 };
 
