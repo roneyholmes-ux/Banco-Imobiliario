@@ -13,6 +13,9 @@ window.showOnlineModal = function() {
 const Multiplayer = {
   peer: null,
   roomCode: null,
+  lobbyState: {
+    players: [] // Vai guardar os jogadores que entrarem
+  },
 
   init() {
     document.addEventListener('DOMContentLoaded', () => {
@@ -42,11 +45,19 @@ const Multiplayer = {
     }
   },
 
-  /**
+/**
    * Cria a sala (HOST)
    */
-  createRoom() {
+  createRoom(hostName, hostAvatar) {
     this.roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
+
+    // Limpa a sala e adiciona o criador como o primeiro jogador
+    this.lobbyState.players = [{
+        id: 'host',
+        name: hostName || 'Jogador 1',
+        avatar: hostAvatar || 'avatar1',
+        isHost: true
+    }];
     this.peer = new Peer(`banco-imob-${this.roomCode}`);
 
     this.peer.on('open', (id) => {
@@ -59,8 +70,9 @@ const Multiplayer = {
       if (displayCode) displayCode.innerText = this.roomCode;
       if (infoBox) infoBox.classList.remove('hidden');
 
-      if (typeof window.scrollToGame === 'function') {
-        window.scrollToGame();
+      // Em vez de rolar direto pro jogo, vamos pedir para a interface atualizar o Lobby
+      if (window.UI && typeof window.UI.updateLobby === 'function') {
+        window.UI.updateLobby(this.lobbyState.players);
       }
     });
 
