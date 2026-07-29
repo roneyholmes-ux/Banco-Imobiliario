@@ -1,4 +1,4 @@
-/**
+/** 
  * game.js
  * Lógica central do jogo, estados, regras e movimentação.
  */
