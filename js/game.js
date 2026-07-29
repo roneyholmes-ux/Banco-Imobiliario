@@ -1,6 +1,6 @@
 /** 
  * game.js
- * Lógica central do jogo, estados, regras e movimentação.
+ * Lógica central do jogo, estados, regras, movimentação e sincronização Host-Authoritative.
  */
 
 let GAME_CONFIG = {
@@ -9,7 +9,7 @@ let GAME_CONFIG = {
     rentMultiplier: 1.0,
     impostoRenda: 2000,
     taxaLuxo: 1000,
-    fiancaPrisao: 500, 
+    fiancaPrisao: 500,
     taxaTroca: 200
 };
 
@@ -98,6 +98,7 @@ function initializePlayers(count = 2) {
         const preset = PLAYER_PRESETS[i % PLAYER_PRESETS.length];
         players.push({
             id: i,
+            peerId: null,
             name: preset.name,
             color: preset.color,
             money: GAME_CONFIG.startingMoney,
@@ -134,9 +135,38 @@ function resetBoardState() {
     }
 }
 
+// ==========================================
+// ROLAGEM DE DADOS E MOVIMENTAÇÃO
+// ==========================================
+
 function rollDice() {
     if (isMoving || awaitingDecision) return;
 
+    const player = players[currentPlayerIndex];
+    if (!player || player.isBankrupt) return;
+
+    // Se for modo Multiplayer, valida se é a vez do jogador local
+    if (isMultiplayer) {
+        const myPeerId = window.Network ? window.Network.myPeerId : null;
+        if (player.peerId !== myPeerId) {
+            console.log("[rollDice] Não é a sua vez!");
+            return;
+        }
+
+        // Se não for o Host, envia requisição pela rede
+        if (window.Network && !window.Network.isHost) {
+            if (typeof window.sendNetworkAction === "function") {
+                window.sendNetworkAction("REQUEST_ROLL_DICE");
+            }
+            return;
+        }
+    }
+
+    // Se for Host ou jogo Local, executa a rolagens diretamente
+    executeRollDice();
+}
+
+function executeRollDice() {
     const player = players[currentPlayerIndex];
     if (!player || player.isBankrupt) return;
 
@@ -146,11 +176,15 @@ function rollDice() {
             player.money -= GAME_CONFIG.fiancaPrisao;
             player.inJail = false;
             player.jailTurns = 0;
+            const msg = `⛓️ ${player.name} pagou $${GAME_CONFIG.fiancaPrisao} de fiança e saiu da prisão!`;
             const statusDiv = document.getElementById("game-status");
-            if (statusDiv) statusDiv.innerText = `⛓️ ${player.name} pagou $${GAME_CONFIG.fiancaPrisao} de fiança e saiu da prisão!`;
+            if (statusDiv) statusDiv.innerText = msg;
+            syncGameState(msg);
         } else {
+            const msg = `⛓️ ${player.name} continua na prisão (${player.jailTurns}º turno).`;
             const statusDiv = document.getElementById("game-status");
-            if (statusDiv) statusDiv.innerText = `⛓️ ${player.name} continua na prisão (${player.jailTurns}º turno).`;
+            if (statusDiv) statusDiv.innerText = msg;
+            syncGameState(msg);
             nextTurn();
             return;
         }
@@ -160,12 +194,15 @@ function rollDice() {
     const d2 = Math.floor(Math.random() * 6) + 1;
     const total = d1 + d2;
 
+    const diceText = `🎲 ${d1} + ${d2} = ${total}`;
     const diceDisplay = document.getElementById("dice-display");
-    if (diceDisplay) diceDisplay.innerText = `🎲 ${d1} + ${d2} = ${total}`;
+    if (diceDisplay) diceDisplay.innerText = diceText;
 
+    const statusMsg = `${player.name} tirou ${d1} e ${d2} (${total}). Avance ${total} casas!`;
     const statusDiv = document.getElementById("game-status");
-    if (statusDiv) statusDiv.innerText = `${player.name} tirou ${d1} e ${d2} (${total}). Avance ${total} casas!`;
+    if (statusDiv) statusDiv.innerText = statusMsg;
 
+    syncGameState(statusMsg, diceText);
     movePlayer(currentPlayerIndex, total);
 }
 
@@ -179,8 +216,11 @@ async function movePlayer(playerIndex, steps) {
 
         if (player.position === 0) {
             player.money -= GAME_CONFIG.goBonus;
+            const statusMsg = `💸 ${player.name} passou pela PARTIDA e pagou $${GAME_CONFIG.goBonus}!`;
             const statusLabel = document.getElementById("game-status");
-            if (statusLabel) statusLabel.innerText = `💸 ${player.name} passou pela PARTIDA e pagou $${GAME_CONFIG.goBonus}!`;
+            if (statusLabel) statusLabel.innerText = statusMsg;
+
+            syncGameState(statusMsg);
 
             if (player.money < 0) {
                 isMoving = false;
@@ -191,6 +231,7 @@ async function movePlayer(playerIndex, steps) {
         }
 
         renderPawns();
+        syncGameState();
         await new Promise(resolve => setTimeout(resolve, 200));
     }
 
@@ -212,7 +253,9 @@ function handleLanding(player) {
             payRent(player, space);
             return;
         } else {
-            document.getElementById("game-status").innerText = `${player.name} caiu na sua própria propriedade: ${space.name}.`;
+            const msg = `${player.name} caiu na sua própria propriedade: ${space.name}.`;
+            document.getElementById("game-status").innerText = msg;
+            syncGameState(msg);
         }
     } else if (space.name === "Sorte ou Revés") {
         drawCard(player);
@@ -222,13 +265,19 @@ function handleLanding(player) {
         player.inJail = true;
         player.jailTurns = 0;
         renderPawns();
-        document.getElementById("game-status").innerText = `🚨 ${player.name} foi para a Prisão!`;
+        const msg = `🚨 ${player.name} foi para a Prisão!`;
+        document.getElementById("game-status").innerText = msg;
+        syncGameState(msg);
     } else if (space.name === "Imposto de Renda") {
         player.money -= GAME_CONFIG.impostoRenda;
-        document.getElementById("game-status").innerText = `💸 ${player.name} pagou $${GAME_CONFIG.impostoRenda} de Imposto de Renda.`;
+        const msg = `💸 ${player.name} pagou $${GAME_CONFIG.impostoRenda} de Imposto de Renda.`;
+        document.getElementById("game-status").innerText = msg;
+        syncGameState(msg);
     } else if (space.name === "Taxa de Luxo") {
         player.money -= GAME_CONFIG.taxaLuxo;
-        document.getElementById("game-status").innerText = `💎 ${player.name} pagou $${GAME_CONFIG.taxaLuxo} de Taxa de Luxo.`;
+        const msg = `💎 ${player.name} pagou $${GAME_CONFIG.taxaLuxo} de Taxa de Luxo.`;
+        document.getElementById("game-status").innerText = msg;
+        syncGameState(msg);
     }
 
     nextTurn();
@@ -246,11 +295,27 @@ function payRent(player, space) {
         return;
     }
 
-    document.getElementById("game-status").innerText = `💸 ${player.name} pagou $${rentAmount} de aluguel para ${owner ? owner.name : "o Banco"}.`;
+    const msg = `💸 ${player.name} pagou $${rentAmount} de aluguel para ${owner ? owner.name : "o Banco"}.`;
+    document.getElementById("game-status").innerText = msg;
+    syncGameState(msg);
     nextTurn();
 }
 
 function showPurchaseModal(player, space) {
+    const statusDiv = document.getElementById("game-status");
+    if (!statusDiv) return;
+
+    syncGameState(`Aguardando decisão de ${player.name} sobre ${space.name}...`);
+
+    const myPeerId = window.Network ? window.Network.myPeerId : null;
+    if (!isMultiplayer || player.peerId === myPeerId) {
+        showPurchaseModalUI(player, space);
+    } else {
+        statusDiv.innerText = `🏠 ${space.name} ($${space.price}) disponível! Aguardando ${player.name}...`;
+    }
+}
+
+function showPurchaseModalUI(player, space) {
     const statusDiv = document.getElementById("game-status");
     if (!statusDiv) return;
 
@@ -265,21 +330,19 @@ function showPurchaseModal(player, space) {
     `;
 
     document.getElementById("btn-buy-prop").onclick = () => {
-        if (player.money >= space.price) {
-            player.money -= space.price;
-            space.owner = player.id;
-            statusDiv.innerText = `🎉 ${player.name} comprou ${space.name}!`;
+        if (isMultiplayer && window.Network && !window.Network.isHost) {
+            window.sendNetworkAction("REQUEST_BUY_PROPERTY");
         } else {
-            alert("Dinheiro insuficiente!");
+            hostProcessBuyProperty(player.peerId);
         }
-        awaitingDecision = false;
-        nextTurn();
     };
 
     document.getElementById("btn-pass-prop").onclick = () => {
-        statusDiv.innerText = `${player.name} não comprou ${space.name}.`;
-        awaitingDecision = false;
-        nextTurn();
+        if (isMultiplayer && window.Network && !window.Network.isHost) {
+            window.sendNetworkAction("REQUEST_PASS_PROPERTY");
+        } else {
+            hostProcessPassProperty(player.peerId);
+        }
     };
 }
 
@@ -288,8 +351,10 @@ function drawCard(player) {
     if (card.type === "earn") player.money += card.value;
     else player.money -= card.value;
 
-    document.getElementById("game-status").innerText = `🃏 Carta: "${card.text}"`;
+    const msg = `🃏 Carta: "${card.text}"`;
+    document.getElementById("game-status").innerText = msg;
     awaitingDecision = false;
+    syncGameState(msg);
     nextTurn();
 }
 
@@ -297,7 +362,9 @@ function checkBankruptcy(player, creditorId) {
     if (player.money < 0) {
         player.isBankrupt = true;
         boardSpaces.forEach(s => { if (s.owner === player.id) s.owner = creditorId; });
-        document.getElementById("game-status").innerText = `💥 ${player.name} FALIU!`;
+        const msg = `💥 ${player.name} FALIU!`;
+        document.getElementById("game-status").innerText = msg;
+        syncGameState(msg);
         nextTurn();
     }
 }
@@ -308,7 +375,9 @@ function nextTurn() {
     const activePlayers = players.filter(p => !p.isBankrupt);
     if (activePlayers.length <= 1 && players.length > 1) {
         const winner = activePlayers[0] || players[0];
-        document.getElementById("game-status").innerHTML = `🏆 <strong>FIM DE JOGO!</strong> ${winner.name} venceu!`;
+        const msg = `🏆 <strong>FIM DE JOGO!</strong> ${winner.name} venceu!`;
+        document.getElementById("game-status").innerHTML = msg;
+        syncGameState(msg);
         return;
     }
 
@@ -316,12 +385,138 @@ function nextTurn() {
         currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
     } while (players[currentPlayerIndex].isBankrupt);
 
+    awaitingDecision = false;
     updateUI();
+
+    const nextPlayer = players[currentPlayerIndex];
+    const msg = `É a vez de ${nextPlayer.name}. Role os dados!`;
     const statusDiv = document.getElementById("game-status");
-    if (statusDiv && !awaitingDecision) {
-        statusDiv.innerText = `É a vez de ${players[currentPlayerIndex].name}. Role os dados!`;
+    if (statusDiv) {
+        statusDiv.innerText = msg;
+    }
+    syncGameState(msg);
+}
+
+// ==========================================
+// PROCESSADORES DE COMANDOS EXECUTADOS PELO HOST
+// ==========================================
+
+function hostProcessRollDice(senderPeerId) {
+    if (isMultiplayer && window.Network && !window.Network.isHost) return;
+    const player = players[currentPlayerIndex];
+    if (player && player.peerId === senderPeerId) {
+        executeRollDice();
     }
 }
+
+function hostProcessBuyProperty(senderPeerId) {
+    if (isMultiplayer && window.Network && !window.Network.isHost) return;
+    const player = players[currentPlayerIndex];
+    
+    // Valida se a ordem veio do jogador da vez
+    if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
+
+    const space = boardSpaces[player.position];
+    if (space && space.owner === null && player.money >= space.price) {
+        player.money -= space.price;
+        space.owner = player.id;
+        const msg = `🎉 ${player.name} comprou ${space.name}!`;
+        document.getElementById("game-status").innerText = msg;
+        awaitingDecision = false;
+        syncGameState(msg);
+        nextTurn();
+    } else {
+        alert("Dinheiro insuficiente ou propriedade indisponível!");
+    }
+}
+
+function hostProcessPassProperty(senderPeerId) {
+    if (isMultiplayer && window.Network && !window.Network.isHost) return;
+    const player = players[currentPlayerIndex];
+
+    if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
+
+    const space = boardSpaces[player.position];
+    const msg = `${player.name} não comprou ${space.name}.`;
+    document.getElementById("game-status").innerText = msg;
+    awaitingDecision = false;
+    syncGameState(msg);
+    nextTurn();
+}
+
+// ==========================================
+// SINCRONIZAÇÃO DE REDE (BROADCAST E RECEBIMENTO)
+// ==========================================
+
+function syncGameState(statusMessage = null, diceDisplay = null) {
+    if (!isMultiplayer || !window.Network || !window.Network.isHost) return;
+
+    window.Network.sendGameAction("SYNC_GAME_STATE", {
+        players: players,
+        boardSpaces: boardSpaces.map(s => ({ id: s.id, owner: s.owner, houses: s.houses || 0 })),
+        currentPlayerIndex: currentPlayerIndex,
+        isMoving: isMoving,
+        awaitingDecision: awaitingDecision,
+        statusMessage: statusMessage || (document.getElementById("game-status") ? document.getElementById("game-status").innerText : ""),
+        diceDisplay: diceDisplay || (document.getElementById("dice-display") ? document.getElementById("dice-display").innerText : "")
+    });
+}
+
+function applyGameStateSync(payload) {
+    if (!payload) return;
+
+    // Se for o Host, ele já é a fonte primária do estado
+    if (window.Network && window.Network.isHost) return;
+
+    if (payload.players) players = payload.players;
+
+    if (payload.boardSpaces) {
+        payload.boardSpaces.forEach(syncSpace => {
+            const localSpace = boardSpaces.find(s => s.id === syncSpace.id);
+            if (localSpace) {
+                localSpace.owner = syncSpace.owner;
+                localSpace.houses = syncSpace.houses;
+            }
+        });
+    }
+
+    if (payload.currentPlayerIndex !== undefined) currentPlayerIndex = payload.currentPlayerIndex;
+    if (payload.isMoving !== undefined) isMoving = payload.isMoving;
+    if (payload.awaitingDecision !== undefined) awaitingDecision = payload.awaitingDecision;
+
+    if (payload.diceDisplay) {
+        const diceDisplayEl = document.getElementById("dice-display");
+        if (diceDisplayEl) diceDisplayEl.innerText = payload.diceDisplay;
+    }
+
+    if (payload.statusMessage) {
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv && !awaitingDecision) {
+            statusDiv.innerText = payload.statusMessage;
+        }
+    }
+
+    renderPawns();
+    updateUI();
+
+    // Se o jogo está aguardando uma decisão e é a vez do jogador local
+    if (awaitingDecision) {
+        const currentPlayer = players[currentPlayerIndex];
+        const myPeerId = window.Network ? window.Network.myPeerId : null;
+        const space = boardSpaces[currentPlayer.position];
+
+        if (currentPlayer && currentPlayer.peerId === myPeerId) {
+            showPurchaseModalUI(currentPlayer, space);
+        } else {
+            const statusDiv = document.getElementById("game-status");
+            if (statusDiv) statusDiv.innerText = `Aguardando decisão de ${currentPlayer.name}...`;
+        }
+    }
+}
+
+// ==========================================
+// INICIALIZADORES E CONFIGURAÇÕES
+// ==========================================
 
 function startPlayerSetup() {
     let count = prompt("Quantos jogadores locais? (2 a 6)", "2");
@@ -344,5 +539,15 @@ window.startMultiplayerGame = function(lobbyPlayers) {
         jailTurns: 0,
         isBankrupt: false
     }));
+
     resetBoardState();
+
+    if (window.Network && window.Network.isHost) {
+        syncGameState("A partida começou! Role os dados.");
+    }
 };
+
+window.hostProcessRollDice = hostProcessRollDice;
+window.hostProcessBuyProperty = hostProcessBuyProperty;
+window.hostProcessPassProperty = hostProcessPassProperty;
+window.applyGameStateSync = applyGameStateSync;
