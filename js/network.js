@@ -1,4 +1,3 @@
-```javascript
 // ==========================================
 // NETWORK.JS
 // CAMADA DE COMPATIBILIDADE
@@ -56,4 +55,4 @@ window.sendNetworkAction =
 console.log(
     "[Network] Camada de compatibilidade pronta."
 );
-```
+
