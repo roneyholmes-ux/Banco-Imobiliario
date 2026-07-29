@@ -1,7 +1,7 @@
 /**
  * ui.js
  * Desenha e sincroniza os elementos visuais do tabuleiro e painéis.
- */
+ */ 
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
