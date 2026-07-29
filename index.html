@@ -32,7 +32,24 @@
                 <div class="hero-buttons">
                     <button class="hero-btn-primary" onclick="scrollToGame()">JOGAR AGORA</button>
                     <!-- BOTÃO ONLINE CORRIGIDO AQUI -->
-                    <button class="hero-btn-primary" style="background: #6c5ce7;" onclick="if(window.Network){window.Network.openOnlineMenu()}else{alert('Erro: O sistema multiplayer ainda está carregando ou o arquivo multiplayer.js não foi encontrado.')}">🌐 JOGAR ONLINE</button>
+                    ```html
+<button
+    class="hero-btn-primary"
+    style="background: #6c5ce7;"
+    onclick="
+        if (window.Network && typeof window.Network.openOnlineMenu === 'function') {
+            window.Network.openOnlineMenu();
+        } else {
+            alert('ERRO: O sistema multiplayer não foi carregado corretamente. Verifique o arquivo multiplayer.js.');
+            console.error('Network disponível:', window.Network);
+            console.error('openOnlineMenu:', window.Network ? window.Network.openOnlineMenu : 'Network inexistente');
+        }
+    "
+>
+    🌐 JOGAR ONLINE
+</button>
+```
+
                     <button class="hero-btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('hidden')">CONHECER REGRAS</button>
                 </div>
             </div>
