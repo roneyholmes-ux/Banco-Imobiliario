@@ -123,6 +123,7 @@ let players = [];
 let currentPlayerIndex = 0; 
 let isMoving = false; 
 let awaitingDecision = false; 
+let isMultiplayer = false;
 
 function getGridPosition(index) {
     if (index >= 0 && index <= 10) {
@@ -248,7 +249,17 @@ function updateUI() {
         rollButton.parentNode.insertBefore(tradeButton, rollButton.nextSibling);
     }
 
-    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt) {
+    // Controle de turno em partidas online: Desabilita botões se não for o turno do peer atual
+    let isMyTurn = true;
+    if (isMultiplayer && window.Network && window.Network.peer) {
+        const myPeerId = window.Network.peer.id;
+        const activePlayer = players[currentPlayerIndex];
+        if (activePlayer && activePlayer.peerId && activePlayer.peerId !== myPeerId) {
+            isMyTurn = false;
+        }
+    }
+
+    if (isMoving || awaitingDecision || players[currentPlayerIndex]?.inJail || players[currentPlayerIndex]?.isBankrupt || !isMyTurn) {
         if (rollButton) { rollButton.disabled = true; rollButton.style.opacity = "0.5"; rollButton.style.cursor = "not-allowed"; }
         if (tradeButton) { tradeButton.disabled = true; tradeButton.style.opacity = "0.5"; tradeButton.style.cursor = "not-allowed"; }
     } else {
@@ -430,7 +441,6 @@ function handleLanding(player) {
             return; 
         } 
         else if (currentSpace.owner !== player.id) {
-            // Verifica se a propriedade possui minigame pedagógico de grandeza
             if (currentSpace.grandezaType) {
                 handleGrandezaLandingOtherPlayer(player, currentSpace);
             } else {
@@ -580,6 +590,30 @@ function handleGrandezaLandingOtherPlayer(player, space) {
     updateUI();
 
     document.getElementById("btn-pay-rent-g").addEventListener("click", () => {
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('GRANDEZA_CHOICE', { choice: 'PAY', playerIndex: player.id, spaceId: space.id });
+            return;
+        }
+        executeGrandezaChoice('PAY', player.id, space.id);
+    });
+
+    document.getElementById("btn-give-tokens-g").addEventListener("click", () => {
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('GRANDEZA_CHOICE', { choice: 'TOKENS', playerIndex: player.id, spaceId: space.id });
+            return;
+        }
+        executeGrandezaChoice('TOKENS', player.id, space.id);
+    });
+}
+
+function executeGrandezaChoice(choice, playerIndex, spaceId) {
+    const player = players[playerIndex];
+    const space = boardSpaces[spaceId];
+    const owner = players.find(p => p.id === space.owner);
+    const rentAmount = calculateCurrentRent(space);
+    const kind = space.grandezaType;
+
+    if (choice === 'PAY') {
         player.money -= rentAmount;
         owner.money += rentAmount;
 
@@ -591,9 +625,7 @@ function handleGrandezaLandingOtherPlayer(player, space) {
         awaitingDecision = false;
         document.getElementById("game-status").innerText = `${player.name} preferiu pagar o aluguel de $${rentAmount} para ${owner.name}.`;
         nextTurn();
-    });
-
-    document.getElementById("btn-give-tokens-g").addEventListener("click", () => {
+    } else {
         players.forEach(p => {
             if (!p.isBankrupt) {
                 if (kind === "discreta") p.fichasDiscreta += 1;
@@ -605,7 +637,7 @@ function handleGrandezaLandingOtherPlayer(player, space) {
         document.getElementById("game-status").innerText = `${player.name} acionou o benefício global! Todos os jogadores ganharam 1 Ficha de Grandeza ${kind.toUpperCase()}!`;
         updateUI();
         nextTurn();
-    });
+    }
 }
 
 function drawCard(player) {
@@ -688,11 +720,27 @@ function showPurchaseModal(player, space) {
         </div>
     `;
 
-    document.getElementById("btn-buy-yes").addEventListener("click", () => buyProperty(player, space));
-    document.getElementById("btn-buy-no").addEventListener("click", () => skipProperty(player, space));
+    document.getElementById("btn-buy-yes").addEventListener("click", () => {
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('BUY_PROPERTY', { playerIndex: player.id, spaceId: space.id });
+            return;
+        }
+        buyProperty(player, space);
+    });
+
+    document.getElementById("btn-buy-no").addEventListener("click", () => {
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('SKIP_PROPERTY', { playerIndex: player.id, spaceId: space.id });
+            return;
+        }
+        skipProperty(player, space);
+    });
 }
 
 function buyProperty(player, space) {
+    if (typeof player === 'number') player = players[player];
+    if (typeof space === 'number') space = boardSpaces[space];
+
     if (player.money >= space.price) {
         player.money -= space.price;
         space.owner = player.id;
@@ -722,6 +770,9 @@ function buyProperty(player, space) {
 }
 
 function skipProperty(player, space) {
+    if (typeof player === 'number') player = players[player];
+    if (typeof space === 'number') space = boardSpaces[space];
+
     document.getElementById("game-status").innerText = `${player.name} decidiu não comprar ${space.name}.`;
     awaitingDecision = false;
     nextTurn();
@@ -782,11 +833,31 @@ function checkJailTurn(player) {
     updateUI();
 
     document.getElementById("btn-jail-roll").addEventListener("click", () => {
-        document.getElementById("btn-jail-roll").disabled = true;
-        document.getElementById("btn-jail-pay").disabled = true;
-        
-        const d1 = Math.floor(Math.random() * 6) + 1;
-        const d2 = Math.floor(Math.random() * 6) + 1;
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('JAIL_ACTION', { action: 'ROLL', playerIndex: player.id });
+            return;
+        }
+        executeJailAction('ROLL', player.id);
+    });
+
+    document.getElementById("btn-jail-pay").addEventListener("click", () => {
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('JAIL_ACTION', { action: 'PAY', playerIndex: player.id });
+            return;
+        }
+        executeJailAction('PAY', player.id);
+    });
+
+    return true;
+}
+
+function executeJailAction(actionType, playerIndex, diceVal1 = null, diceVal2 = null) {
+    const player = players[playerIndex];
+    const statusDiv = document.getElementById("game-status");
+
+    if (actionType === 'ROLL') {
+        const d1 = diceVal1 !== null ? diceVal1 : Math.floor(Math.random() * 6) + 1;
+        const d2 = diceVal2 !== null ? diceVal2 : Math.floor(Math.random() * 6) + 1;
         
         if (d1 === d2) {
             player.inJail = false;
@@ -795,7 +866,7 @@ function checkJailTurn(player) {
             statusDiv.innerHTML = `🎲 Você tirou dados duplos (${d1} e ${d2})! <strong>Você está LIVRE!</strong>`;
             
             setTimeout(() => {
-                movePlayer(currentPlayerIndex, d1 + d2);
+                movePlayer(playerIndex, d1 + d2);
             }, 1500);
         } else {
             player.jailTurns += 1;
@@ -806,12 +877,7 @@ function checkJailTurn(player) {
                 nextTurn();
             }, 2000);
         }
-    });
-
-    document.getElementById("btn-jail-pay").addEventListener("click", () => {
-        document.getElementById("btn-jail-roll").disabled = true;
-        document.getElementById("btn-jail-pay").disabled = true;
-        
+    } else if (actionType === 'PAY') {
         if (player.money >= GAME_CONFIG.fiancaPrisao) {
             player.money -= GAME_CONFIG.fiancaPrisao;
             player.inJail = false;
@@ -822,12 +888,8 @@ function checkJailTurn(player) {
             statusDiv.innerText = `${player.name} pagou a fiança e está livre para jogar!`;
         } else {
             alert("Você não tem dinheiro suficiente para pagar a fiança!");
-            document.getElementById("btn-jail-roll").disabled = false;
-            document.getElementById("btn-jail-pay").disabled = false;
         }
-    });
-
-    return true;
+    }
 }
 
 function rollDice() {
@@ -840,16 +902,29 @@ function rollDice() {
         return;
     }
 
-    const diceValue1 = Math.floor(Math.random() * 6) + 1;
-    const diceValue2 = Math.floor(Math.random() * 6) + 1;
-    const totalSteps = diceValue1 + diceValue2;
+    if (isMultiplayer && window.Network) {
+        // Se estiver online, gera os dados e distribui a ação sincronizada
+        const d1 = Math.floor(Math.random() * 6) + 1;
+        const d2 = Math.floor(Math.random() * 6) + 1;
+        window.Network.sendGameAction('ROLL_DICE', { playerIndex: currentPlayerIndex, d1: d1, d2: d2 });
+        return;
+    }
 
-    document.getElementById("game-status").innerText = `🎲 ${player.name} tirou ${diceValue1} + ${diceValue2} = ${totalSteps}!`;
+    const d1 = Math.floor(Math.random() * 6) + 1;
+    const d2 = Math.floor(Math.random() * 6) + 1;
+    executeDiceRoll(currentPlayerIndex, d1, d2);
+}
 
-    movePlayer(currentPlayerIndex, totalSteps);
+function executeDiceRoll(playerIndex, d1, d2) {
+    const player = players[playerIndex];
+    const totalSteps = d1 + d2;
+
+    document.getElementById("game-status").innerText = `🎲 ${player.name} tirou ${d1} + ${d2} = ${totalSteps}!`;
+    movePlayer(playerIndex, totalSteps);
 }
 
 function initializePlayers(quantity) {
+    isMultiplayer = false;
     players = [];
     for (let i = 0; i < quantity; i++) {
         players.push({
@@ -940,36 +1015,47 @@ function showBuildModal(player, space) {
 
     if (playerHasToken) {
         btnYes.addEventListener("click", () => {
-            btnYes.disabled = true;
-            btnNo.disabled = true;
-            
-            if (player.money >= housePrice) {
-                player.money -= housePrice;
-                if (requiredType === "discreta") player.fichasDiscreta -= 1;
-                else player.fichasContinua -= 1;
-
-                space.houses += 1;
-                updateSpaceVisualWithHouses(space);
-                
-                document.getElementById("game-status").innerText = `${player.name} usou 1 Ficha de ${requiredTypeLabel} e construiu ${itemText} em ${space.name}!`;
-                awaitingDecision = false;
-                updateUI();
-                
-                setTimeout(() => { nextTurn(); }, 1500);
-            } else {
-                alert("Dinheiro insuficiente para construir!");
-                btnYes.disabled = false;
-                btnNo.disabled = false;
+            if (isMultiplayer && window.Network) {
+                window.Network.sendGameAction('BUILD_HOUSE', { playerIndex: player.id, spaceId: space.id });
+                return;
             }
+            executeBuildHouse(player.id, space.id);
         });
     }
 
     btnNo.addEventListener("click", () => {
-        btnYes.disabled = true;
-        btnNo.disabled = true;
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('SKIP_BUILD', { playerIndex: player.id, spaceId: space.id });
+            return;
+        }
         awaitingDecision = false;
         nextTurn();
     });
+}
+
+function executeBuildHouse(playerIndex, spaceId) {
+    const player = players[playerIndex];
+    const space = boardSpaces[spaceId];
+    const housePrice = Math.round(space.price / 2);
+    const requiredType = space.grandezaType || "continua";
+    const requiredTypeLabel = requiredType === "discreta" ? "Grandeza Discreta 🎲" : "Grandeza Contínua 📈";
+    const isHotel = space.houses === 4;
+    const itemText = isHotel ? "um Hotel" : "uma Casa";
+
+    if (player.money >= housePrice) {
+        player.money -= housePrice;
+        if (requiredType === "discreta") player.fichasDiscreta -= 1;
+        else player.fichasContinua -= 1;
+
+        space.houses += 1;
+        updateSpaceVisualWithHouses(space);
+        
+        document.getElementById("game-status").innerText = `${player.name} usou 1 Ficha de ${requiredTypeLabel} e construiu ${itemText} em ${space.name}!`;
+        awaitingDecision = false;
+        updateUI();
+        
+        setTimeout(() => { nextTurn(); }, 1500);
+    }
 }
 
 function updateSpaceVisualWithHouses(space) {
@@ -1227,10 +1313,19 @@ function openTradeModal() {
         }
 
         document.body.removeChild(overlay);
-        sendTradeProposalToUI(proposer, receiver, {
-            offerMoney, offerFd, offerFc, offerPropId,
-            requestMoney, requestFd, requestFc, requestPropId
-        });
+        
+        const tradePayload = {
+            proposerId: proposer.id,
+            receiverId: receiver.id,
+            tradeData: { offerMoney, offerFd, offerFc, offerPropId, requestMoney, requestFd, requestFc, requestPropId }
+        };
+
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('TRADE_PROPOSE', tradePayload);
+            return;
+        }
+
+        sendTradeProposalToUI(proposer, receiver, tradePayload.tradeData);
     });
 }
 
@@ -1275,9 +1370,28 @@ function sendTradeProposalToUI(proposer, receiver, tradeData) {
     const declineBtn = document.getElementById("btn-decline-trade");
 
     acceptBtn.addEventListener("click", () => {
-        acceptBtn.disabled = true;
-        declineBtn.disabled = true;
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('TRADE_RESPONSE', { accepted: true, proposerId: proposer.id, receiverId: receiver.id, tradeData });
+            return;
+        }
+        executeTradeResolution(true, proposer.id, receiver.id, tradeData);
+    });
 
+    declineBtn.addEventListener("click", () => {
+        if (isMultiplayer && window.Network) {
+            window.Network.sendGameAction('TRADE_RESPONSE', { accepted: false, proposerId: proposer.id, receiverId: receiver.id, tradeData });
+            return;
+        }
+        executeTradeResolution(false, proposer.id, receiver.id, tradeData);
+    });
+}
+
+function executeTradeResolution(accepted, proposerId, receiverId, tradeData) {
+    const proposer = players[proposerId];
+    const receiver = players[receiverId];
+    const statusDiv = document.getElementById("game-status");
+
+    if (accepted) {
         proposer.money -= GAME_CONFIG.taxaTroca;
 
         proposer.money -= tradeData.offerMoney;
@@ -1291,38 +1405,33 @@ function sendTradeProposalToUI(proposer, receiver, tradeData) {
         receiver.fichasDiscreta = receiver.fichasDiscreta - tradeData.requestFd + tradeData.offerFd;
         receiver.fichasContinua = receiver.fichasContinua - tradeData.requestFc + tradeData.offerFc;
 
-        if (offerProp) {
-            offerProp.owner = receiver.id;
-            updateTradeVisualProperty(offerProp, receiver);
+        if (tradeData.offerPropId !== null) {
+            const offerProp = boardSpaces.find(s => s.id === tradeData.offerPropId);
+            if (offerProp) {
+                offerProp.owner = receiver.id;
+                updateTradeVisualProperty(offerProp, receiver);
+            }
         }
-        if (requestProp) {
-            requestProp.owner = proposer.id;
-            updateTradeVisualProperty(requestProp, proposer);
+        if (tradeData.requestPropId !== null) {
+            const requestProp = boardSpaces.find(s => s.id === tradeData.requestPropId);
+            if (requestProp) {
+                requestProp.owner = proposer.id;
+                updateTradeVisualProperty(requestProp, proposer);
+            }
         }
 
         statusDiv.innerHTML = `<div style="color: #2ed573; font-weight: bold;">🤝 Negócio Concluído! Taxa de $${GAME_CONFIG.taxaTroca} recolhida pelo Banco.</div>`;
-        awaitingDecision = false;
-        updateUI();
-
-        setTimeout(() => {
-            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
-            updateUI();
-        }, 2000);
-    });
-
-    declineBtn.addEventListener("click", () => {
-        acceptBtn.disabled = true;
-        declineBtn.disabled = true;
-
+    } else {
         statusDiv.innerHTML = `<div style="color: #ff4757; font-weight: bold;">❌ ${receiver.name} recusou a proposta de negócio.</div>`;
-        awaitingDecision = false;
-        updateUI();
+    }
 
-        setTimeout(() => {
-            statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
-            updateUI();
-        }, 2000);
-    });
+    awaitingDecision = false;
+    updateUI();
+
+    setTimeout(() => {
+        statusDiv.innerHTML = `É a vez de <strong>${proposer.name}</strong> jogar!`;
+        updateUI();
+    }, 2000);
 }
 
 function updateTradeVisualProperty(space, newOwner) {
@@ -1348,22 +1457,22 @@ window.onload = () => {
 // INICIALIZAÇÃO MULTIPLAYER ONLINE
 // ==========================================
 window.startMultiplayerGame = function(lobbyPlayers, hostConfig = null) {
-    // 1. Se o host enviou configurações personalizadas, atualiza o jogo
+    isMultiplayer = true;
     if (hostConfig) {
         GAME_CONFIG = { ...GAME_CONFIG, ...hostConfig };
     }
 
-    // 2. Limpa a lista de jogadores atual e cria com os dados da rede
     players = [];
     currentPlayerIndex = 0;
     
     lobbyPlayers.forEach((lobbyPlayer, index) => {
         players.push({
-            id: lobbyPlayer.id, // O ID do PeerJS (para sabermos quem é quem na rede)
+            id: index,
+            peerId: lobbyPlayer.id,
             name: lobbyPlayer.name,
             money: GAME_CONFIG.startingMoney,
             position: 0,
-            color: PLAYER_PRESETS[index % PLAYER_PRESETS.length].color, // Pega a cor pela ordem
+            color: PLAYER_PRESETS[index % PLAYER_PRESETS.length].color,
             inJail: false,
             jailTurns: 0,
             isBankrupt: false,
@@ -1372,15 +1481,13 @@ window.startMultiplayerGame = function(lobbyPlayers, hostConfig = null) {
         });
     });
 
-    // 3. Zera as propriedades do tabuleiro
     boardSpaces.forEach(space => {
-        if (space.type === "property") {
+        if (space.type === "property" || space.type === "station" || space.type === "utility") {
             space.houses = 0;
             space.owner = null;
         }
     });
 
-    // 4. Renderiza tudo na tela
     const gameArea = document.getElementById("game-section-area");
     if(gameArea) gameArea.classList.remove("hidden");
 
@@ -1391,4 +1498,42 @@ window.startMultiplayerGame = function(lobbyPlayers, hostConfig = null) {
     if(gameArea) gameArea.scrollIntoView({ behavior: "smooth" });
 
     document.getElementById("game-status").innerHTML = `Partida online iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
+};
+
+// ==========================================
+// Mapeamento de Ações do Motor de Sincronização
+// ==========================================
+window.executeMultiplayerAction = function(action, payload) {
+    switch(action) {
+        case 'ROLL_DICE':
+            executeDiceRoll(payload.playerIndex, payload.d1, payload.d2);
+            break;
+        case 'BUY_PROPERTY':
+            buyProperty(payload.playerIndex, payload.spaceId);
+            break;
+        case 'SKIP_PROPERTY':
+            skipProperty(payload.playerIndex, payload.spaceId);
+            break;
+        case 'BUILD_HOUSE':
+            executeBuildHouse(payload.playerIndex, payload.spaceId);
+            break;
+        case 'SKIP_BUILD':
+            awaitingDecision = false;
+            nextTurn();
+            break;
+        case 'JAIL_ACTION':
+            executeJailAction(payload.action, payload.playerIndex, payload.d1, payload.d2);
+            break;
+        case 'GRANDEZA_CHOICE':
+            executeGrandezaChoice(payload.choice, payload.playerIndex, payload.spaceId);
+            break;
+        case 'TRADE_PROPOSE':
+            const proposer = players[payload.proposerId];
+            const receiver = players[payload.receiverId];
+            sendTradeProposalToUI(proposer, receiver, payload.tradeData);
+            break;
+        case 'TRADE_RESPONSE':
+            executeTradeResolution(payload.accepted, payload.proposerId, payload.receiverId, payload.tradeData);
+            break;
+    }
 };
