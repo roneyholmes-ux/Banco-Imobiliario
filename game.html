@@ -46,12 +46,12 @@
         </div>
     </main>
 
-    <!-- CARREGAMENTO DE SCRIPTS NA ORDEM DE DEPENDÊNCIA -->
+    <!-- CARREGAMENTO DE SCRIPTS NA ORDEM CORRETA DE DEPENDÊNCIA -->
+    <script src="js/multiplayer.js"></script>
+    <script src="js/network.js"></script>
+    <script src="js/actions.js"></script>
     <script src="js/game.js"></script>
     <script src="js/ui.js"></script>
-    <script src="js/actions.js"></script>
-    <script src="js/network.js"></script>
-    <script src="js/multiplayer.js"></script>
 
     <!-- INICIALIZADOR CONFORME O MODO (URL QUERY) -->
     <script>
@@ -59,13 +59,16 @@
             const urlParams = new URLSearchParams(window.location.search);
             const mode = urlParams.get('mode');
 
-            renderBoard();
+            if (typeof renderBoard === 'function') {
+                renderBoard();
+            }
 
             if (mode === 'online') {
-                if (window.Network && typeof window.Network.openOnlineMenu === 'function') {
-                    window.Network.openOnlineMenu();
+                // Chama a abertura do menu de sala na camada Multiplayer
+                if (window.Multiplayer && typeof window.Multiplayer.openOnlineMenu === 'function') {
+                    window.Multiplayer.openOnlineMenu();
                 } else {
-                    alert("Erro ao carregar módulo online.");
+                    alert("Erro ao carregar módulo online: window.Multiplayer não encontrado.");
                 }
             } else {
                 // Modo Local Padrão
