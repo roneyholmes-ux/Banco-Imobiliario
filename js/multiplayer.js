@@ -13,8 +13,18 @@ class MultiplayerManager {
     this.overlay = null; 
   }
 
+  // Gera ID curto de 5 caracteres (sem caracteres confusos como 0, O, 1, I)
+  generateShortId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let result = '';
+    for (let i = 0; i < 5; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
   // ==========================================
-  // GERAÇÃO DINÂMICA DA INTERFACE (Bypass do HTML)
+  // GERAÇÃO DINÂMICA DA INTERFACE
   // ==========================================
   openOnlineMenu() {
     if (typeof Peer === 'undefined') {
@@ -22,7 +32,6 @@ class MultiplayerManager {
         return;
     }
 
-    // Evita criar múltiplos overlays se já houver um aberto
     if (this.overlay) return;
 
     this.overlay = document.createElement("div");
@@ -56,8 +65,8 @@ class MultiplayerManager {
         <p style="color: #aaa; font-size: 0.9rem; margin-bottom: 20px;">Crie uma sala ou conecte-se a um amigo.</p>
         
         <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px;">
-            <button id="btn-dyn-host" style="padding: 12px; font-size: 1.1rem; background: #1e90ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">👑 Criar Sala (Host)</button>
-            <button id="btn-dyn-join" style="padding: 12px; font-size: 1.1rem; background: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; transition: 0.2s;">🔗 Entrar em Sala</button>
+            <button id="btn-dyn-host" style="padding: 12px; font-size: 1.1rem; background: #1e90ff; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">👑 Criar Sala (Host)</button>
+            <button id="btn-dyn-join" style="padding: 12px; font-size: 1.1rem; background: #2e7d32; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">🔗 Entrar em Sala</button>
         </div>
         
         <button id="btn-close-online" style="background: transparent; color: #aaa; border: none; cursor: pointer; text-decoration: underline;">Voltar ao Menu</button>
@@ -74,9 +83,9 @@ class MultiplayerManager {
 
       let hostInfo = roomId 
         ? `<div style="margin-bottom:15px; padding:12px; background:#282828; border-radius:6px; border:1px solid #1e90ff;">
-            <span style="font-size:0.85rem; color:#aaa;">ID da Sala:</span><br>
-            <strong style="font-size:1.1rem; color:#1e90ff; font-family:monospace;">${roomId}</strong>
-            <button id="btn-copy-id" style="margin-top:8px; display:block; width:100%; padding:6px; background:#1e90ff; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">📋 Copiar ID</button>
+            <span style="font-size:0.85rem; color:#aaa;">Código da Sala:</span><br>
+            <strong style="font-size:1.8rem; color:#1e90ff; letter-spacing: 4px; font-family:monospace;">${roomId}</strong>
+            <button id="btn-copy-id" style="margin-top:8px; display:block; width:100%; padding:8px; background:#1e90ff; color:white; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">📋 Copiar Código</button>
            </div>` 
         : '';
 
@@ -103,7 +112,7 @@ class MultiplayerManager {
                   btnCopy.innerText = "✓ Copiado!";
                   btnCopy.style.background = "#2e7d32";
                   setTimeout(() => {
-                      btnCopy.innerText = "📋 Copiar ID";
+                      btnCopy.innerText = "📋 Copiar Código";
                       btnCopy.style.background = "#1e90ff";
                   }, 2000);
               });
@@ -149,33 +158,38 @@ class MultiplayerManager {
       };
 
       if (this.isHost) {
-          // Se sou o Host, aplico no meu jogo e sincronizo com os clientes
           this.processGameAction(message);
           this.connections.forEach(conn => {
               if (conn.open) conn.send(message);
           });
       } else {
-          // Se sou Cliente, envio para o Host autorizar/processar
           if (this.conn && this.conn.open) {
               this.conn.send(message);
+          } else {
+              console.warn("[Network] Conexão com o Host indisponível.");
           }
       }
   }
 
   processGameAction(message) {
       const { action, payload } = message;
-      
       console.log(`[Sync] Ação recebida: ${action}`, payload);
 
       switch(action) {
           case 'ROLL_DICE':
-              if (window.executeDiceRoll) window.executeDiceRoll(payload);
+              if (typeof window.executeDiceRoll === 'function') {
+                  window.executeDiceRoll(payload);
+              } else if (typeof window.rolarDado === 'function') {
+                  window.rolarDado(payload);
+              } else {
+                  console.warn("[Sync] Função 'window.executeDiceRoll' não encontrada no script principal!");
+              }
               break;
           case 'BUY_PROPERTY':
-              if (window.executeBuyProperty) window.executeBuyProperty(payload);
+              if (typeof window.executeBuyProperty === 'function') window.executeBuyProperty(payload);
               break;
           case 'END_TURN':
-              if (window.executeEndTurn) window.executeEndTurn(payload);
+              if (typeof window.executeEndTurn === 'function') window.executeEndTurn(payload);
               break;
           default:
               console.warn("Ação não reconhecida:", action);
@@ -186,14 +200,16 @@ class MultiplayerManager {
   // LÓGICA DO HOST
   // ==========================================
   hostGame() {
-    this.destroyPeer(); // Limpa conexões antigas antes de criar uma nova
+    this.destroyPeer();
     this.isHost = true;
     
     const inputName = prompt("Qual o seu nome?", this.playerName);
     if (!inputName) return;
     this.playerName = inputName;
     
-    this.peer = new Peer(); 
+    // Cria sala com ID de 5 caracteres
+    const shortId = this.generateShortId();
+    this.peer = new Peer(shortId); 
 
     this.peer.on('open', (id) => {
       this.lobbyState.players = [{ id: id, name: this.playerName, isHost: true }];
@@ -207,14 +223,18 @@ class MultiplayerManager {
 
     this.peer.on('error', (err) => {
       console.error("[PeerJS Error]", err);
-      alert("Ocorreu um erro no servidor PeerJS: " + err.type);
+      if (err.type === 'unavailable-id') {
+          // Se houver colisão de ID no servidor PeerJS, tenta gerar outro
+          this.hostGame();
+      } else {
+          alert("Erro no servidor de conexão: " + err.type);
+      }
     });
   }
 
   setupHostListeners(conn) {
     conn.on('data', (data) => {
       if (data.type === 'PLAYER_JOINED') {
-        // Adiciona novo jogador se ainda não existir
         if (!this.lobbyState.players.some(p => p.id === data.payload.id)) {
             this.lobbyState.players.push(data.payload);
         }
@@ -222,7 +242,6 @@ class MultiplayerManager {
         this.updateLobbyUI(); 
       }
       else if (data.type === 'GAME_ACTION') {
-        // Host recebe do cliente, processa localmente e retransmite aos demais clientes
         this.processGameAction(data);
         this.connections.forEach(c => {
             if (c.peer !== conn.peer && c.open) c.send(data); 
@@ -230,7 +249,6 @@ class MultiplayerManager {
       }
     });
 
-    // Trata saída/desconexão do jogador
     conn.on('close', () => {
         this.connections = this.connections.filter(c => c.peer !== conn.peer);
         this.lobbyState.players = this.lobbyState.players.filter(p => p.id !== conn.peer);
@@ -251,20 +269,21 @@ class MultiplayerManager {
   // LÓGICA DO CLIENTE
   // ==========================================
   joinGame() {
-    const hostId = prompt("Cole o ID da sala:");
-    if (!hostId) return;
+    const inputHostId = prompt("Digite o código da sala (5 caracteres):");
+    if (!inputHostId) return;
+    const hostId = inputHostId.trim().toUpperCase();
 
     const inputName = prompt("Qual o seu nome?", this.playerName);
     if (!inputName) return;
     this.playerName = inputName;
 
-    this.destroyPeer(); // Limpa conexões antigas
+    this.destroyPeer();
     this.isHost = false;
     
     this.peer = new Peer();
 
     this.peer.on('open', (id) => {
-      this.conn = this.peer.connect(hostId.trim());
+      this.conn = this.peer.connect(hostId);
       
       this.conn.on('open', () => {
         this.conn.send({
@@ -279,7 +298,7 @@ class MultiplayerManager {
 
     this.peer.on('error', (err) => {
       console.error("[PeerJS Error]", err);
-      alert("Não foi possível conectar à sala. Verifique se o ID está correto.");
+      alert("Não foi possível encontrar a sala '" + hostId + "'. Verifique o código digitado.");
     });
   }
 
@@ -296,7 +315,6 @@ class MultiplayerManager {
         }
       }
       else if (data.type === 'GAME_ACTION') {
-        // Cliente executa ação ordenada pelo Host
         this.processGameAction(data);
       }
     });
