@@ -22,7 +22,6 @@ class MultiplayerManager {
         return;
     }
 
-    // Cria o fundo escuro do Modal
     this.overlay = document.createElement("div");
     this.overlay.id = "online-setup-overlay";
     this.overlay.style = `
@@ -31,7 +30,6 @@ class MultiplayerManager {
         align-items: center; z-index: 9999; font-family: 'Montserrat', sans-serif;
     `;
 
-    // Cria a caixa principal
     const setupBox = document.createElement("div");
     setupBox.id = "online-setup-box";
     setupBox.style = `
@@ -102,6 +100,49 @@ class MultiplayerManager {
   }
 
   // ==========================================
+  // MOTOR DE SINCRONIZAÇÃO DE JOGO 
+  // ==========================================
+
+  sendGameAction(actionType, dataPayload) {
+      const message = {
+          type: 'GAME_ACTION',
+          action: actionType,
+          payload: dataPayload
+      };
+
+      if (this.isHost) {
+          // Se eu sou o Host, eu aplico no meu jogo e aviso todo mundo
+          this.processGameAction(message);
+          this.connections.forEach(conn => conn.send(message));
+      } else {
+          // Se eu sou Cliente, eu envio para o Host decidir
+          if (this.conn) {
+              this.conn.send(message);
+          }
+      }
+  }
+
+  processGameAction(message) {
+      const { action, payload } = message;
+      
+      console.log(`[Sync] Ação recebida: ${action}`, payload);
+
+      switch(action) {
+          case 'ROLL_DICE':
+              // Exemplo futuro: window.executeDiceRoll(payload);
+              break;
+          case 'BUY_PROPERTY':
+              // Exemplo futuro: window.executeBuyProperty(payload);
+              break;
+          case 'END_TURN':
+              // Exemplo futuro: window.executeEndTurn();
+              break;
+          default:
+              console.warn("Ação não reconhecida:", action);
+      }
+  }
+
+  // ==========================================
   // LÓGICA DO HOST
   // ==========================================
   hostGame() {
@@ -126,6 +167,13 @@ class MultiplayerManager {
         this.lobbyState.players.push(data.payload);
         this.broadcastLobbyUpdate(); 
         this.updateLobbyUI(); 
+      }
+      else if (data.type === 'GAME_ACTION') {
+        // Host recebe do cliente, processa e repassa para os outros clientes
+        this.processGameAction(data);
+        this.connections.forEach(c => {
+            if (c.peer !== conn.peer) c.send(data); 
+        });
       }
     });
   }
@@ -173,6 +221,10 @@ class MultiplayerManager {
         if (window.startMultiplayerGame) {
           window.startMultiplayerGame(data.payload.players, data.payload.config);
         }
+      }
+      else if (data.type === 'GAME_ACTION') {
+        // Cliente obedece o Host
+        this.processGameAction(data);
       }
     });
   }
