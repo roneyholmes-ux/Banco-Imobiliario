@@ -1,6 +1,10 @@
 /** 
  * game.js
- * Lógica central do jogo, estados, regras, movimentação e sincronização Host-Authoritative.
+ * Lógica central do jogo, regras, movimentação e estado (Host-Authoritative).
+ * 
+ * Responsabilidades:
+ * - O Host executa regras, movimenta peças, altera dinheiro/propriedades e transmite o estado.
+ * - O Cliente envia intenções/pedidos e apenas aplica o estado recebido do Host.
  */
 
 let GAME_CONFIG = {
@@ -120,15 +124,12 @@ function resetBoardState() {
             space.houses = 0;
         }
     });
-
     currentPlayerIndex = 0;
     isMoving = false;
     awaitingDecision = false;
-
     renderBoard();
     renderPawns();
     updateUI();
-
     const statusDiv = document.getElementById("game-status");
     if (statusDiv && players.length > 0) {
         statusDiv.innerText = `Partida iniciada! É a vez de ${players[0].name}. Role os dados!`;
@@ -138,26 +139,24 @@ function resetBoardState() {
 // ==========================================
 // ROLAGEM DE DADOS E MOVIMENTAÇÃO
 // ==========================================
-
 function rollDice() {
     if (isMoving || awaitingDecision) return;
-
     const player = players[currentPlayerIndex];
     if (!player || player.isBankrupt) return;
 
-    // Se for modo Multiplayer, valida se é a vez do jogador local
-    if (isMultiplayer) {
-        const myPeerId = window.Network ? window.Network.myPeerId : null;
+    // Se for modo Multiplayer Online
+    if (isMultiplayer && window.Network) {
+        const myPeerId = window.Network.myPeerId;
+        
+        // Se não for a vez do jogador local, ignora
         if (player.peerId !== myPeerId) {
             console.log("[rollDice] Não é a sua vez!");
             return;
         }
 
-        // Se não for o Host, envia requisição pela rede
-        if (window.Network && !window.Network.isHost) {
-            if (typeof window.sendNetworkAction === "function") {
-                window.sendNetworkAction("REQUEST_ROLL_DICE");
-            }
+        // Se for Cliente, envia requisição ao Host
+        if (!window.Network.isHost) {
+            sendNetworkAction("REQUEST_ROLL_DICE");
             return;
         }
     }
@@ -193,7 +192,6 @@ function executeRollDice() {
     const d1 = Math.floor(Math.random() * 6) + 1;
     const d2 = Math.floor(Math.random() * 6) + 1;
     const total = d1 + d2;
-
     const diceText = `🎲 ${d1} + ${d2} = ${total}`;
     const diceDisplay = document.getElementById("dice-display");
     if (diceDisplay) diceDisplay.innerText = diceText;
@@ -213,23 +211,14 @@ async function movePlayer(playerIndex, steps) {
 
     for (let i = 0; i < steps; i++) {
         player.position = (player.position + 1) % 40;
-
         if (player.position === 0) {
-            player.money -= GAME_CONFIG.goBonus;
-            const statusMsg = `💸 ${player.name} passou pela PARTIDA e pagou $${GAME_CONFIG.goBonus}!`;
+            player.money += GAME_CONFIG.goBonus;
+            const statusMsg = `💸 ${player.name} passou pela PARTIDA e recebeu $${GAME_CONFIG.goBonus}!`;
             const statusLabel = document.getElementById("game-status");
             if (statusLabel) statusLabel.innerText = statusMsg;
-
             syncGameState(statusMsg);
-
-            if (player.money < 0) {
-                isMoving = false;
-                checkBankruptcy(player, null);
-                return;
-            }
             updateUI();
         }
-
         renderPawns();
         syncGameState();
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -254,7 +243,8 @@ function handleLanding(player) {
             return;
         } else {
             const msg = `${player.name} caiu na sua própria propriedade: ${space.name}.`;
-            document.getElementById("game-status").innerText = msg;
+            const statusDiv = document.getElementById("game-status");
+            if (statusDiv) statusDiv.innerText = msg;
             syncGameState(msg);
         }
     } else if (space.name === "Sorte ou Revés") {
@@ -266,17 +256,20 @@ function handleLanding(player) {
         player.jailTurns = 0;
         renderPawns();
         const msg = `🚨 ${player.name} foi para a Prisão!`;
-        document.getElementById("game-status").innerText = msg;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
     } else if (space.name === "Imposto de Renda") {
         player.money -= GAME_CONFIG.impostoRenda;
         const msg = `💸 ${player.name} pagou $${GAME_CONFIG.impostoRenda} de Imposto de Renda.`;
-        document.getElementById("game-status").innerText = msg;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
     } else if (space.name === "Taxa de Luxo") {
         player.money -= GAME_CONFIG.taxaLuxo;
         const msg = `💎 ${player.name} pagou $${GAME_CONFIG.taxaLuxo} de Taxa de Luxo.`;
-        document.getElementById("game-status").innerText = msg;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
     }
 
@@ -296,7 +289,8 @@ function payRent(player, space) {
     }
 
     const msg = `💸 ${player.name} pagou $${rentAmount} de aluguel para ${owner ? owner.name : "o Banco"}.`;
-    document.getElementById("game-status").innerText = msg;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
     syncGameState(msg);
     nextTurn();
 }
@@ -306,8 +300,8 @@ function showPurchaseModal(player, space) {
     if (!statusDiv) return;
 
     syncGameState(`Aguardando decisão de ${player.name} sobre ${space.name}...`);
-
     const myPeerId = window.Network ? window.Network.myPeerId : null;
+
     if (!isMultiplayer || player.peerId === myPeerId) {
         showPurchaseModalUI(player, space);
     } else {
@@ -331,17 +325,17 @@ function showPurchaseModalUI(player, space) {
 
     document.getElementById("btn-buy-prop").onclick = () => {
         if (isMultiplayer && window.Network && !window.Network.isHost) {
-            window.sendNetworkAction("REQUEST_BUY_PROPERTY");
+            sendNetworkAction("REQUEST_BUY_PROPERTY");
         } else {
-            hostProcessBuyProperty(player.peerId);
+            hostProcessBuyProperty(window.Network ? window.Network.myPeerId : null);
         }
     };
 
     document.getElementById("btn-pass-prop").onclick = () => {
         if (isMultiplayer && window.Network && !window.Network.isHost) {
-            window.sendNetworkAction("REQUEST_PASS_PROPERTY");
+            sendNetworkAction("REQUEST_PASS_PROPERTY");
         } else {
-            hostProcessPassProperty(player.peerId);
+            hostProcessPassProperty(window.Network ? window.Network.myPeerId : null);
         }
     };
 }
@@ -352,7 +346,8 @@ function drawCard(player) {
     else player.money -= card.value;
 
     const msg = `🃏 Carta: "${card.text}"`;
-    document.getElementById("game-status").innerText = msg;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
     awaitingDecision = false;
     syncGameState(msg);
     nextTurn();
@@ -363,7 +358,8 @@ function checkBankruptcy(player, creditorId) {
         player.isBankrupt = true;
         boardSpaces.forEach(s => { if (s.owner === player.id) s.owner = creditorId; });
         const msg = `💥 ${player.name} FALIU!`;
-        document.getElementById("game-status").innerText = msg;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
         nextTurn();
     }
@@ -376,7 +372,8 @@ function nextTurn() {
     if (activePlayers.length <= 1 && players.length > 1) {
         const winner = activePlayers[0] || players[0];
         const msg = `🏆 <strong>FIM DE JOGO!</strong> ${winner.name} venceu!`;
-        document.getElementById("game-status").innerHTML = msg;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerHTML = msg;
         syncGameState(msg);
         return;
     }
@@ -391,16 +388,14 @@ function nextTurn() {
     const nextPlayer = players[currentPlayerIndex];
     const msg = `É a vez de ${nextPlayer.name}. Role os dados!`;
     const statusDiv = document.getElementById("game-status");
-    if (statusDiv) {
-        statusDiv.innerText = msg;
-    }
+    if (statusDiv) statusDiv.innerText = msg;
+    
     syncGameState(msg);
 }
 
 // ==========================================
 // PROCESSADORES DE COMANDOS EXECUTADOS PELO HOST
 // ==========================================
-
 function hostProcessRollDice(senderPeerId) {
     if (isMultiplayer && window.Network && !window.Network.isHost) return;
     const player = players[currentPlayerIndex];
@@ -412,8 +407,7 @@ function hostProcessRollDice(senderPeerId) {
 function hostProcessBuyProperty(senderPeerId) {
     if (isMultiplayer && window.Network && !window.Network.isHost) return;
     const player = players[currentPlayerIndex];
-    
-    // Valida se a ordem veio do jogador da vez
+
     if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
 
     const space = boardSpaces[player.position];
@@ -421,12 +415,11 @@ function hostProcessBuyProperty(senderPeerId) {
         player.money -= space.price;
         space.owner = player.id;
         const msg = `🎉 ${player.name} comprou ${space.name}!`;
-        document.getElementById("game-status").innerText = msg;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
         awaitingDecision = false;
         syncGameState(msg);
         nextTurn();
-    } else {
-        alert("Dinheiro insuficiente ou propriedade indisponível!");
     }
 }
 
@@ -438,7 +431,8 @@ function hostProcessPassProperty(senderPeerId) {
 
     const space = boardSpaces[player.position];
     const msg = `${player.name} não comprou ${space.name}.`;
-    document.getElementById("game-status").innerText = msg;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
     awaitingDecision = false;
     syncGameState(msg);
     nextTurn();
@@ -447,11 +441,10 @@ function hostProcessPassProperty(senderPeerId) {
 // ==========================================
 // SINCRONIZAÇÃO DE REDE (BROADCAST E RECEBIMENTO)
 // ==========================================
-
 function syncGameState(statusMessage = null, diceDisplay = null) {
     if (!isMultiplayer || !window.Network || !window.Network.isHost) return;
 
-    window.Network.sendGameAction("SYNC_GAME_STATE", {
+    sendNetworkAction("SYNC_GAME_STATE", {
         players: players,
         boardSpaces: boardSpaces.map(s => ({ id: s.id, owner: s.owner, houses: s.houses || 0 })),
         currentPlayerIndex: currentPlayerIndex,
@@ -464,12 +457,9 @@ function syncGameState(statusMessage = null, diceDisplay = null) {
 
 function applyGameStateSync(payload) {
     if (!payload) return;
-
-    // Se for o Host, ele já é a fonte primária do estado
-    if (window.Network && window.Network.isHost) return;
+    if (window.Network && window.Network.isHost) return; // O Host já possui o estado autorritativo
 
     if (payload.players) players = payload.players;
-
     if (payload.boardSpaces) {
         payload.boardSpaces.forEach(syncSpace => {
             const localSpace = boardSpaces.find(s => s.id === syncSpace.id);
@@ -499,7 +489,6 @@ function applyGameStateSync(payload) {
     renderPawns();
     updateUI();
 
-    // Se o jogo está aguardando uma decisão e é a vez do jogador local
     if (awaitingDecision) {
         const currentPlayer = players[currentPlayerIndex];
         const myPeerId = window.Network ? window.Network.myPeerId : null;
@@ -515,9 +504,8 @@ function applyGameStateSync(payload) {
 }
 
 // ==========================================
-// INICIALIZADORES E CONFIGURAÇÕES
+// INICIAIS E BINDINGS GLOBAIS
 // ==========================================
-
 function startPlayerSetup() {
     let count = prompt("Quantos jogadores locais? (2 a 6)", "2");
     count = parseInt(count);
@@ -525,7 +513,6 @@ function startPlayerSetup() {
     initializePlayers(count);
 }
 
-// Suporte ao Multiplayer
 window.startMultiplayerGame = function(lobbyPlayers) {
     isMultiplayer = true;
     players = lobbyPlayers.map((lp, idx) => ({
