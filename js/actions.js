@@ -1,7 +1,7 @@
 /**
  * actions.js
  * Central de despachos de ações.
- */
+ */ 
 
 const Actions = {
     handleAction(message) {
