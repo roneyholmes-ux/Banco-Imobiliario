@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Banco Imobiliário Educativo</title>
@@ -10,16 +9,16 @@
 </head>
 <body>
 
-    <!-- 🧭 BARRA DE NAVEGAÇÃO FIXA (TOP NAV) -->
+    <!-- 🧭 BARRA DE NAVEGAÇÃO FIXA -->
     <nav class="navbar">
-        <div class="nav-logo">🎲 BANCO IMOBILIÁRIO <span class="version-badge" style="font-size: 0.75rem; background: #6c5ce7; color: white; padding: 2px 8px; border-radius: 12px; margin-left: 8px; vertical-align: middle;">v1.1.7</span></div>
+        <div class="nav-logo">🎲 BANCO IMOBILIÁRIO <span class="version-badge">v1.2.0</span></div>
         <ul class="nav-links">
             <li><a href="#home">Home</a></li>
             <li><a href="#about">O que é</a></li>
             <li><a href="#benefits">Por que jogar</a></li>
             <li><a href="#explore">Explorar</a></li>
             <li><a href="#faq">FAQ</a></li>
-            <li><button class="nav-play-btn" onclick="scrollToGame()">Jogar agora</button></li>
+            <li><button class="nav-play-btn" onclick="openPlayModal()">JOGAR</button></li>
         </ul>
     </nav>
 
@@ -30,9 +29,8 @@
                 <h1 class="main-hero-title">Estratégia se aprende <br><span>jogando</span></h1>
                 <p class="hero-description">O Banco Imobiliário é um simulador estratégico e financeiro que combina tomadas de decisão, negociações dinâmicas e gerenciamento de riscos de forma prática, desafiadora e significativa.</p>
                 <div class="hero-buttons">
-                    <button class="hero-btn-primary" onclick="scrollToGame()">JOGAR AGORA</button>
-                    <!-- BOTÃO ONLINE CORRIGIDO AQUI -->
-                    <button class="hero-btn-primary" style="background: #6c5ce7;" onclick="if(window.Network){window.Network.openOnlineMenu()}else{alert('Erro: O sistema multiplayer ainda está carregando ou o arquivo multiplayer.js não foi encontrado.')}">🌐 JOGAR ONLINE</button>
+                    <!-- BOTÃO ÚNICO DE JOGAR -->
+                    <button class="hero-btn-primary" onclick="openPlayModal()">🎮 JOGAR AGORA</button>
                     <button class="hero-btn-secondary" onclick="document.getElementById('rules-modal').classList.remove('hidden')">CONHECER REGRAS</button>
                 </div>
             </div>
@@ -58,18 +56,24 @@
             <div class="cards-step-container">
                 <div class="step-card">
                     <div class="step-number">1</div>
-                    <h3>Gerencie Capital</h3>
-                    <p>Controle seu saldo inicial, invista em ativos e previna-se contra taxas e falências eminentes.</p>
+                    <div>
+                        <h3>Gerencie Capital</h3>
+                        <p>Controle seu saldo inicial, invista em ativos e previna-se contra taxas e falências iminentes.</p>
+                    </div>
                 </div>
                 <div class="step-card">
                     <div class="step-number">2</div>
-                    <h3>Construa Monopólios</h3>
-                    <p>Agrupe propriedades da mesma cor para evoluir construções de casas e hotéis visuais.</p>
+                    <div>
+                        <h3>Construa Monopólios</h3>
+                        <p>Agrupe propriedades da mesma cor para evoluir construções de casas e hotéis visuais.</p>
+                    </div>
                 </div>
                 <div class="step-card">
                     <div class="step-number">3</div>
-                    <h3>Negocie Ativos</h3>
-                    <p>Use a mesa de trocas integrada para comprar, vender e negociar ativos diretamente com rivais.</p>
+                    <div>
+                        <h3>Negocie Ativos</h3>
+                        <p>Use a mesa de trocas integrada para comprar, vender e negociar ativos diretamente com rivais.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -110,10 +114,10 @@
         <div class="section-container text-center">
             <h2 class="section-title">Explore o Banco</h2>
             <div class="explore-row">
-                <div class="explore-item" onclick="scrollToGame()">
+                <div class="explore-item" onclick="openPlayModal()">
                     <div class="ex-icon">🎮</div>
                     <h4>Jogo</h4>
-                    <p>Jogue online e experimente.</p>
+                    <p>Escolha o modo local ou online e jogue.</p>
                 </div>
                 <div class="explore-item" onclick="document.getElementById('rules-modal').classList.remove('hidden')">
                     <div class="ex-icon">📜</div>
@@ -129,27 +133,6 @@
                     <div class="ex-icon">🧑‍🏫</div>
                     <h4>Professor</h4>
                     <p>Veja caminhos pedagógicos.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 🎮 SEÇÃO DO TABULEIRO DE JOGO (ESCONDIDO ATÉ O CLICK) -->
-    <section id="game-section-area" class="section-game hidden">
-        <div class="section-container">
-            <h2 class="section-title text-white">Mesa de Jogo</h2>
-            <div class="container">
-                <div id="board" class="board"></div>
-                <div class="control-panel">
-                    <div class="status-box">
-                        <h3>Painel de Controle</h3>
-                        <div id="game-status">Escolha os jogadores para iniciar a partida!</div>
-                        <button id="rollDice" class="dice-btn">🎲 Jogar Dado</button>
-                    </div>
-                    <div class="players-box">
-                        <h3>Jogadores</h3>
-                        <div id="players-list"></div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -192,32 +175,44 @@
         </div>
     </footer>
 
-    <!-- 📖 MODAL DE REGRAS RE-ESTILIZADO -->
+    <!-- 🎯 MODAL UNIFICADO DE SELEÇÃO DE MODO DE JOGO -->
+    <div id="play-mode-modal" class="modal-overlay hidden">
+        <div class="rules-box text-center" style="max-width: 450px;">
+            <h2 style="color: #6c5ce7; margin-bottom: 10px;">Como deseja jogar? 🎲</h2>
+            <p style="color: #a4b0be; font-size: 0.9rem; margin-bottom: 25px;">Escolha entre jogar presencialmente no mesmo dispositivo ou conectar-se online com amigos.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <button class="hero-btn-primary" style="width: 100%; font-size: 1.1rem;" onclick="selectGameMode('local')">
+                    👥 Jogar Local (Mesmo Dispositivo)
+                </button>
+                <button class="hero-btn-primary" style="width: 100%; font-size: 1.1rem; background: linear-gradient(135deg, #6c5ce7, #a29bfe);" onclick="selectGameMode('online')">
+                    🌐 Jogar Online (Multiplayer P2P)
+                </button>
+            </div>
+
+            <button class="menu-btn" style="margin-top: 20px; background: transparent; color: #888; text-decoration: underline;" onclick="closePlayModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- 📖 MODAL DE REGRAS -->
     <div id="rules-modal" class="modal-overlay hidden">
         <div class="rules-box">
             <h2>Como Jogar? 📖</h2>
             <div class="rules-content">
                 <p><strong>🎯 Objetivo:</strong> Ser o único jogador restante à mesa, forçando a quebra de capital de seus concorrentes.</p>
-                <hr>
+                <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
                 <ul>
                     <li><strong>🎲 Dados:</strong> Avance casas somando o resultado de dois dados simultâneos.</li>
                     <li><strong>🏡 Monopólio:</strong> Obter todos os terrenos de uma mesma cor dobra os aluguéis bases recebidos daquela categoria.</li>
-                    <li><strong>🏠 Casas & Hotéis:</strong> Ao cair em suas propriedades pertencentes a monopólios, compre benfeitorias para inflacionar aluguéis em até 120x.</li>
-                    <li><strong>⛓️ Prisão:</strong> Saia tirando dados idênticos (duplos) ou efetuando o pagamento compulsório de fiança tarifada em $500.</li>
-                    <li><strong>🤝 Negociações:</strong> Proponha intercâmbios bilaterais de moedas e terrenos antes da rolagem de sua vez clicando no botão de transação.</li>
+                    <li><strong>🏠 Casas & Hotéis:</strong> Ao cair em suas propriedades pertencentes a monopólios, compre benfeitorias para inflacionar aluguéis.</li>
+                    <li><strong>⛓️ Prisão:</strong> Saia efetuando o pagamento compulsório de fiança tarifada em $500.</li>
+                    <li><strong>🤝 Negociações:</strong> Proponha intercâmbios bilaterais de moedas e terrenos antes da rolagem de sua vez.</li>
                 </ul>
             </div>
             <button id="btn-close-rules" class="menu-btn danger-btn" onclick="document.getElementById('rules-modal').classList.add('hidden')">Fechar Diretrizes</button>
         </div>
     </div>
-    
-    <!-- SCRIPTS SEPARADOS -->
+
     <script src="js/landing.js"></script>
-    <script src="js/network.js"></script>
-    <script src="js/actions.js"></script>
-    <script src="js/ui.js"></script>
-    <script src="js/game.js"></script>
-    <script src="js/multiplayer.js"></script>
-    
 </body>
 </html>
