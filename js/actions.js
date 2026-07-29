@@ -1,6 +1,6 @@
 /**
  * actions.js
- * Central de despachos de ações.
+ * Central de despachos de ações. 
  */ 
 
 const Actions = {
