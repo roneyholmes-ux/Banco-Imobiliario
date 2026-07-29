@@ -156,8 +156,10 @@ class MultiplayerManager {
           payload: dataPayload
       };
 
+      // Executa a ação localmente para quem realizou a jogada (seja Host ou Cliente)
+      this.processGameAction(message);
+
       if (this.isHost) {
-          this.processGameAction(message);
           this.connections.forEach(conn => {
               if (conn.open) conn.send(message);
           });
