@@ -1,4 +1,4 @@
-```javascript
+
 // ==========================================
 // GERENCIADOR MULTIPLAYER
 // multiplayer.js
