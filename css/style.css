@@ -688,3 +688,12 @@ body {
 .cor-cinza        { background: linear-gradient(180deg, rgba(100, 116, 139, 0.3) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #64748b !important; }
 
 .border-top { border-top: 1px solid #23354d; }
+
+/* Ajuste nos cards da seção explore convertidos para links */
+a.explore-item {
+  text-decoration: none; /* Remove o sublinhado padrão de links */
+  color: inherit;         /* Mantém a cor original do texto */
+  display: flex;          /* Garante a estrutura correta do layout interno */
+  flex-direction: column;
+  align-items: center;
+}
