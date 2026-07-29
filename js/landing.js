@@ -1,29 +1,27 @@
-// Funções de navegação e interações da página institucional
-function scrollToGame() {
-    const gameArea = document.getElementById('game-section-area');
-    gameArea.classList.remove('hidden');
-    if(typeof startPlayerSetup === 'function' && typeof players !== 'undefined' && players.length === 0){
-        startPlayerSetup();
-    }
-    gameArea.scrollIntoView({ behavior: 'smooth' });
+/**
+ * landing.js
+ * Gerencia a navegação e o modal de escolha de modo de jogo.
+ */
+
+function openPlayModal() {
+    const modal = document.getElementById('play-mode-modal');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closePlayModal() {
+    const modal = document.getElementById('play-mode-modal');
+    if (modal) modal.classList.add('hidden');
+}
+
+function selectGameMode(mode) {
+    // Redireciona diretamente para a nova página do jogo passando o modo na URL
+    window.location.href = `game.html?mode=${mode}`;
 }
 
 function toggleFaq(element) {
     element.classList.toggle('active');
     const icon = element.querySelector('.faq-icon');
-    icon.innerText = element.classList.contains('active') ? '-' : '+';
+    if (icon) {
+        icon.innerText = element.classList.contains('active') ? '-' : '+';
+    }
 }
-// Atrelamento genérico dos botões de ação à camada Network assim que a página carregar
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btn-roll-dice')?.addEventListener('click', () => {
-    Network.sendAction('ROLL_DICE');
-  });
-
-  document.getElementById('btn-buy-property')?.addEventListener('click', () => {
-    Network.sendAction('BUY_PROPERTY');
-  });
-
-  document.getElementById('btn-end-turn')?.addEventListener('click', () => {
-    Network.sendAction('END_TURN');
-  });
-});
