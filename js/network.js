@@ -8,5 +8,5 @@ function sendNetworkAction(actionType, payload = {}) {
         window.Network.sendGameAction(actionType, payload);
     }
 }
-
+ 
 window.sendNetworkAction = sendNetworkAction;
