@@ -23,7 +23,7 @@ body {
 }
 
 /* ==========================================
-   2. BARRA DE NAVEGAÇÃO SUPERIOR (NAVBAR)
+   2. NAVEGAÇÃO (NAVBAR)
    ========================================== */
 .navbar {
     position: fixed;
@@ -45,6 +45,16 @@ body {
     font-size: 1.3rem;
     color: #ff4757;
     letter-spacing: 1px;
+}
+
+.version-badge {
+    font-size: 0.75rem;
+    background: #6c5ce7;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    vertical-align: middle;
 }
 
 .nav-links {
@@ -83,7 +93,7 @@ body {
 }
 
 /* ==========================================
-   3. SEÇÃO HERO (HOME)
+   3. HERO & SEÇÕES INSTITUCIONAIS
    ========================================== */
 .hero-section {
     min-height: 100vh;
@@ -160,19 +170,6 @@ body {
     background: rgba(255, 255, 255, 0.05);
 }
 
-.scroll-arrow {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 2rem;
-    text-decoration: none;
-    animation: bounce 2s infinite;
-}
-
-/* ==========================================
-   4. ESTRUTURA DAS SEÇÕES INSTITUCIONAIS
-   ========================================== */
 .section-light {
     background: #ffffff;
     color: #1e272e;
@@ -197,40 +194,6 @@ body {
     align-items: center;
 }
 
-.section-tag {
-    color: #6c5ce7;
-    font-weight: 700;
-    font-size: 0.9rem;
-    letter-spacing: 1px;
-    display: block;
-    margin-bottom: 10px;
-}
-
-.section-title {
-    font-size: 2.3rem;
-    font-weight: 900;
-    line-height: 1.2;
-    margin-bottom: 20px;
-    color: #0f171e;
-}
-
-.section-title.text-white {
-    color: #ffffff;
-}
-
-.section-title span {
-    color: #6c5ce7;
-}
-
-.text-center { text-align: center; }
-.accent-bar {
-    width: 60px;
-    height: 4px;
-    background: #6c5ce7;
-    margin: 10px auto 40px auto;
-}
-
-/* Cards "O que é" */
 .cards-step-container {
     display: flex;
     flex-direction: column;
@@ -245,7 +208,6 @@ body {
     display: flex;
     align-items: center;
     gap: 20px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.02);
 }
 
 .step-number {
@@ -262,18 +224,6 @@ body {
     flex-shrink: 0;
 }
 
-.step-card h3 {
-    font-size: 1.1rem;
-    color: #1e272e;
-    margin-bottom: 4px;
-}
-
-.step-card p {
-    font-size: 0.9rem;
-    color: #57606f;
-}
-
-/* Cards "Por que jogar" */
 .benefits-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -285,39 +235,8 @@ body {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
     padding: 30px 20px;
-    transition: transform 0.3s;
 }
 
-.benefit-card:hover {
-    transform: translateY(-5px);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.b-number {
-    width: 40px;
-    height: 40px;
-    background: rgba(108, 92, 231, 0.2);
-    color: #a29bfe;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    margin: 0 auto 20px auto;
-}
-
-.benefit-card h3 {
-    font-size: 1.1rem;
-    margin-bottom: 12px;
-}
-
-.benefit-card p {
-    font-size: 0.85rem;
-    color: #a4b0be;
-    line-height: 1.5;
-}
-
-/* Grid "Explorar" */
 .explore-row {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -330,122 +249,17 @@ body {
     border: 1px solid #e8ebd1;
     border-radius: 12px;
     padding: 35px 20px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.03);
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.explore-item:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(108, 92, 231, 0.1);
-    border-color: #a29bfe;
-}
-
-.ex-icon {
-    font-size: 2.5rem;
-    margin-bottom: 15px;
-}
-
-.explore-item h4 {
-    color: #1e272e;
-    font-size: 1.2rem;
-    margin-bottom: 8px;
-}
-
-.explore-item p {
-    color: #747d8c;
-    font-size: 0.85rem;
-}
-
-/* Accordion FAQ */
-.grid-faq {
-    display: grid;
-    grid-template-columns: 0.8fr 1.2fr;
-    gap: 40px;
-}
-
-.faq-accordion {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.faq-item {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    overflow: hidden;
     cursor: pointer;
 }
 
-.faq-header {
-    padding: 20px;
-    font-weight: bold;
-    color: #1e272e;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.faq-icon {
-    background: #6c5ce7;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.8rem;
-}
-
-.faq-body {
-    padding: 0 20px;
-    max-height: 0;
-    overflow: hidden;
-    color: #57606f;
-    font-size: 0.9rem;
-    transition: all 0.3s ease;
-}
-
-.faq-item.active .faq-body {
-    padding: 0 20px 20px 20px;
-    max-height: 100px;
-}
-
-/* Ilustração Cartas Hero */
-.hero-visual { display: flex; justify-content: center; }
-.visual-card-stack { position: relative; width: 200px; height: 250px; }
-.v-card {
-    position: absolute;
-    width: 150px;
-    height: 210px;
-    border-radius: 12px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    font-weight: bold;
-    font-size: 1.2rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-    border: 2px solid rgba(255,255,255,0.1);
-}
-.c1 { background: linear-gradient(135deg, #6c5ce7, #4834d4); transform: rotate(-15deg); left: -40px; z-index: 1; }
-.c2 { background: linear-gradient(135deg, #ff4757, #ff6b81); transform: rotate(5deg); top: -10px; z-index: 3; }
-.c3 { background: linear-gradient(135deg, #2ed573, #26de81); transform: rotate(20deg); left: 40px; z-index: 2; }
-
+.text-center { text-align: center; }
 
 /* ==========================================
-   5. TABULEIRO DE JOGO E PAINEL CONTROL (ESTILO CYBER/TECH)
+   4. TABULEIRO CYBERPUNK (GRID 11x11)
    ========================================== */
 .section-game {
     background: #0b131e;
-    background-image: 
-        radial-gradient(circle at 50% 50%, #152538 0%, #070c14 100%),
-        linear-gradient(rgba(0, 255, 255, 0.02) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 255, 0.02) 1px, transparent 1px);
-    background-size: 100% 100%, 30px 30px, 30px 30px;
-    padding: 60px 2%;
+    padding: 40px 2%;
 }
 
 .container {
@@ -453,10 +267,8 @@ body {
     gap: 30px;
     justify-content: center;
     align-items: flex-start;
-    margin-top: 30px;
 }
 
-/* Configuração Grid 11x11 Fixo com Estilo Cyberpunk */
 .board {
     display: grid !important;
     grid-template-columns: repeat(11, 55px);
@@ -466,16 +278,13 @@ body {
     background: #111a28;
     border: 3px solid #1e2d42;
     border-radius: 16px;
-    position: relative;
-    box-shadow: 0 0 35px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 225, 255, 0.05);
     padding: 4px;
     gap: 2px;
 }
 
-/* Estilo individual de cada casa */
 .space {
     background: #162233;
-    border: 1px solid #203148 !important;
+    border: 1px solid #203148;
     border-radius: 4px;
     color: #e0e6ed;
     display: flex;
@@ -486,31 +295,36 @@ body {
     font-weight: 600;
     padding: 3px 2px;
     text-align: center;
-    box-sizing: border-box;
+    position: relative;
     overflow: hidden;
-    word-break: break-word;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.space:hover {
-    border-color: #00d2ff !important;
-    box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
 }
 
 .property-tag {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    height: 10px;
-    border-radius: 2px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.4);
-    margin-bottom: 2px;
+    height: 100%;
+    z-index: 0;
+    border-top: 3px solid transparent;
 }
 
-.corner-space {
-    background: #1a293d;
-    justify-content: center !important;
-    font-weight: bold;
-    border-color: #2c415e !important;
+.space > *:not(.property-tag) {
+    position: relative;
+    z-index: 1;
 }
+
+/* PALETA DE DEGRADÊS */
+.cor-marrom       { background: linear-gradient(180deg, rgba(168, 85, 247, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #a855f7; }
+.cor-azul-claro   { background: linear-gradient(180deg, rgba(56, 189, 248, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #38bdf8; }
+.cor-rosa         { background: linear-gradient(180deg, rgba(236, 72, 153, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #ec4899; }
+.cor-laranja      { background: linear-gradient(180deg, rgba(34, 197, 94, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #22c55e; }
+.cor-vermelho     { background: linear-gradient(180deg, rgba(239, 68, 68, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #ef4444; }
+.cor-amarelo      { background: linear-gradient(180deg, rgba(234, 179, 8, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #eab308; }
+.cor-verde        { background: linear-gradient(180deg, rgba(16, 185, 129, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #10b981; }
+.cor-azul-escuro  { background: linear-gradient(180deg, rgba(59, 130, 246, 0.4) 0%, rgba(22, 34, 51, 0) 85%); border-top-color: #3b82f6; }
+
+.corner-space { background: #1a293d; justify-content: center; font-weight: bold; }
 
 .tokens-container {
     display: flex;
@@ -527,10 +341,9 @@ body {
     height: 12px;
     border-radius: 50%;
     border: 1px solid white;
-    box-shadow: 0 0 5px rgba(0, 210, 255, 0.8);
 }
 
-/* Painel Lateral Cyberpunk */
+/* PAINEL DE CONTROLE LATERAL */
 .control-panel {
     display: flex;
     flex-direction: column;
@@ -539,27 +352,10 @@ body {
 }
 
 .status-box, .players-box {
-    background: linear-gradient(135deg, #182536 0%, #101926 100%);
+    background: #182536;
     border: 1px solid #283d59;
     border-radius: 12px;
     padding: 20px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-.status-box h3, .players-box h3 {
-    font-size: 1.1rem;
-    color: #38bdf8;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #283d59;
-    padding-bottom: 5px;
-}
-
-#game-status {
-    font-size: 0.9rem;
-    min-height: 40px;
-    color: #e0e6ed;
 }
 
 .dice-btn {
@@ -568,18 +364,10 @@ body {
     font-weight: bold;
     color: white;
     background: linear-gradient(180deg, #e11d48 0%, #9f1239 100%);
-    border: 1px solid #f43f5e;
+    border: none;
     border-radius: 8px;
-    box-shadow: 0 0 15px rgba(225, 29, 72, 0.4);
     cursor: pointer;
-    flex: 1;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-    transition: transform 0.1s, box-shadow 0.2s;
-}
-
-.dice-btn:hover {
-    box-shadow: 0 0 20px rgba(225, 29, 72, 0.7);
-    transform: translateY(-1px);
+    width: 100%;
 }
 
 .player-row {
@@ -593,23 +381,9 @@ body {
     border-radius: 8px;
 }
 
-
 /* ==========================================
-   6. FOOTER E MODAIS
+   5. MODAIS & FOOTER
    ========================================== */
-.game-footer {
-    background: #08030d;
-    padding: 40px 8%;
-    border-top: 1px solid rgba(255,255,255,0.05);
-}
-
-.footer-container { max-width: 1200px; margin: 0 auto; text-align: center; }
-.footer-brand { font-size: 0.8rem; letter-spacing: 2px; color: #6c5ce7; font-weight: bold; margin-bottom: 20px; }
-.footer-logos { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; }
-.logo-placeholder { font-weight: bold; color: white; border-left: 3px solid #ff4757; padding-left: 10px; font-size: 1.1rem; }
-.footer-copyright { font-size: 0.8rem; color: #57606f; }
-
-/* Estilização Modal */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -629,62 +403,17 @@ body {
     padding: 30px;
     max-width: 550px;
     width: 90%;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
     color: white;
 }
 
-.rules-content { overflow-y: auto; margin: 15px 0; text-align: left; font-size: 0.9rem; line-height: 1.5; }
-.rules-content li { margin-bottom: 8px; }
-.menu-btn { padding: 10px 20px; font-weight: bold; border-radius: 6px; border: none; cursor: pointer; }
-.danger-btn { background: #ff4757; color: white; }
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% { transform: translateY(0) translateX(-50%); }
-    40% { transform: translateY(-15px) translateX(-50%); }
-    60% { transform: translateY(-7px) translateX(-50%); }
+.game-footer {
+    background: #08030d;
+    padding: 40px 8%;
+    border-top: 1px solid rgba(255,255,255,0.05);
 }
 
-
-/* ==========================================
-   7. PALETA DE CORES DAS PROPRIEDADES (DEGRADÊ DE FUNDO)
-   ========================================== */
-
-/* Torna a casa um contêiner relativo para o fundo se posicionar */
-.space {
-    position: relative !important;
-    overflow: hidden !important;
-}
-
-/* Faz a tag de cor expandir e preencher todo o fundo da casa */
-.property-tag {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    z-index: 0 !important;
-    border: none !important;
-    border-top-width: 3px !important;
-    border-top-style: solid !important;
-}
-
-/* Garante que os textos e informações fiquem na frente do degradê */
-.space > *:not(.property-tag) {
-    position: relative !important;
-    z-index: 1 !important;
-}
-
-/* DEGRADÊS POR COR (Com a cor vívida no topo sumindo até a base) */
-.cor-marrom       { background: linear-gradient(180deg, rgba(168, 85, 247, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #a855f7 !important; }
-.cor-azul-claro   { background: linear-gradient(180deg, rgba(56, 189, 248, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #38bdf8 !important; }
-.cor-rosa         { background: linear-gradient(180deg, rgba(236, 72, 153, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #ec4899 !important; }
-.cor-laranja      { background: linear-gradient(180deg, rgba(34, 197, 94, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #22c55e !important; }
-.cor-vermelho     { background: linear-gradient(180deg, rgba(239, 68, 68, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #ef4444 !important; }
-.cor-amarelo      { background: linear-gradient(180deg, rgba(234, 179, 8, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #eab308 !important; }
-.cor-verde        { background: linear-gradient(180deg, rgba(16, 185, 129, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #10b981 !important; }
-.cor-azul-escuro  { background: linear-gradient(180deg, rgba(59, 130, 246, 0.4) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #3b82f6 !important; }
-.cor-cinza        { background: linear-gradient(180deg, rgba(100, 116, 139, 0.3) 0%, rgba(22, 34, 51, 0) 85%) !important; border-top-color: #64748b !important; }
-
-.border-top { border-top: 1px solid #23354d; }
+.footer-container { max-width: 1200px; margin: 0 auto; text-align: center; }
+.footer-brand { font-size: 0.8rem; letter-spacing: 2px; color: #6c5ce7; font-weight: bold; margin-bottom: 20px; }
+.footer-logos { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; }
+.logo-placeholder { font-weight: bold; color: white; border-left: 3px solid #ff4757; padding-left: 10px; font-size: 1.1rem; }
+.footer-copyright { font-size: 0.8rem; color: #57606f; }
