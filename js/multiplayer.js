@@ -556,10 +556,12 @@ class MultiplayerManager {
     this.processGameAction(data);
 
     // Depois envia a ação para TODOS os clientes
-    this.broadcastGameAction(
-        data,
-        null
-    );
+    this.processGameAction(data);
+
+this.broadcastGameAction(
+    data,
+    null
+);
 
     return;
 }
