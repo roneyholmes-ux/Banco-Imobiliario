@@ -1,7 +1,7 @@
 /**
  * network.js
  * Gerencia a ponte de comunicação entre PeerJS e a lógica do jogo.
- */
+ */ 
 
 const Network = {
   isHost: false,
