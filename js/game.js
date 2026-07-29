@@ -900,16 +900,82 @@ function executeJailAction(actionType, playerIndex, diceVal1 = null, diceVal2 = 
 }
 
 function rollDice() {
+
     if (isMoving || awaitingDecision) return;
 
-    const player = players[currentPlayerIndex];
+    const player =
+        players[currentPlayerIndex];
+
+    // ==========================================
+    // MULTIPLAYER — GARANTE QUE É MEU TURNO
+    // ==========================================
+
+    if (
+        isMultiplayer &&
+        window.Network &&
+        window.Network.peer
+    ) {
+
+        if (
+            player.peerId !==
+            window.Network.peer.id
+        ) {
+
+            console.warn(
+                "[Multiplayer] Não é o turno deste jogador."
+            );
+
+            return;
+        }
+    }
 
     if (player.inJail) {
         checkJailTurn(player);
         return;
     }
 
+    // ==========================================
+    // ROLAGEM ONLINE
+    // ==========================================
+
     if (isMultiplayer && window.Network) {
+
+        const d1 =
+            Math.floor(Math.random() * 6) + 1;
+
+        const d2 =
+            Math.floor(Math.random() * 6) + 1;
+
+        window.Network.sendGameAction(
+            "ROLL_DICE",
+            {
+                playerIndex:
+                    currentPlayerIndex,
+
+                d1: d1,
+                d2: d2
+            }
+        );
+
+        return;
+    }
+
+    // ==========================================
+    // MODO LOCAL
+    // ==========================================
+
+    const d1 =
+        Math.floor(Math.random() * 6) + 1;
+
+    const d2 =
+        Math.floor(Math.random() * 6) + 1;
+
+    executeDiceRoll(
+        currentPlayerIndex,
+        d1,
+        d2
+    );
+}
         // Se estiver online, gera os dados e distribui a ação sincronizada
         const d1 = Math.floor(Math.random() * 6) + 1;
         const d2 = Math.floor(Math.random() * 6) + 1;
@@ -1547,3 +1613,71 @@ window.executeMultiplayerAction = function(action, payload) {
             break;
     }
 };
+
+// ==========================================
+// RECEBER AÇÕES DA REDE
+// ==========================================
+
+window.addEventListener(
+    "networkGameAction",
+    function(event) {
+
+        const action =
+            event.detail.action;
+
+        const payload =
+            event.detail.payload;
+
+        console.log(
+            "[GAME] Executando ação recebida pela rede:",
+            action,
+            payload
+        );
+
+        if (
+            typeof window.executeMultiplayerAction ===
+            "function"
+        ) {
+
+            window.executeMultiplayerAction(
+                action,
+                payload
+            );
+
+        } else {
+
+            console.error(
+                "[GAME] executeMultiplayerAction não encontrada."
+            );
+        }
+    }
+);
+
+window.addEventListener(
+    "networkGameAction",
+    function(event) {
+
+        const action =
+            event.detail.action;
+
+        const payload =
+            event.detail.payload;
+
+        console.log(
+            "[GAME] Executando ação recebida pela rede:",
+            action,
+            payload
+        );
+
+        if (
+            typeof window.executeMultiplayerAction ===
+            "function"
+        ) {
+
+            window.executeMultiplayerAction(
+                action,
+                payload
+            );
+        }
+    }
+);
