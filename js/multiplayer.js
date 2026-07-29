@@ -63,6 +63,35 @@ const Multiplayer = {
         }
       });
     }
+
+    // ---------------------------------------------------------
+    // 3. Lógica do Botão Começar Partida (HOST)
+    // ---------------------------------------------------------
+    const btnStart = document.getElementById('btn-start-game');
+    if (btnStart) {
+      btnStart.addEventListener('click', () => {
+        this.startGame();
+      });
+    }
+  },
+
+  /**
+   * Inicia a partida e avisa todos os clientes (HOST)
+   */
+  startGame() {
+    console.log('[Multiplayer] O Host iniciou a partida!');
+
+    // 1. Esconde o modal de online e mostra o tabuleiro para o Host
+    document.getElementById('online-modal')?.classList.add('hidden');
+    document.getElementById('game-section-area')?.classList.remove('hidden');
+    if (typeof window.scrollToGame === 'function') window.scrollToGame();
+
+    // 2. Aqui nós vamos conectar com o game.js para criar o estado inicial
+    // Por enquanto, vamos disparar um alerta para confirmar que chegamos até aqui
+    alert('Lobby concluído! Jogadores prontos: ' + this.lobbyState.players.length);
+    
+    // O próximo passo será trocar esse alert por uma chamada ao game.js 
+    // e enviar o SYNC_GAME_STATE pela rede.
   },
 
   /**
