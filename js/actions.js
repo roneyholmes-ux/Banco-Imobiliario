@@ -1,53 +1,62 @@
 /**
  * actions.js
- * Central de despacho e roteamento de ações de rede (P2P / Host-Authoritative).
+ * Roteador e Despachante Central de Ações de Rede (Host-Authoritative).
+ * 
+ * Responsabilidades:
+ * - Interpretar o tipo do comando (type).
+ * - Rotear requisições de clientes apenas para os manipuladores do Host.
+ * - Rotear atualizações do Host para a sincronização da tela nos clientes.
+ * - Manter desacopladas a ponte de rede (network.js) e as regras do jogo (game.js).
  */
 
-const Actions = {
+class ActionRouter {
+    /**
+     * Processa e despacha a mensagem recebida da rede
+     */
     handleAction(message) {
-        console.log("[Actions] Mensagem de rede recebida:", message);
         if (!message || !message.type) return;
 
         const { type, payload, senderPeerId } = message;
+        console.log(`[Actions] Processando ação: ${type} (Enviado por: ${senderPeerId || 'Host/Desconhecido'})`);
+
+        const isHost = window.Network ? window.Network.isHost : false;
 
         switch (type) {
             // ==========================================
-            // REQUISIÇÕES DOS CLIENTES ENVIADAS AO HOST
+            // REQUISIÇÕES DOS CLIENTES (Apenas o Host executa)
             // ==========================================
             case "REQUEST_ROLL_DICE":
-                // Processado APENAS pelo Host
-                if (window.Network && window.Network.isHost) {
-                    if (typeof window.hostProcessRollDice === "function") {
-                        window.hostProcessRollDice(senderPeerId);
-                    }
+                if (isHost && typeof window.hostProcessRollDice === "function") {
+                    window.hostProcessRollDice(senderPeerId);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_ROLL_DICE (Apenas o Host pode processar).");
                 }
                 break;
 
             case "REQUEST_BUY_PROPERTY":
-                // Processado APENAS pelo Host
-                if (window.Network && window.Network.isHost) {
-                    if (typeof window.hostProcessBuyProperty === "function") {
-                        window.hostProcessBuyProperty(senderPeerId);
-                    }
+                if (isHost && typeof window.hostProcessBuyProperty === "function") {
+                    window.hostProcessBuyProperty(senderPeerId);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_BUY_PROPERTY (Apenas o Host pode processar).");
                 }
                 break;
 
             case "REQUEST_PASS_PROPERTY":
-                // Processado APENAS pelo Host
-                if (window.Network && window.Network.isHost) {
-                    if (typeof window.hostProcessPassProperty === "function") {
-                        window.hostProcessPassProperty(senderPeerId);
-                    }
+                if (isHost && typeof window.hostProcessPassProperty === "function") {
+                    window.hostProcessPassProperty(senderPeerId);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_PASS_PROPERTY (Apenas o Host pode processar).");
                 }
                 break;
 
             // ==========================================
-            // TRANSMISSÃO DE ESTADO DO HOST PARA TODOS
+            // SINCRONIZAÇÃO DE ESTADO TRANSMITIDA PELO HOST
             // ==========================================
             case "SYNC_GAME_STATE":
-                // Recebido por TODOS (principalmente Clientes) para sincronizar o jogo
                 if (typeof window.applyGameStateSync === "function") {
                     window.applyGameStateSync(payload);
+                } else {
+                    console.warn("[Actions] Função window.applyGameStateSync não encontrada para aplicar o estado.");
                 }
                 break;
 
@@ -56,6 +65,7 @@ const Actions = {
                 break;
         }
     }
-};
+}
 
-window.Actions = Actions;
+// Instância global para ser utilizada pela ponte de rede (network.js)
+window.Actions = new ActionRouter();
