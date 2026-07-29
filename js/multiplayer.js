@@ -19,7 +19,7 @@ class MultiplayerManager {
         let res = "";
         for (let i = 0; i < 5; i++) res += chars.charAt(Math.floor(Math.random() * chars.length));
         return res;
-    }
+    } 
 
     openOnlineMenu() {
         if (typeof Peer === "undefined") {
