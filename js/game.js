@@ -3,7 +3,7 @@
 // ==========================================
 let GAME_CONFIG = {
     startingMoney: 25000,       // Dinheiro inicial de cada jogador
-    goBonus: 2000,              // 🛑 AGORA É PENALIDADE: Valor PERDIDO ao passar pela PARTIDA
+    goBonus: 2000,              // 🛑 PENALIDADE: Valor PERDIDO ao passar pela PARTIDA
     rentMultiplier: 1.0,        // Multiplicador global de aluguéis
     impostoRenda: 2000,         // Valor cobrado na casa Imposto de Renda
     taxaLuxo: 1000,             // Valor cobrado na casa Taxa de Luxo
@@ -43,7 +43,7 @@ const CARDS = [
     { text: "Revés! Multa por excesso de velocidade. Pague $30", type: "pay", value: 30 }
 ];
 
-// Lista de casas atualizada com os novos Sistemas Científicos/Pedagógicos
+// Lista de casas atualizada
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
     
@@ -138,6 +138,7 @@ function getGridPosition(index) {
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
+    if(!boardElement) return;
     document.querySelectorAll(".space").forEach(e => e.remove());
     
     boardSpaces.forEach((space) => {
@@ -149,7 +150,7 @@ function renderBoard() {
         spaceDiv.style.gridRow = pos.row;
         spaceDiv.style.gridColumn = pos.col;
         
-        if (space.type === "property" || space.type === "station" || space.type === "utility" || space.type === "grandeza") {
+        if (space.type === "property" || space.type === "station" || space.type === "utility") {
             const tag = document.createElement("div");
             tag.className = `property-tag ${space.color || 'cor-cinza'}`;
             tag.id = `tag-${space.id}`;
@@ -196,6 +197,7 @@ function renderPawns() {
 
 function updateUI() {
     const playersList = document.getElementById("players-list");
+    if (!playersList) return;
     playersList.innerHTML = "";
     
     players.forEach((p, idx) => {
@@ -263,14 +265,15 @@ async function movePlayer(playerIndex, steps) {
     for (let i = 0; i < steps; i++) {
         player.position = (player.position + 1) % 40;
         
-        // 🛑 REGRA ALTERADA: Ao passar pela PARTIDA o jogador PERDE dinheiro ao invés de ganhar
+        // Passar pela PARTIDA subtrai dinheiro
         if (player.position === 0) {
             player.money -= GAME_CONFIG.goBonus;
-            document.getElementById("game-status").innerText = `💸 ${player.name} passou pela PARTIDA e pagou uma taxa de $${GAME_CONFIG.goBonus}!`;
+            const statusLabel = document.getElementById("game-status");
+            if (statusLabel) statusLabel.innerText = `💸 ${player.name} passou pela PARTIDA e pagou uma taxa de $${GAME_CONFIG.goBonus}!`;
             
             if (player.money < 0) {
-                checkBankruptcy(player, null);
                 isMoving = false;
+                checkBankruptcy(player, null);
                 return;
             }
             updateUI();
@@ -305,7 +308,6 @@ function startPlayerSetup() {
         box-shadow: 0px 10px 30px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto;
     `;
 
-    // ETAPA 1: Quantidade de Jogadores
     function renderStep1() {
         setupBox.innerHTML = `
             <h2 style="margin-top: 0; color: #ff4757; font-size: 1.8rem; margin-bottom: 10px;">BANCO IMOBILIÁRIO</h2>
@@ -337,13 +339,11 @@ function startPlayerSetup() {
         document.getElementById("btn-back-to-menu").addEventListener("click", () => document.body.removeChild(overlay));
     }
 
-    // ETAPA 2: Seleção e Edição de Presets
     function renderStep2() {
         setupBox.innerHTML = `
             <h3 style="margin-top: 0; color: #ff4757; font-size: 1.5rem; margin-bottom: 5px;">⚙️ Presets & Configurações</h3>
             <p style="color: #aaa; font-size: 0.85rem; margin-bottom: 20px;">Passo 2 de 2: Escolha um preset ou personalize as regras</p>
 
-            <!-- Seleção de Presets Rápidos -->
             <div style="margin-bottom: 15px; text-align: left;">
                 <label style="font-size: 0.85rem; color: #ddd; font-weight: bold;">Selecione um Preset:</label>
                 <select id="preset-selector" style="width: 100%; padding: 8px; margin-top: 5px; background: #333; color: white; border: 1px solid #555; border-radius: 5px; font-size: 0.95rem;">
@@ -354,7 +354,6 @@ function startPlayerSetup() {
                 </select>
             </div>
 
-            <!-- Campos de Edição Customizada -->
             <div style="background: #282828; padding: 15px; border-radius: 8px; border: 1px solid #444; text-align: left; margin-bottom: 20px;">
                 <label style="font-size: 0.8rem; display: block; margin-bottom: 4px;">Dinheiro Inicial de cada Jogador ($):</label>
                 <input type="number" id="input-start-money" value="${GAME_CONFIG.startingMoney}" style="width: 93%; padding: 6px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; margin-bottom: 10px;">
@@ -391,7 +390,6 @@ function startPlayerSetup() {
         document.getElementById("btn-prev-step").addEventListener("click", renderStep1);
 
         document.getElementById("btn-start-game").addEventListener("click", () => {
-            // Atualiza o objeto de configurações globais com as opções do preset/editadas
             GAME_CONFIG.startingMoney = parseInt(moneyInput.value) || 25000;
             GAME_CONFIG.goBonus = parseInt(goTaxInput.value) || 2000;
             GAME_CONFIG.taxaTroca = parseInt(tradeTaxInput.value) || 200;
@@ -404,7 +402,6 @@ function startPlayerSetup() {
     overlay.appendChild(setupBox);
     document.body.appendChild(overlay);
 
-    // Injeta os estilos CSS necessários para os botões do setup
     const style = document.createElement("style");
     style.innerHTML = `
         .setup-qty-btn {
@@ -423,7 +420,7 @@ function startPlayerSetup() {
 
 function handleLanding(player) {
     const currentSpace = boardSpaces[player.position];
-    const purchaseableTypes = ["property", "station", "utility", "grandeza"];
+    const purchaseableTypes = ["property", "station", "utility"];
 
     if (purchaseableTypes.includes(currentSpace.type)) {
         if (currentSpace.owner === null) {
@@ -433,7 +430,8 @@ function handleLanding(player) {
             return; 
         } 
         else if (currentSpace.owner !== player.id) {
-            if (currentSpace.type === "grandeza") {
+            // Verifica se a propriedade possui minigame pedagógico de grandeza
+            if (currentSpace.grandezaType) {
                 handleGrandezaLandingOtherPlayer(player, currentSpace);
             } else {
                 payRent(player, currentSpace);
@@ -441,8 +439,8 @@ function handleLanding(player) {
             return; 
         } 
         else {
-            if (currentSpace.type === "grandeza") {
-                const kind = currentSpace.grandezaKind;
+            if (currentSpace.grandezaType) {
+                const kind = currentSpace.grandezaType;
                 if (kind === "discreta") player.fichasDiscreta += 1;
                 else player.fichasContinua += 1;
 
@@ -560,7 +558,7 @@ function handleLanding(player) {
 function handleGrandezaLandingOtherPlayer(player, space) {
     const owner = players.find(p => p.id === space.owner);
     const rentAmount = calculateCurrentRent(space);
-    const kind = space.grandezaKind;
+    const kind = space.grandezaType;
 
     const statusDiv = document.getElementById("game-status");
     statusDiv.innerHTML = `
@@ -676,8 +674,8 @@ function payRent(player, space) {
 function showPurchaseModal(player, space) {
     const statusDiv = document.getElementById("game-status");
     
-    let isGrandeza = space.type === "grandeza";
-    let extraBonusText = isGrandeza ? `<br><small style="color: #2ed573;">✨ BÔNUS: Comprando esta casa, você ganha 1 Ficha de Grandeza ${space.grandezaKind.toUpperCase()} grátis!</small>` : "";
+    let isGrandeza = !!space.grandezaType;
+    let extraBonusText = isGrandeza ? `<br><small style="color: #2ed573;">✨ BÔNUS: Comprando esta casa, você ganha 1 Ficha de Grandeza ${space.grandezaType.toUpperCase()} grátis!</small>` : "";
 
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px;">
@@ -699,13 +697,13 @@ function buyProperty(player, space) {
         player.money -= space.price;
         space.owner = player.id;
         
-        if (space.type === "grandeza") {
-            if (space.grandezaKind === "discreta") player.fichasDiscreta += 1;
-            else if (space.grandezaKind === "continua") player.fichasContinua += 1;
+        if (space.grandezaType) {
+            if (space.grandezaType === "discreta") player.fichasDiscreta += 1;
+            else if (space.grandezaType === "continua") player.fichasContinua += 1;
         }
 
         const spaceDiv = document.getElementById(`space-${space.id}`);
-        spaceDiv.style.border = `3px dashed ${player.color}`;
+        if(spaceDiv) spaceDiv.style.border = `3px dashed ${player.color}`;
         
         const priceLabel = document.getElementById(`price-label-${space.id}`);
         if (priceLabel) {
@@ -871,17 +869,18 @@ function initializePlayers(quantity) {
     boardSpaces.forEach(space => {
         if (space.type === "property") {
             space.houses = 0;
+            space.owner = null;
         }
     });
 
     const gameArea = document.getElementById("game-section-area");
-    gameArea.classList.remove("hidden");
+    if(gameArea) gameArea.classList.remove("hidden");
 
     renderBoard();
     renderPawns();
     updateUI();
 
-    gameArea.scrollIntoView({ behavior: "smooth" });
+    if(gameArea) gameArea.scrollIntoView({ behavior: "smooth" });
 
     document.getElementById("game-status").innerHTML = `Partida iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
 }
@@ -893,7 +892,7 @@ function hasMonopoly(player, colorClass) {
 }
 
 function calculateCurrentRent(space) {
-    if (space.type !== "property" && space.type !== "grandeza") {
+    if (space.type !== "property") {
         return space.rent;
     }
 
@@ -905,7 +904,7 @@ function calculateCurrentRent(space) {
     else if (space.houses === 3) finalRent = space.rent * 40;
     else if (space.houses === 4) finalRent = space.rent * 80;
     else if (space.houses === 5) finalRent = space.rent * 120;
-    else if (hasMonopoly(owner, space.color)) {
+    else if (owner && hasMonopoly(owner, space.color)) {
         finalRent = space.rent * 2;
     }
 
@@ -917,7 +916,7 @@ function showBuildModal(player, space) {
     const isHotel = space.houses === 4;
     const itemText = isHotel ? "um Hotel" : "uma Casa";
     
-    const requiredType = space.grandezaType || (space.id % 2 === 0 ? "continua" : "discreta");
+    const requiredType = space.grandezaType || "continua";
     const requiredTypeLabel = requiredType === "discreta" ? "Grandeza Discreta 🎲" : "Grandeza Contínua 📈";
     const playerHasToken = requiredType === "discreta" ? player.fichasDiscreta > 0 : player.fichasContinua > 0;
 
