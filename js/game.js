@@ -901,68 +901,43 @@ function executeJailAction(actionType, playerIndex, diceVal1 = null, diceVal2 = 
 
 function rollDice() {
 
-    if (isMoving || awaitingDecision) return;
+if (isMoving || awaitingDecision) return;
 
-    const player =
-        players[currentPlayerIndex];
+const player = players[currentPlayerIndex];
 
-    // ==========================================
-    // MULTIPLAYER — GARANTE QUE É MEU TURNO
-    // ==========================================
+// ==========================================
+// MULTIPLAYER — GARANTE QUE É MEU TURNO
+// ==========================================
+
+if (
+    isMultiplayer &&
+    window.Network &&
+    window.Network.peer
+) {
 
     if (
-        isMultiplayer &&
-        window.Network &&
-        window.Network.peer
+        player.peerId !==
+        window.Network.peer.id
     ) {
 
-        if (
-            player.peerId !==
-            window.Network.peer.id
-        ) {
-
-            console.warn(
-                "[Multiplayer] Não é o turno deste jogador."
-            );
-
-            return;
-        }
-    }
-
-    if (player.inJail) {
-        checkJailTurn(player);
-        return;
-    }
-
-    // ==========================================
-    // ROLAGEM ONLINE
-    // ==========================================
-
-    if (isMultiplayer && window.Network) {
-
-        const d1 =
-            Math.floor(Math.random() * 6) + 1;
-
-        const d2 =
-            Math.floor(Math.random() * 6) + 1;
-
-        window.Network.sendGameAction(
-            "ROLL_DICE",
-            {
-                playerIndex:
-                    currentPlayerIndex,
-
-                d1: d1,
-                d2: d2
-            }
+        console.warn(
+            "[Multiplayer] Não é o turno deste jogador."
         );
 
         return;
     }
+}
 
-    // ==========================================
-    // MODO LOCAL
-    // ==========================================
+if (player.inJail) {
+    checkJailTurn(player);
+    return;
+}
+
+// ==========================================
+// MODO ONLINE
+// ==========================================
+
+if (isMultiplayer && window.Network) {
 
     const d1 =
         Math.floor(Math.random() * 6) + 1;
@@ -970,12 +945,38 @@ function rollDice() {
     const d2 =
         Math.floor(Math.random() * 6) + 1;
 
-    executeDiceRoll(
-        currentPlayerIndex,
-        d1,
-        d2
+    window.Network.sendGameAction(
+        "ROLL_DICE",
+        {
+            playerIndex:
+                currentPlayerIndex,
+
+            d1: d1,
+            d2: d2
+        }
     );
+
+    return;
 }
+
+// ==========================================
+// MODO LOCAL
+// ==========================================
+
+const d1 =
+    Math.floor(Math.random() * 6) + 1;
+
+const d2 =
+    Math.floor(Math.random() * 6) + 1;
+
+executeDiceRoll(
+    currentPlayerIndex,
+    d1,
+    d2
+);
+
+}
+
         // Se estiver online, gera os dados e distribui a ação sincronizada
         const d1 = Math.floor(Math.random() * 6) + 1;
         const d2 = Math.floor(Math.random() * 6) + 1;
