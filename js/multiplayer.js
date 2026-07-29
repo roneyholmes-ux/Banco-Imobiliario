@@ -1,17 +1,18 @@
 /**
  * multiplayer.js
- * Gerenciador de conexão P2P utilizando PeerJS. 
+ * Gerenciador de conexão P2P utilizando PeerJS com Autoridade do Host.
  */
 
 class MultiplayerManager {
     constructor() {
         this.peer = null;
-        this.conn = null;
-        this.connections = [];
+        this.conn = null;            // Conexão do cliente com o Host
+        this.connections = [];       // Lista de conexões mantida pelo Host
         this.isHost = false;
         this.lobbyState = { players: [] };
         this.playerName = "Jogador " + Math.floor(Math.random() * 1000);
         this.overlay = null;
+        this.myPeerId = null;
     }
 
     generateShortId() {
@@ -54,18 +55,38 @@ class MultiplayerManager {
         this.peer = new Peer(roomId);
 
         this.peer.on("open", id => {
-            this.lobbyState.players = [{ id: id, peerId: id, name: this.playerName, isHost: true }];
+            this.myPeerId = id;
+            this.lobbyState.players = [{ id: 0, peerId: id, name: this.playerName, isHost: true }];
             this.renderLobby(id);
         });
 
         this.peer.on("connection", conn => {
             this.connections.push(conn);
+
             conn.on("data", data => {
                 if (data.type === "PLAYER_JOINED") {
+                    const newPlayerId = this.lobbyState.players.length;
+                    data.payload.id = newPlayerId;
                     this.lobbyState.players.push(data.payload);
                     this.broadcastLobby();
                     this.updateLobbyUI();
+                } else {
+                    // Mensagem de jogo vinda de um Cliente:
+                    // 1. O Host executa localmente
+                    if (window.Actions && typeof window.Actions.handleAction === "function") {
+                        window.Actions.handleAction(data);
+                    }
+                    // 2. O Host retransmite para os outros Clientes
+                    this.connections.forEach(c => {
+                        if (c !== conn && c && c.open) {
+                            c.send(data);
+                        }
+                    });
                 }
+            });
+
+            conn.on("close", () => {
+                this.connections = this.connections.filter(c => c !== conn);
             });
         });
     }
@@ -81,11 +102,13 @@ class MultiplayerManager {
         this.peer = new Peer();
 
         this.peer.on("open", id => {
+            this.myPeerId = id;
             this.conn = this.peer.connect(roomId.trim().toUpperCase());
+
             this.conn.on("open", () => {
                 this.conn.send({
                     type: "PLAYER_JOINED",
-                    payload: { id: id, peerId: id, name: this.playerName, isHost: false }
+                    payload: { peerId: id, name: this.playerName, isHost: false }
                 });
                 this.renderLobby(null);
             });
@@ -98,6 +121,11 @@ class MultiplayerManager {
                     if (this.overlay) this.overlay.remove();
                     if (typeof window.startMultiplayerGame === "function") {
                         window.startMultiplayerGame(data.payload.players);
+                    }
+                } else {
+                    // Mensagem de jogo vinda do Host
+                    if (window.Actions && typeof window.Actions.handleAction === "function") {
+                        window.Actions.handleAction(data);
                     }
                 }
             });
@@ -134,20 +162,41 @@ class MultiplayerManager {
     }
 
     broadcastLobby() {
-        this.connections.forEach(c => {
-            if (c && c.open) c.send({ type: "LOBBY_UPDATE", payload: this.lobbyState });
-        });
+        this.broadcast({ type: "LOBBY_UPDATE", payload: this.lobbyState });
     }
 
     startGame() {
         if (!this.isHost) return;
-        this.connections.forEach(c => {
-            if (c && c.open) c.send({ type: "START_GAME", payload: { players: this.lobbyState.players } });
-        });
+        this.broadcast({ type: "START_GAME", payload: { players: this.lobbyState.players } });
         if (this.overlay) this.overlay.remove();
         if (typeof window.startMultiplayerGame === "function") {
             window.startMultiplayerGame(this.lobbyState.players);
         }
+    }
+
+    /**
+     * Envia uma mensagem para a rede.
+     * Se for Host: envia para todos os clientes.
+     * Se for Cliente: envia para o Host.
+     */
+    sendGameAction(type, payload = {}) {
+        const message = { type, payload, senderPeerId: this.myPeerId };
+        if (this.isHost) {
+            this.broadcast(message);
+        } else if (this.conn && this.conn.open) {
+            this.conn.send(message);
+        }
+    }
+
+    /**
+     * Retransmite dados para todas as conexões abertas (apenas Host).
+     */
+    broadcast(data) {
+        this.connections.forEach(c => {
+            if (c && c.open) {
+                c.send(data);
+            }
+        });
     }
 }
 
