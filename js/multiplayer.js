@@ -543,20 +543,26 @@ class MultiplayerManager {
                 }
 
                 if (
-                    data &&
-                    data.type === "GAME_ACTION"
-                ) {
+    data &&
+    data.type === "GAME_ACTION"
+) {
 
-                    console.log(
-                        "[Host] Ação recebida:",
-                        data
-                    );
+    console.log(
+        "[Host] Ação recebida:",
+        data
+    );
 
-                    this.broadcastGameAction(
-                        data,
-                        conn
-                    );
-                }
+    // O HOST também executa a ação
+    this.processGameAction(data);
+
+    // Depois envia a ação para TODOS os clientes
+    this.broadcastGameAction(
+        data,
+        null
+    );
+
+    return;
+}
             }
         );
 
