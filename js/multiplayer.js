@@ -1,4 +1,3 @@
-
 // ==========================================
 // GERENCIADOR MULTIPLAYER
 // multiplayer.js
@@ -7,7 +6,6 @@
 class MultiplayerManager {
 
     constructor() {
-
         this.peer = null;
         this.conn = null;
         this.connections = [];
@@ -25,9 +23,8 @@ class MultiplayerManager {
         this.overlay = null;
     }
 
-
     // ==========================================
-    // GERA CÓDIGO CURTO DA SALA
+    // GERA CÓDIGO DA SALA
     // ==========================================
 
     generateShortId() {
@@ -38,16 +35,13 @@ class MultiplayerManager {
         let result = "";
 
         for (let i = 0; i < 5; i++) {
-
             result += chars.charAt(
                 Math.floor(Math.random() * chars.length)
             );
-
         }
 
         return result;
     }
-
 
     // ==========================================
     // ABRIR MENU ONLINE
@@ -55,10 +49,9 @@ class MultiplayerManager {
 
     openOnlineMenu() {
 
-        console.log("[Multiplayer] Abrindo menu online...");
-
-
-        // Verifica PeerJS
+        console.log(
+            "[Multiplayer] Abrindo menu online..."
+        );
 
         if (typeof Peer === "undefined") {
 
@@ -73,18 +66,9 @@ class MultiplayerManager {
             return;
         }
 
-
-        // Evita abrir duas telas
-
         if (this.overlay) {
-
             return;
         }
-
-
-        // ==========================================
-        // OVERLAY
-        // ==========================================
 
         this.overlay =
             document.createElement("div");
@@ -92,24 +76,16 @@ class MultiplayerManager {
         this.overlay.id =
             "online-setup-overlay";
 
-        this.overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.92);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 99999;
-            font-family: Arial, sans-serif;
-        `;
-
-
-        // ==========================================
-        // CAIXA
-        // ==========================================
+        this.overlay.style.cssText =
+            "position:fixed;" +
+            "top:0;left:0;" +
+            "width:100%;height:100%;" +
+            "background:rgba(0,0,0,0.92);" +
+            "display:flex;" +
+            "justify-content:center;" +
+            "align-items:center;" +
+            "z-index:99999;" +
+            "font-family:Arial,sans-serif;";
 
         const box =
             document.createElement("div");
@@ -117,18 +93,16 @@ class MultiplayerManager {
         box.id =
             "online-setup-box";
 
-        box.style.cssText = `
-            background: #1e1e1e;
-            border: 3px solid #1e90ff;
-            border-radius: 12px;
-            padding: 30px;
-            text-align: center;
-            color: white;
-            max-width: 480px;
-            width: 90%;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        `;
-
+        box.style.cssText =
+            "background:#1e1e1e;" +
+            "border:3px solid #1e90ff;" +
+            "border-radius:12px;" +
+            "padding:30px;" +
+            "text-align:center;" +
+            "color:white;" +
+            "max-width:480px;" +
+            "width:90%;" +
+            "box-shadow:0 10px 30px rgba(0,0,0,0.5);";
 
         this.overlay.appendChild(box);
 
@@ -136,13 +110,11 @@ class MultiplayerManager {
             this.overlay
         );
 
-
         this.renderStep1();
     }
 
-
     // ==========================================
-    // MENU PRINCIPAL ONLINE
+    // MENU PRINCIPAL
     // ==========================================
 
     renderStep1() {
@@ -153,113 +125,55 @@ class MultiplayerManager {
             );
 
         if (!box) {
-
             console.error(
                 "[Multiplayer] Caixa do menu não encontrada."
             );
-
             return;
         }
 
+        box.innerHTML =
+            "<h2 style='color:#1e90ff;'>🌐 MODO ONLINE</h2>" +
 
-        box.innerHTML = `
+            "<p style='color:#aaa;'>Crie uma sala ou entre em uma sala existente.</p>" +
 
-            <h2 style="
-                margin-top: 0;
-                color: #1e90ff;
-                font-size: 1.8rem;
-            ">
-                🌐 MODO ONLINE
-            </h2>
+            "<button id='btn-dyn-host' " +
+            "style='width:100%;padding:14px;margin-bottom:12px;" +
+            "font-size:1.05rem;background:#1e90ff;color:white;" +
+            "border:none;border-radius:6px;cursor:pointer;font-weight:bold;'>" +
+            "👑 Criar Sala" +
+            "</button>" +
 
-            <p style="
-                color: #aaa;
-                margin-bottom: 25px;
-            ">
-                Crie uma sala ou entre em uma sala existente.
-            </p>
+            "<button id='btn-dyn-join' " +
+            "style='width:100%;padding:14px;margin-bottom:20px;" +
+            "font-size:1.05rem;background:#2e7d32;color:white;" +
+            "border:none;border-radius:6px;cursor:pointer;font-weight:bold;'>" +
+            "🔗 Entrar em Sala" +
+            "</button>" +
 
+            "<button id='btn-close-online' " +
+            "style='background:transparent;color:#aaa;border:none;" +
+            "cursor:pointer;text-decoration:underline;'>" +
+            "Voltar" +
+            "</button>";
 
-            <button
-                id="btn-dyn-host"
-                style="
-                    width: 100%;
-                    padding: 14px;
-                    margin-bottom: 12px;
-                    font-size: 1.05rem;
-                    background: #1e90ff;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: bold;
-                "
-            >
-                👑 Criar Sala
-            </button>
+        document.getElementById(
+            "btn-dyn-host"
+        ).onclick = () => {
+            this.hostGame();
+        };
 
+        document.getElementById(
+            "btn-dyn-join"
+        ).onclick = () => {
+            this.joinGame();
+        };
 
-            <button
-                id="btn-dyn-join"
-                style="
-                    width: 100%;
-                    padding: 14px;
-                    margin-bottom: 20px;
-                    font-size: 1.05rem;
-                    background: #2e7d32;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
-                    font-weight: bold;
-                "
-            >
-                🔗 Entrar em Sala
-            </button>
-
-
-            <button
-                id="btn-close-online"
-                style="
-                    background: transparent;
-                    color: #aaa;
-                    border: none;
-                    cursor: pointer;
-                    text-decoration: underline;
-                "
-            >
-                Voltar
-            </button>
-        `;
-
-
-        document
-            .getElementById("btn-dyn-host")
-            .onclick = () => {
-
-                this.hostGame();
-
-            };
-
-
-        document
-            .getElementById("btn-dyn-join")
-            .onclick = () => {
-
-                this.joinGame();
-
-            };
-
-
-        document
-            .getElementById("btn-close-online")
-            .onclick = () => {
-
-                this.closeMenu();
-
-            };
+        document.getElementById(
+            "btn-close-online"
+        ).onclick = () => {
+            this.closeMenu();
+        };
     }
-
 
     // ==========================================
     // LOBBY
@@ -274,202 +188,116 @@ class MultiplayerManager {
 
         if (!box) return;
 
-
         let roomHTML = "";
-
 
         if (roomId) {
 
-            roomHTML = `
+            roomHTML =
+                "<div style='background:#282828;" +
+                "border:1px solid #1e90ff;padding:15px;" +
+                "border-radius:8px;margin-bottom:20px;'>" +
 
-                <div style="
-                    background:#282828;
-                    border:1px solid #1e90ff;
-                    padding:15px;
-                    border-radius:8px;
-                    margin-bottom:20px;
-                ">
+                "<div style='color:#aaa;font-size:.85rem;'>" +
+                "Código da Sala" +
+                "</div>" +
 
-                    <div style="
-                        color:#aaa;
-                        font-size:0.85rem;
-                    ">
-                        Código da Sala
-                    </div>
+                "<div style='color:#1e90ff;font-size:2rem;" +
+                "font-family:monospace;letter-spacing:5px;" +
+                "font-weight:bold;margin:8px 0;'>" +
+                roomId +
+                "</div>" +
 
-                    <div style="
-                        color:#1e90ff;
-                        font-size:2rem;
-                        font-family:monospace;
-                        letter-spacing:5px;
-                        font-weight:bold;
-                        margin:8px 0;
-                    ">
-                        ${roomId}
-                    </div>
+                "<button id='btn-copy-id' " +
+                "style='width:100%;padding:8px;" +
+                "background:#1e90ff;color:white;border:none;" +
+                "border-radius:5px;cursor:pointer;'>" +
+                "📋 Copiar Código" +
+                "</button>" +
 
-                    <button
-                        id="btn-copy-id"
-                        style="
-                            width:100%;
-                            padding:8px;
-                            background:#1e90ff;
-                            color:white;
-                            border:none;
-                            border-radius:5px;
-                            cursor:pointer;
-                        "
-                    >
-                        📋 Copiar Código
-                    </button>
-
-                </div>
-            `;
+                "</div>";
         }
 
+        box.innerHTML =
+            "<h2 style='color:#1e90ff;'>SALA DE ESPERA</h2>" +
 
-        box.innerHTML = `
+            roomHTML +
 
-            <h2 style="
-                margin-top:0;
-                color:#1e90ff;
-            ">
-                SALA DE ESPERA
-            </h2>
+            "<div style='background:#282828;padding:15px;" +
+            "border-radius:8px;min-height:120px;" +
+            "margin-bottom:20px;text-align:left;'>" +
 
-            ${roomHTML}
+            "<h4 style='color:#ddd;'>Jogadores conectados</h4>" +
 
+            "<ul id='dyn-lobby-list' " +
+            "style='color:white;line-height:1.8;'>" +
+            "</ul>" +
 
-            <div style="
-                background:#282828;
-                padding:15px;
-                border-radius:8px;
-                min-height:120px;
-                margin-bottom:20px;
-                text-align:left;
-            ">
+            "</div>" +
 
-                <h4 style="
-                    margin-top:0;
-                    color:#ddd;
-                ">
-                    Jogadores conectados
-                </h4>
-
-                <ul
-                    id="dyn-lobby-list"
-                    style="
-                        color:white;
-                        line-height:1.8;
-                    "
-                ></ul>
-
-            </div>
-
-
-            <div id="lobby-action-area"></div>
-        `;
-
-
-        // ==========================================
-        // COPIAR CÓDIGO
-        // ==========================================
+            "<div id='lobby-action-area'></div>";
 
         const copyButton =
             document.getElementById(
                 "btn-copy-id"
             );
 
-
         if (copyButton && roomId) {
 
-            copyButton.onclick =
-                async () => {
+            copyButton.onclick = async () => {
 
-                    try {
+                try {
 
-                        await navigator.clipboard.writeText(
-                            roomId
-                        );
+                    await navigator.clipboard.writeText(
+                        roomId
+                    );
 
-                        copyButton.innerText =
-                            "✓ Copiado!";
+                    copyButton.innerText =
+                        "✓ Copiado!";
 
-                    } catch (error) {
+                } catch (error) {
 
-                        alert(
-                            "Código da sala: " +
-                            roomId
-                        );
-
-                    }
-
-                };
+                    alert(
+                        "Código da sala: " +
+                        roomId
+                    );
+                }
+            };
         }
-
-
-        // ==========================================
-        // BOTÃO DO HOST
-        // ==========================================
 
         const actionArea =
             document.getElementById(
                 "lobby-action-area"
             );
 
-
         if (this.isHost) {
 
-            actionArea.innerHTML = `
+            actionArea.innerHTML =
+                "<button id='btn-dyn-start-match' " +
+                "style='padding:12px 25px;font-size:1.05rem;" +
+                "background:#ff4757;color:white;border:none;" +
+                "border-radius:6px;cursor:pointer;font-weight:bold;'>" +
+                "🚀 Começar Partida" +
+                "</button>";
 
-                <button
-                    id="btn-dyn-start-match"
-                    style="
-                        padding:12px 25px;
-                        font-size:1.05rem;
-                        background:#ff4757;
-                        color:white;
-                        border:none;
-                        border-radius:6px;
-                        cursor:pointer;
-                        font-weight:bold;
-                    "
-                >
-                    🚀 Começar Partida
-                </button>
-            `;
-
-
-            document
-                .getElementById(
-                    "btn-dyn-start-match"
-                )
-                .onclick = () => {
-
-                    this.startGame();
-
-                };
+            document.getElementById(
+                "btn-dyn-start-match"
+            ).onclick = () => {
+                this.startGame();
+            };
 
         } else {
 
-            actionArea.innerHTML = `
-
-                <p style="
-                    color:#ffb300;
-                    font-weight:bold;
-                ">
-                    ⏳ Aguardando o Host iniciar a partida...
-                </p>
-            `;
+            actionArea.innerHTML =
+                "<p style='color:#ffb300;font-weight:bold;'>" +
+                "⏳ Aguardando o Host iniciar a partida..." +
+                "</p>";
         }
-
 
         this.updateLobbyUI();
     }
 
-
     // ==========================================
-    // ATUALIZA LISTA DO LOBBY
+    // ATUALIZAR LOBBY
     // ==========================================
 
     updateLobbyUI() {
@@ -481,9 +309,7 @@ class MultiplayerManager {
 
         if (!list) return;
 
-
         list.innerHTML = "";
-
 
         this.lobbyState.players.forEach(
             player => {
@@ -500,11 +326,9 @@ class MultiplayerManager {
                     );
 
                 list.appendChild(li);
-
             }
         );
     }
-
 
     // ==========================================
     // FECHAR MENU
@@ -514,27 +338,20 @@ class MultiplayerManager {
 
         if (!this.overlay) return;
 
-
         try {
-
             this.overlay.remove();
-
         } catch (error) {
-
             console.warn(
                 "[Multiplayer] Erro ao fechar menu:",
                 error
             );
-
         }
-
 
         this.overlay = null;
     }
 
-
     // ==========================================
-    // LIMPAR CONEXÕES
+    // DESTRUIR CONEXÕES
     // ==========================================
 
     destroyPeer() {
@@ -542,51 +359,39 @@ class MultiplayerManager {
         if (this.conn) {
 
             try {
-
                 this.conn.close();
-
             } catch (error) {}
 
             this.conn = null;
         }
 
-
         this.connections.forEach(
             connection => {
 
                 try {
-
                     connection.close();
-
                 } catch (error) {}
 
             }
         );
 
-
         this.connections = [];
-
 
         if (this.peer) {
 
             try {
-
                 this.peer.destroy();
-
             } catch (error) {}
 
             this.peer = null;
         }
 
-
         this.lobbyState = {
             players: []
         };
 
-
         this.gameStarted = false;
     }
-
 
     // ==========================================
     // CRIAR SALA
@@ -598,11 +403,9 @@ class MultiplayerManager {
             "[Multiplayer] Criando sala..."
         );
 
-
         this.destroyPeer();
 
         this.isHost = true;
-
 
         const name =
             prompt(
@@ -610,34 +413,21 @@ class MultiplayerManager {
                 this.playerName
             );
 
-
-        if (!name) {
-
-            return;
-        }
-
+        if (!name) return;
 
         this.playerName =
             name.trim();
 
-
         const roomId =
             this.generateShortId();
-
 
         console.log(
             "[Multiplayer] Código escolhido:",
             roomId
         );
 
-
         this.peer =
             new Peer(roomId);
-
-
-        // ==========================================
-        // PEER ABERTO
-        // ==========================================
 
         this.peer.on(
             "open",
@@ -648,32 +438,20 @@ class MultiplayerManager {
                     id
                 );
 
-
                 this.lobbyState = {
-
                     players: [
-
                         {
                             id: id,
                             peerId: id,
                             name: this.playerName,
                             isHost: true
                         }
-
                     ]
-
                 };
 
-
                 this.renderLobby(id);
-
             }
         );
-
-
-        // ==========================================
-        // NOVA CONEXÃO
-        // ==========================================
 
         this.peer.on(
             "connection",
@@ -684,23 +462,13 @@ class MultiplayerManager {
                     conn.peer
                 );
 
-
-                this.connections.push(
-                    conn
-                );
-
+                this.connections.push(conn);
 
                 this.setupHostConnection(
                     conn
                 );
-
             }
         );
-
-
-        // ==========================================
-        // ERROS
-        // ==========================================
 
         this.peer.on(
             "error",
@@ -711,39 +479,19 @@ class MultiplayerManager {
                     error
                 );
 
-
-                if (
-                    error.type ===
-                    "unavailable-id"
-                ) {
-
-                    alert(
-                        "O código gerado já está em uso. Tente criar a sala novamente."
-                    );
-
-                    this.destroyPeer();
-
-                } else {
-
-                    alert(
-                        "Erro de conexão: " +
-                        error.type
-                    );
-
-                }
-
+                alert(
+                    "Erro de conexão: " +
+                    error.type
+                );
             }
         );
     }
-
 
     // ==========================================
     // CONEXÃO DO HOST
     // ==========================================
 
-    setupHostConnection(
-        conn
-    ) {
+    setupHostConnection(conn) {
 
         conn.on(
             "open",
@@ -753,10 +501,8 @@ class MultiplayerManager {
                     "[Host] Conexão aberta:",
                     conn.peer
                 );
-
             }
         );
-
 
         conn.on(
             "data",
@@ -767,55 +513,37 @@ class MultiplayerManager {
                     data
                 );
 
-
-                // ======================================
-                // NOVO JOGADOR
-                // ======================================
-
                 if (
                     data &&
-                    data.type ===
-                    "PLAYER_JOINED"
+                    data.type === "PLAYER_JOINED"
                 ) {
 
                     const player =
                         data.payload;
 
-
                     if (
                         player &&
                         !this.lobbyState.players.some(
                             p =>
-                                p.id ===
-                                player.id
+                                p.id === player.id
                         )
                     ) {
 
                         this.lobbyState.players.push(
                             player
                         );
-
                     }
-
 
                     this.broadcastLobby();
 
-
                     this.updateLobbyUI();
-
 
                     return;
                 }
 
-
-                // ======================================
-                // AÇÃO DE JOGO
-                // ======================================
-
                 if (
                     data &&
-                    data.type ===
-                    "GAME_ACTION"
+                    data.type === "GAME_ACTION"
                 ) {
 
                     console.log(
@@ -823,20 +551,13 @@ class MultiplayerManager {
                         data
                     );
 
-
-                    // Neste momento ainda não
-                    // executamos a sincronização.
-                    //
-                    // Isso será acrescentado
-                    // depois que confirmarmos
-                    // que a conexão está funcionando.
-
-                    return;
+                    this.broadcastGameAction(
+                        data,
+                        conn
+                    );
                 }
-
             }
         );
-
 
         conn.on(
             "close",
@@ -847,61 +568,46 @@ class MultiplayerManager {
                     conn.peer
                 );
 
-
                 this.connections =
                     this.connections.filter(
                         c =>
-                            c.peer !==
-                            conn.peer
+                            c.peer !== conn.peer
                     );
-
 
                 this.lobbyState.players =
                     this.lobbyState.players.filter(
                         p =>
-                            p.id !==
-                            conn.peer
+                            p.peerId !== conn.peer
                     );
-
 
                 this.broadcastLobby();
 
                 this.updateLobbyUI();
-
             }
         );
-
 
         conn.on(
             "error",
             error => {
 
                 console.error(
-                    "[Host] Erro na conexão:",
+                    "[Host] Erro:",
                     error
                 );
-
             }
         );
     }
 
-
     // ==========================================
-    // ATUALIZA LOBBY NOS CLIENTES
+    // ATUALIZAR LOBBY
     // ==========================================
 
     broadcastLobby() {
 
         const message = {
-
-            type:
-                "LOBBY_UPDATE",
-
-            payload:
-                this.lobbyState
-
+            type: "LOBBY_UPDATE",
+            payload: this.lobbyState
         };
-
 
         this.connections.forEach(
             connection => {
@@ -914,16 +620,13 @@ class MultiplayerManager {
                     connection.send(
                         message
                     );
-
                 }
-
             }
         );
     }
 
-
     // ==========================================
-    // ENTRAR EM SALA
+    // ENTRAR NA SALA
     // ==========================================
 
     joinGame() {
@@ -932,21 +635,17 @@ class MultiplayerManager {
             "[Multiplayer] Entrando em sala..."
         );
 
-
         const roomInput =
             prompt(
                 "Digite o código da sala:"
             );
 
-
         if (!roomInput) return;
-
 
         const roomId =
             roomInput
                 .trim()
                 .toUpperCase();
-
 
         const name =
             prompt(
@@ -954,26 +653,17 @@ class MultiplayerManager {
                 this.playerName
             );
 
-
         if (!name) return;
-
 
         this.playerName =
             name.trim();
-
 
         this.destroyPeer();
 
         this.isHost = false;
 
-
         this.peer =
             new Peer();
-
-
-        // ==========================================
-        // CLIENTE ABERTO
-        // ==========================================
 
         this.peer.on(
             "open",
@@ -984,7 +674,6 @@ class MultiplayerManager {
                     id
                 );
 
-
                 this.conn =
                     this.peer.connect(
                         roomId,
@@ -992,7 +681,6 @@ class MultiplayerManager {
                             reliable: true
                         }
                     );
-
 
                 this.conn.on(
                     "open",
@@ -1002,37 +690,22 @@ class MultiplayerManager {
                             "[Cliente] Conectado ao Host!"
                         );
 
-
                         this.conn.send({
-
-                            type:
-                                "PLAYER_JOINED",
+                            type: "PLAYER_JOINED",
 
                             payload: {
-
                                 id: id,
-
                                 peerId: id,
-
-                                name:
-                                    this.playerName,
-
-                                isHost:
-                                    false
-
+                                name: this.playerName,
+                                isHost: false
                             }
-
                         });
-
 
                         this.setupClientConnection();
 
-
                         this.renderLobby();
-
                     }
                 );
-
 
                 this.conn.on(
                     "error",
@@ -1042,13 +715,10 @@ class MultiplayerManager {
                             "[Cliente] Erro:",
                             error
                         );
-
                     }
                 );
-
             }
         );
-
 
         this.peer.on(
             "error",
@@ -1059,17 +729,14 @@ class MultiplayerManager {
                     error
                 );
 
-
                 alert(
                     "Não foi possível entrar na sala '" +
                     roomId +
                     "'."
                 );
-
             }
         );
     }
-
 
     // ==========================================
     // CONEXÃO DO CLIENTE
@@ -1078,7 +745,6 @@ class MultiplayerManager {
     setupClientConnection() {
 
         if (!this.conn) return;
-
 
         this.conn.on(
             "data",
@@ -1089,49 +755,31 @@ class MultiplayerManager {
                     data
                 );
 
-
-                // ======================================
-                // LOBBY
-                // ======================================
-
                 if (
                     data &&
-                    data.type ===
-                    "LOBBY_UPDATE"
+                    data.type === "LOBBY_UPDATE"
                 ) {
 
                     this.lobbyState =
                         data.payload;
 
-
                     this.updateLobbyUI();
-
 
                     return;
                 }
 
-
-                // ======================================
-                // INÍCIO DA PARTIDA
-                // ======================================
-
                 if (
                     data &&
-                    data.type ===
-                    "START_GAME"
+                    data.type === "START_GAME"
                 ) {
 
                     console.log(
-                        "[Cliente] Host iniciou a partida."
+                        "[Cliente] Partida iniciada."
                     );
 
-
-                    this.gameStarted =
-                        true;
-
+                    this.gameStarted = true;
 
                     this.closeMenu();
-
 
                     if (
                         typeof window.startMultiplayerGame ===
@@ -1142,16 +790,22 @@ class MultiplayerManager {
                             data.payload.players,
                             data.payload.config || null
                         );
-
                     }
-
 
                     return;
                 }
 
+                if (
+                    data &&
+                    data.type === "GAME_ACTION"
+                ) {
+
+                    this.processGameAction(
+                        data
+                    );
+                }
             }
         );
-
 
         this.conn.on(
             "close",
@@ -1161,13 +815,10 @@ class MultiplayerManager {
                     "A conexão com o Host foi perdida."
                 );
 
-
                 this.closeMenu();
-
             }
         );
     }
-
 
     // ==========================================
     // INICIAR PARTIDA
@@ -1175,24 +826,13 @@ class MultiplayerManager {
 
     startGame() {
 
-        if (!this.isHost) {
-
-            return;
-        }
-
+        if (!this.isHost) return;
 
         console.log(
             "[Host] Iniciando partida..."
         );
 
-
-        this.gameStarted =
-            true;
-
-
-        // ==========================================
-        // INICIA NO HOST
-        // ==========================================
+        this.gameStarted = true;
 
         if (
             typeof window.startMultiplayerGame ===
@@ -1211,34 +851,20 @@ class MultiplayerManager {
             );
 
             alert(
-                "Erro: a função de início da partida não foi encontrada."
+                "Erro: função de início da partida não encontrada."
             );
 
             return;
         }
 
-
-        // ==========================================
-        // ENVIA PARA CLIENTES
-        // ==========================================
-
         const message = {
-
-            type:
-                "START_GAME",
+            type: "START_GAME",
 
             payload: {
-
-                players:
-                    this.lobbyState.players,
-
-                config:
-                    null
-
+                players: this.lobbyState.players,
+                config: null
             }
-
         };
-
 
         this.connections.forEach(
             connection => {
@@ -1251,41 +877,16 @@ class MultiplayerManager {
                     connection.send(
                         message
                     );
-
                 }
-
             }
         );
 
-
         this.closeMenu();
-
 
         console.log(
             "[Host] Partida iniciada."
         );
     }
-
-
-    // ==========================================
-    // COMPATIBILIDADE COM O SISTEMA ANTIGO
-    // ==========================================
-
-    init(
-        isHost,
-        peerInstance
-    ) {
-
-        this.isHost =
-            isHost;
-
-        this.peer =
-            peerInstance;
-
-        this.gameStarted =
-            true;
-    }
-
 
     // ==========================================
     // ENVIO DE AÇÕES
@@ -1297,53 +898,29 @@ class MultiplayerManager {
     ) {
 
         const message = {
-
-            type:
-                "GAME_ACTION",
-
-            action:
-                actionType,
-
-            payload:
-                payload,
-
+            type: "GAME_ACTION",
+            action: actionType,
+            payload: payload,
             senderId:
                 this.peer
                     ? this.peer.id
                     : null
-
         };
 
-
-        // Host
         if (this.isHost) {
 
-            console.log(
-                "[Host] Ação local:",
+            this.processGameAction(
                 message
             );
 
-
-            window.dispatchEvent(
-                new CustomEvent(
-                    "networkGameAction",
-                    {
-                        detail: {
-                            action:
-                                actionType,
-                            payload:
-                                payload
-                        }
-                    }
-                )
+            this.broadcastGameAction(
+                message,
+                null
             );
-
 
             return;
         }
 
-
-        // Cliente
         if (
             this.conn &&
             this.conn.open
@@ -1358,10 +935,65 @@ class MultiplayerManager {
             console.warn(
                 "[Cliente] Sem conexão com o Host."
             );
-
         }
     }
 
+    // ==========================================
+    // PROCESSAR AÇÃO
+    // ==========================================
+
+    processGameAction(message) {
+
+        console.log(
+            "[Sync] Processando:",
+            message
+        );
+
+        window.dispatchEvent(
+            new CustomEvent(
+                "networkGameAction",
+                {
+                    detail: {
+                        action:
+                            message.action,
+
+                        payload:
+                            message.payload
+                    }
+                }
+            )
+        );
+    }
+
+    // ==========================================
+    // DISTRIBUIR AÇÃO
+    // ==========================================
+
+    broadcastGameAction(
+        message,
+        senderConnection
+    ) {
+
+        this.connections.forEach(
+            connection => {
+
+                if (
+                    connection &&
+                    connection.open &&
+                    (
+                        !senderConnection ||
+                        connection.peer !==
+                        senderConnection.peer
+                    )
+                ) {
+
+                    connection.send(
+                        message
+                    );
+                }
+            }
+        );
+    }
 
     // ==========================================
     // COMPATIBILIDADE
@@ -1378,9 +1010,23 @@ class MultiplayerManager {
         );
     }
 
+    init(
+        isHost,
+        peerInstance
+    ) {
+
+        this.isHost =
+            isHost;
+
+        this.peer =
+            peerInstance;
+
+        this.gameStarted =
+            true;
+    }
 
     // ==========================================
-    // ENCERRAR MULTIPLAYER
+    // SAIR
     // ==========================================
 
     leaveGame() {
@@ -1389,22 +1035,19 @@ class MultiplayerManager {
 
         this.closeMenu();
 
-        this.isHost =
-            false;
+        this.isHost = false;
 
-        this.gameStarted =
-            false;
+        this.gameStarted = false;
     }
 }
 
 
 // ==========================================
-// CRIA INSTÂNCIA GLOBAL
+// INSTÂNCIA GLOBAL
 // ==========================================
 
 window.Network =
     new MultiplayerManager();
-
 
 console.log(
     "🌐 MultiplayerManager carregado com sucesso."
@@ -1414,4 +1057,4 @@ console.log(
     "🌐 window.Network:",
     window.Network
 );
-```
+
