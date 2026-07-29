@@ -1,37 +1,83 @@
-<!-- SEÇÃO 4: EXPLORE O BANCO -->
-<section id="explore" class="explore-section">
-  <div class="container">
-    <h2 class="section-title">Explore o Banco</h2>
-    <div class="explore-grid">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banco de Jogos Educativos</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-      <!-- Card 1: Jogo (Direciona para a página do jogo na mesma aba) -->
-      <a href="game.html" class="explore-item">
-        <div class="ex-icon">🎮</div>
-        <h3>Jogo</h3>
-        <p>Acesse a mesa de jogo interativa e divirta-se aprendendo.</p>
-      </a>
-
-      <!-- Card 2: Regras -->
-      <a href="regras.html" class="explore-item">
-        <div class="ex-icon">📜</div>
-        <h3>Regras</h3>
-        <p>Consulte as regras completas e tire todas as suas dúvidas.</p>
-      </a>
-
-      <!-- Card 3: Downloads -->
-      <a href="downloads.html" class="explore-item">
-        <div class="ex-icon">📥</div>
-        <h3>Downloads</h3>
-        <p>Baixe materiais em PDF, fichas de apoio e recursos visuais.</p>
-      </a>
-
-      <!-- Card 4: Área do Professor -->
-      <a href="professor.html" class="explore-item">
-        <div class="ex-icon">🧑‍🏫</div>
-        <h3>Professor</h3>
-        <p>Acesse planos de aula, orientações didáticas e materiais pedagógicos.</p>
-      </a>
-
+  <!-- CABEÇALHO DA PÁGINA -->
+  <header class="navbar">
+    <div class="container">
+      <h1 class="logo">Banco de Jogos</h1>
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#home">Início</a></li>
+          <li><a href="#explore">Explore</a></li>
+          <li><a href="game.html">Jogo</a></li>
+          <li><a href="regras.html">Regras</a></li>
+          <li><a href="downloads.html">Downloads</a></li>
+          <li><a href="professor.html">Professor</a></li>
+        </ul>
+      </nav>
     </div>
-  </div>
-</section>
+  </header>
+
+  <!-- SEÇÃO HERO / APRESENTAÇÃO -->
+  <section id="home" class="hero">
+    <div class="container hero-content">
+      <h2>Aprenda e Divirta-se com Jogos Educativos</h2>
+      <p>Explore nosso acervo completo de jogos, regras, materiais para download e orientações pedagógicas.</p>
+      <a href="#explore" class="btn-primary">Explorar Agora</a>
+    </div>
+  </section>
+
+  <!-- SEÇÃO 4: EXPLORE O BANCO -->
+  <section id="explore" class="explore-section">
+    <div class="container">
+      <h2 class="section-title">Explore o Banco</h2>
+      <div class="explore-grid">
+
+        <!-- Card 1: Jogo (Redireciona para game.html na mesma aba) -->
+        <div class="explore-item" onclick="window.location.href='game.html'">
+          <div class="ex-icon">🎮</div>
+          <h3>Jogo</h3>
+          <p>Acesse a mesa de jogo interativa e divirta-se aprendendo.</p>
+        </div>
+
+        <!-- Card 2: Regras -->
+        <div class="explore-item" onclick="window.location.href='regras.html'">
+          <div class="ex-icon">📜</div>
+          <h3>Regras</h3>
+          <p>Consulte as regras completas e tire todas as suas dúvidas.</p>
+        </div>
+
+        <!-- Card 3: Downloads -->
+        <div class="explore-item" onclick="window.location.href='downloads.html'">
+          <div class="ex-icon">📥</div>
+          <h3>Downloads</h3>
+          <p>Baixe materiais em PDF, fichas de apoio e recursos visuais.</p>
+        </div>
+
+        <!-- Card 4: Área do Professor -->
+        <div class="explore-item" onclick="window.location.href='professor.html'">
+          <div class="ex-icon">🧑‍🏫</div>
+          <h3>Professor</h3>
+          <p>Acesse planos de aula, orientações didáticas e materiais pedagógicos.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- RODAPÉ DA PÁGINA -->
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2026 Banco de Jogos Educativos. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+</body>
+</html>
