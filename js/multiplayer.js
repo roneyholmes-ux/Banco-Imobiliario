@@ -1,18 +1,13 @@
 /**
  * multiplayer.js
- * Gerencia as conexões WebRTC via PeerJS e controla a interface do Modal Online.
+ * Gerencia a conexão PeerJS e a entrada de novos jogadores na partida.
  */
 
 window.multiplayerConnection = null;
 
-// Função chamada diretamente pelo botão "🌐 JOGAR ONLINE" do index.html
 window.showOnlineModal = function() {
   const modal = document.getElementById('online-modal');
-  if (modal) {
-    modal.classList.remove('hidden');
-  } else {
-    alert('Erro: O modal online não foi encontrado no HTML.');
-  }
+  if (modal) modal.classList.remove('hidden');
 };
 
 const Multiplayer = {
@@ -57,17 +52,13 @@ const Multiplayer = {
     this.peer.on('open', (id) => {
       console.log(`[Multiplayer] Sala criada! Código: ${this.roomCode}`);
 
-      if (window.Network) {
-        window.Network.init(true, this.peer);
-      }
+      if (window.Network) window.Network.init(true, this.peer);
 
-      // Exibe o código na tela
       const displayCode = document.getElementById('display-room-code');
       const infoBox = document.getElementById('room-created-info');
       if (displayCode) displayCode.innerText = this.roomCode;
       if (infoBox) infoBox.classList.remove('hidden');
 
-      // Leva o Host diretamente para a seção da mesa de jogo
       if (typeof window.scrollToGame === 'function') {
         window.scrollToGame();
       }
@@ -81,7 +72,7 @@ const Multiplayer = {
 
     this.peer.on('error', (err) => {
       console.error('[Multiplayer] Erro ao criar sala:', err);
-      alert('Erro ao criar a sala no servidor PeerJS. Tente novamente.');
+      alert('Erro ao criar sala. Verifique a sua conexão.');
     });
   },
 
@@ -104,19 +95,29 @@ const Multiplayer = {
         if (window.Network) window.Network.init(false, this.peer);
         this.setupListeners(conn, false);
 
-        alert('Conectado com sucesso à sala!');
-        
-        // Esconde modal e rola até a mesa
+        // Oculta o modal de online
         document.getElementById('online-modal')?.classList.add('hidden');
+
+        // Exibe a seção de jogo
+        const gameArea = document.getElementById('game-section-area');
+        if (gameArea) gameArea.classList.remove('hidden');
+
+        // Oculta modais ou overlays de setup local que possam existir
+        const setupModal = document.getElementById('setup-modal') || document.querySelector('.setup-overlay');
+        if (setupModal) setupModal.classList.add('hidden');
+
         if (typeof window.scrollToGame === 'function') {
           window.scrollToGame();
         }
+
+        // Notifica o Host que um novo jogador entrou na partida
+        window.Network.sendAction('JOIN_GAME', { playerName: 'Jogador 2' });
       });
     });
 
     this.peer.on('error', (err) => {
       console.error('[Multiplayer] Erro ao conectar:', err);
-      alert('Não foi possível encontrar a sala. Verifique o código digitado.');
+      alert('Não foi possível encontrar essa sala. Confirme se o código está correto!');
     });
   },
 
@@ -127,8 +128,12 @@ const Multiplayer = {
       if (isHost) {
         if (window.Actions) window.Actions.handleAction(data);
       } else {
-        if (data.type === 'SYNC_GAME_STATE' && window.UI) {
-          window.UI.update(data.payload);
+        if (data.type === 'SYNC_GAME_STATE') {
+          // Oculta telas de setup local ao receber o estado do Host
+          const setupModal = document.getElementById('setup-modal') || document.querySelector('.setup-overlay');
+          if (setupModal) setupModal.classList.add('hidden');
+
+          if (window.UI) window.UI.update(data.payload);
         }
       }
     });
