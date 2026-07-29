@@ -1343,3 +1343,52 @@ window.onload = () => {
         rollBtn.addEventListener("click", rollDice);
     }
 };
+
+// ==========================================
+// INICIALIZAÇÃO MULTIPLAYER ONLINE
+// ==========================================
+window.startMultiplayerGame = function(lobbyPlayers, hostConfig = null) {
+    // 1. Se o host enviou configurações personalizadas, atualiza o jogo
+    if (hostConfig) {
+        GAME_CONFIG = { ...GAME_CONFIG, ...hostConfig };
+    }
+
+    // 2. Limpa a lista de jogadores atual e cria com os dados da rede
+    players = [];
+    currentPlayerIndex = 0;
+    
+    lobbyPlayers.forEach((lobbyPlayer, index) => {
+        players.push({
+            id: lobbyPlayer.id, // O ID do PeerJS (para sabermos quem é quem na rede)
+            name: lobbyPlayer.name,
+            money: GAME_CONFIG.startingMoney,
+            position: 0,
+            color: PLAYER_PRESETS[index % PLAYER_PRESETS.length].color, // Pega a cor pela ordem
+            inJail: false,
+            jailTurns: 0,
+            isBankrupt: false,
+            fichasDiscreta: 0,
+            fichasContinua: 0
+        });
+    });
+
+    // 3. Zera as propriedades do tabuleiro
+    boardSpaces.forEach(space => {
+        if (space.type === "property") {
+            space.houses = 0;
+            space.owner = null;
+        }
+    });
+
+    // 4. Renderiza tudo na tela
+    const gameArea = document.getElementById("game-section-area");
+    if(gameArea) gameArea.classList.remove("hidden");
+
+    renderBoard();
+    renderPawns();
+    updateUI();
+
+    if(gameArea) gameArea.scrollIntoView({ behavior: "smooth" });
+
+    document.getElementById("game-status").innerHTML = `Partida online iniciada! É a vez de <strong>${players[currentPlayerIndex].name}</strong> jogar!`;
+};
