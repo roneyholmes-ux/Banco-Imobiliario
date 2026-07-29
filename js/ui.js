@@ -19,6 +19,44 @@ const UI = {
   },
 
   /**
+   * Atualiza a interface da lista de espera (Lobby) antes da partida começar
+   */
+  updateLobby(players) {
+    const listElement = document.getElementById('lobby-players-list');
+    if (!listElement) return;
+
+    // Limpa a lista atual para não duplicar
+    listElement.innerHTML = '';
+
+    // Cria um item na lista para cada jogador conectado
+    players.forEach(player => {
+      const li = document.createElement('li');
+      li.style.padding = '5px 0';
+      li.style.borderBottom = '1px solid #334155';
+      
+      // Destaca se o jogador for o criador (Host)
+      const hostTag = player.isHost ? ' <strong style="color: #ff7675; font-size: 0.8rem;">(HOST)</strong>' : '';
+      
+      li.innerHTML = `<strong>${player.name}</strong> <em>(${player.avatar})</em>${hostTag}`;
+      listElement.appendChild(li);
+    });
+
+    // Se o jogador atual for o Host e houver mais de 1 jogador, ele pode começar a partida
+    const btnStart = document.getElementById('btn-start-game');
+    if (btnStart && window.Multiplayer && window.Multiplayer.lobbyState) {
+      // Checa se o próprio peer conectado é o host da sala (primeiro elemento da lista)
+      const isMeHost = window.Multiplayer.lobbyState.players.length > 0 && 
+                       window.Multiplayer.lobbyState.players[0].id === 'host';
+                       
+      if (isMeHost && players.length > 1) {
+        btnStart.classList.remove('hidden');
+      } else {
+        btnStart.classList.add('hidden');
+      }
+    }
+  },
+
+  /**
    * Atualiza o painel dos jogadores (saldo, cor, indicador de turno)
    */
   renderPlayers(players = [], currentPlayerIndex = 0) {
