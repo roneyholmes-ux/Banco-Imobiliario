@@ -552,16 +552,30 @@ class MultiplayerManager {
         data
     );
 
-    // O HOST também executa a ação
-    this.processGameAction(data);
+   if (
+data &&
+data.type === "GAME_ACTION"
+) {
 
-    // Depois envia a ação para TODOS os clientes
-    this.processGameAction(data);
 
+console.log(
+    "[Host] Ação recebida:",
+    data
+);
+
+// O HOST executa a ação uma vez
+this.processGameAction(data);
+
+// Depois sincroniza com os demais jogadores
 this.broadcastGameAction(
     data,
     null
 );
+
+return;
+
+}
+
 
     return;
 }
