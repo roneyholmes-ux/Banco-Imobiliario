@@ -1,37 +1,43 @@
 /**
  * multiplayer.js
- * Gerencia a conexão PeerJS e integra com o jogo existente.
+ * Gerencia as conexões WebRTC via PeerJS e controla a interface do Modal Online.
  */
 
 window.multiplayerConnection = null;
+
+// Função chamada diretamente pelo botão "🌐 JOGAR ONLINE" do index.html
+window.showOnlineModal = function() {
+  const modal = document.getElementById('online-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    alert('Erro: O modal online não foi encontrado no HTML.');
+  }
+};
 
 const Multiplayer = {
   peer: null,
   roomCode: null,
 
   init() {
-    // Escuta os eventos da UI original quando o DOM estiver pronto
     document.addEventListener('DOMContentLoaded', () => {
       this.bindUIEvents();
     });
   },
 
-  /**
-   * Conecta os botões da interface real aos métodos do PeerJS
-   */
   bindUIEvents() {
-    // Botão de Criar Sala / Hospedar
-    const btnCreate = document.getElementById('btn-create-room') || document.getElementById('btn-host-game');
-    if (btnCreate) {
-      btnCreate.addEventListener('click', () => this.createRoom());
+    // Botão Criar Sala
+    const btnHost = document.getElementById('btn-host-game');
+    if (btnHost) {
+      btnHost.addEventListener('click', () => this.createRoom());
     }
 
-    // Botão de Entrar na Sala
-    const btnJoin = document.getElementById('btn-join-room') || document.getElementById('btn-connect-game');
-    if (btnJoin) {
-      btnJoin.addEventListener('click', () => {
-        const inputCode = document.getElementById('room-code-input') || document.getElementById('join-room-code');
-        const code = inputCode ? inputCode.value : '';
+    // Botão Entrar na Sala
+    const btnConnect = document.getElementById('btn-connect-game');
+    if (btnConnect) {
+      btnConnect.addEventListener('click', () => {
+        const inputCode = document.getElementById('join-room-code');
+        const code = inputCode ? inputCode.value.trim() : '';
         if (code) {
           this.joinRoom(code);
         } else {
@@ -42,7 +48,7 @@ const Multiplayer = {
   },
 
   /**
-   * Inicializa como HOST (Cria a sala)
+   * Cria a sala (HOST)
    */
   createRoom() {
     this.roomCode = Math.random().toString(36).substring(2, 7).toUpperCase();
@@ -55,11 +61,16 @@ const Multiplayer = {
         window.Network.init(true, this.peer);
       }
 
-      // Exibe o código da sala no elemento visual
-      const display = document.getElementById('room-code-display') || document.getElementById('display-room-code');
-      if (display) display.innerText = this.roomCode;
+      // Exibe o código na tela
+      const displayCode = document.getElementById('display-room-code');
+      const infoBox = document.getElementById('room-created-info');
+      if (displayCode) displayCode.innerText = this.roomCode;
+      if (infoBox) infoBox.classList.remove('hidden');
 
-      alert(`Sala criada! Seu código é: ${this.roomCode}`);
+      // Leva o Host diretamente para a seção da mesa de jogo
+      if (typeof window.scrollToGame === 'function') {
+        window.scrollToGame();
+      }
     });
 
     this.peer.on('connection', (conn) => {
@@ -70,14 +81,15 @@ const Multiplayer = {
 
     this.peer.on('error', (err) => {
       console.error('[Multiplayer] Erro ao criar sala:', err);
+      alert('Erro ao criar a sala no servidor PeerJS. Tente novamente.');
     });
   },
 
   /**
-   * Inicializa como CLIENTE (Entra em uma sala)
+   * Entra na sala (CLIENTE)
    */
   joinRoom(code) {
-    this.roomCode = code.trim().toUpperCase();
+    this.roomCode = code.toUpperCase();
     this.peer = new Peer();
 
     this.peer.on('open', () => {
@@ -93,21 +105,24 @@ const Multiplayer = {
         this.setupListeners(conn, false);
 
         alert('Conectado com sucesso à sala!');
+        
+        // Esconde modal e rola até a mesa
+        document.getElementById('online-modal')?.classList.add('hidden');
+        if (typeof window.scrollToGame === 'function') {
+          window.scrollToGame();
+        }
       });
     });
 
     this.peer.on('error', (err) => {
       console.error('[Multiplayer] Erro ao conectar:', err);
-      alert('Não foi possível conectar à sala. Verifique o código.');
+      alert('Não foi possível encontrar a sala. Verifique o código digitado.');
     });
   },
 
-  /**
-   * Ouve mensagens recebidas
-   */
   setupListeners(conn, isHost) {
     conn.on('data', (data) => {
-      console.log('[Multiplayer] Recebido:', data);
+      console.log('[Multiplayer] Dados recebidos:', data);
 
       if (isHost) {
         if (window.Actions) window.Actions.handleAction(data);
