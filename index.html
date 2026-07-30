@@ -196,17 +196,25 @@
 
     <!-- 📖 MODAL DE REGRAS -->
     <div id="rules-modal" class="modal-overlay hidden">
-        <div class="rules-box">
-            <h2>Como Jogar? 📖</h2>
+        <div class="rules-box rules-modal-box">
+            <div class="rules-modal-header">
+                <h2>Como Jogar? 📖</h2>
+                <button class="modal-close-btn" aria-label="Fechar regras" onclick="document.getElementById('rules-modal').classList.add('hidden')">✕</button>
+            </div>
             <div class="rules-content">
                 <p><strong>🎯 Objetivo:</strong> Ser o único jogador restante à mesa, forçando a quebra de capital de seus concorrentes.</p>
                 <hr style="border-color: rgba(255,255,255,0.1); margin: 10px 0;">
                 <ul>
                     <li><strong>🎲 Dados:</strong> Avance casas somando o resultado de dois dados simultâneos.</li>
+                    <li><strong>🚀 Partida:</strong> Toda vez que completar uma volta e passar pela casa PARTIDA, receba um bônus de $2000.</li>
                     <li><strong>🏡 Monopólio:</strong> Obter todos os terrenos de uma mesma cor dobra os aluguéis bases recebidos daquela categoria.</li>
                     <li><strong>🏠 Casas & Hotéis:</strong> Ao cair em suas propriedades pertencentes a monopólios, compre benfeitorias para inflacionar aluguéis.</li>
+                    <li><strong>🔬 Fichas de Investigação:</strong> As 4 antigas estações viraram Centros de Observação (Observatório Ambiental, Laboratório Experimental, Centro Estatístico e Instituto Demográfico), compráveis exatamente como as demais propriedades. Toda vez que qualquer jogador parar em um desses centros — inclusive na primeira parada, ao decidir se compra ou não — ele recebe imediatamente 2 Fichas de Grandeza Contínua (fenômenos com valores em intervalo: tempo, temperatura, distância...) ou Discreta (fenômenos com valores isolados: quantidade de pessoas, veículos...), conforme o centro visitado. Além disso, uma vez que o centro já tem dono, todo visitante (que não seja o próprio proprietário) também paga a taxa de utilização normalmente, independentemente de já ter recebido as fichas. As fichas ficam guardadas com o jogador até serem usadas para evoluir os fenômenos adquiridos durante a partida.</li>
+                    <li><strong>🃏 Sorte ou Revés:</strong> Cartas aleatórias que concedem ganhos ou cobram perdas inesperadas em dinheiro.</li>
+                    <li><strong>💸 Imposto de Renda e Taxa de Luxo:</strong> Casas especiais que cobram $2000 e $1000 respectivamente ao serem visitadas.</li>
                     <li><strong>⛓️ Prisão:</strong> Saia efetuando o pagamento compulsório de fiança tarifada em $500.</li>
-                    <li><strong>🤝 Negociações:</strong> Proponha intercâmbios bilaterais de moedas e terrenos antes da rolagem de sua vez.</li>
+                    <li><strong>💥 Falência:</strong> Se o saldo ficar negativo após uma cobrança, o jogador quebra e todos os seus bens passam ao credor (ou ao banco).</li>
+                    <li><strong>🤝 Negociações:</strong> Proponha intercâmbios bilaterais de moedas e terrenos antes da rolagem de sua vez. Ao ser aceita, quem propôs paga uma taxa de negociação ao banco: o maior valor entre $200 fixo e 10% do dinheiro envolvido na troca.</li>
                 </ul>
             </div>
             <button id="btn-close-rules" class="menu-btn danger-btn" onclick="document.getElementById('rules-modal').classList.add('hidden')">Fechar Diretrizes</button>

@@ -14,7 +14,9 @@ let GAME_CONFIG = {
     impostoRenda: 2000,
     taxaLuxo: 1000,
     fiancaPrisao: 500,
-    taxaTroca: 200
+    taxaTroca: 200,
+    taxaTrocaPercent: 0.10,
+    fichasPorVisita: 2
 };
 
 const PRESETS = {
@@ -36,7 +38,7 @@ const boardSpaces = [
     { id: 2, name: "Sorte ou Revés", type: "special" },
     { id: 3, name: "Área", type: "property", color: "cor-marrom", price: 60, rent: 4, owner: null, grandezaType: "continua" },
     { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Estação Carioca", type: "station", price: 200, rent: 20, owner: null },
+    { id: 5, name: "Observatório Ambiental", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua", color: "cor-observatorio" },
     { id: 6, name: "Distância Percorrida", type: "property", color: "cor-azul-claro", price: 100, rent: 6, owner: null, grandezaType: "continua" },
     { id: 7, name: "Sorte ou Revés", type: "special" },
     { id: 8, name: "Velocidade", type: "property", color: "cor-azul-claro", price: 100, rent: 6, owner: null, grandezaType: "continua" },
@@ -46,7 +48,7 @@ const boardSpaces = [
     { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
     { id: 13, name: "Umidade do Ar", type: "property", color: "cor-rosa", price: 140, rent: 10, owner: null, grandezaType: "continua" },
     { id: 14, name: "Pressão Atmosférica", type: "property", color: "cor-rosa", price: 160, rent: 12, owner: null, grandezaType: "continua" },
-    { id: 15, name: "Estação da Luz", type: "station", price: 200, rent: 20, owner: null },
+    { id: 15, name: "Laboratório Experimental", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua", color: "cor-observatorio" },
     { id: 16, name: "Produção", type: "property", color: "cor-laranja", price: 180, rent: 14, owner: null, grandezaType: "discreta" },
     { id: 17, name: "Sorte ou Revés", type: "special" },
     { id: 18, name: "Demanda", type: "property", color: "cor-laranja", price: 180, rent: 14, owner: null, grandezaType: "discreta" },
@@ -56,7 +58,7 @@ const boardSpaces = [
     { id: 22, name: "Sorte ou Revés", type: "special" },
     { id: 23, name: "Potência", type: "property", color: "cor-vermelho", price: 220, rent: 18, owner: null, grandezaType: "continua" },
     { id: 24, name: "Tempo de Uso", type: "property", color: "cor-vermelho", price: 240, rent: 20, owner: null, grandezaType: "continua" },
-    { id: 25, name: "Estação Barra Funda", type: "station", price: 200, rent: 20, owner: null },
+    { id: 25, name: "Centro Estatístico", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta", color: "cor-observatorio" },
     { id: 26, name: "Horas de Estudo", type: "property", color: "cor-amarelo", price: 260, rent: 22, owner: null, grandezaType: "continua" },
     { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150, rent: 15, owner: null },
     { id: 28, name: "Número de Exercícios", type: "property", color: "cor-amarelo", price: 260, rent: 22, owner: null, grandezaType: "discreta" },
@@ -66,7 +68,7 @@ const boardSpaces = [
     { id: 32, name: "Taxa de Natalidade", type: "property", color: "cor-verde", price: 300, rent: 26, owner: null, grandezaType: "continua" },
     { id: 33, name: "Sorte ou Revés", type: "special" },
     { id: 34, name: "Taxa de Mortalidade", type: "property", color: "cor-verde", price: 320, rent: 28, owner: null, grandezaType: "continua" },
-    { id: 35, name: "Estação Brás", type: "station", price: 200, rent: 20, owner: null },
+    { id: 35, name: "Instituto Demográfico", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta", color: "cor-observatorio" },
     { id: 36, name: "Sorte ou Revés", type: "special" },
     { id: 37, name: "Frequência Cardíaca", type: "property", color: "cor-azul-escuro", price: 350, rent: 35, owner: null, grandezaType: "discreta" },
     { id: 38, name: "Taxa de Luxo", type: "special" },
@@ -127,6 +129,8 @@ function resetBoardState() {
     currentPlayerIndex = 0;
     isMoving = false;
     awaitingDecision = false;
+    pendingTrade = null;
+    closeTradeModal();
     renderBoard();
     renderPawns();
     updateUI();
@@ -233,16 +237,27 @@ function handleLanding(player) {
     const purchaseableTypes = ["property", "station", "utility"];
 
     if (purchaseableTypes.includes(space.type)) {
+        if (space.fichaType) {
+            grantFicha(player, space);
+        }
+
         if (space.owner === null) {
             awaitingDecision = true;
             updateUI();
             showPurchaseModal(player, space);
             return;
         } else if (space.owner !== player.id) {
-            payRent(player, space);
+            if (space.fichaType) {
+                payRentWithFichaMessage(player, space);
+            } else {
+                payRent(player, space);
+            }
             return;
         } else {
-            const msg = `${player.name} caiu na sua própria propriedade: ${space.name}.`;
+            let msg = `${player.name} caiu na sua própria propriedade: ${space.name}.`;
+            if (space.fichaType) {
+                msg += ` ${player.name} recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)}.`;
+            }
             const statusDiv = document.getElementById("game-status");
             if (statusDiv) statusDiv.innerText = msg;
             syncGameState(msg);
@@ -295,17 +310,55 @@ function payRent(player, space) {
     nextTurn();
 }
 
+// ==========================================
+// FICHAS DE INVESTIGAÇÃO (CENTROS DE OBSERVAÇÃO)
+// ==========================================
+function fichaTypeLabel(fichaType) {
+    return fichaType === "continua" ? "Contínua" : "Discreta";
+}
+
+function grantFicha(player, space) {
+    if (!space.fichaType) return;
+    const amount = GAME_CONFIG.fichasPorVisita;
+    if (space.fichaType === "continua") {
+        player.fichasContinua = (player.fichasContinua || 0) + amount;
+    } else {
+        player.fichasDiscreta = (player.fichasDiscreta || 0) + amount;
+    }
+}
+
+function payRentWithFichaMessage(player, space) {
+    const owner = players.find(p => p.id === space.owner);
+    const rentAmount = space.rent || 10;
+
+    player.money -= rentAmount;
+    if (owner) owner.money += rentAmount;
+
+    if (player.money < 0) {
+        checkBankruptcy(player, owner ? owner.id : null);
+        return;
+    }
+
+    const msg = `🔬 ${player.name} pagou $${rentAmount} de taxa de utilização para ${owner ? owner.name : "o Banco"} em ${space.name} e recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)}.`;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
+    syncGameState(msg);
+    nextTurn();
+}
+
 function showPurchaseModal(player, space) {
     const statusDiv = document.getElementById("game-status");
     if (!statusDiv) return;
 
-    syncGameState(`Aguardando decisão de ${player.name} sobre ${space.name}...`);
+    const fichaNote = space.fichaType ? ` ${player.name} já recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)} por parar aqui.` : "";
+    syncGameState(`Aguardando decisão de ${player.name} sobre ${space.name}...${fichaNote}`);
     const myPeerId = window.Network ? window.Network.myPeerId : null;
+    const icon = space.fichaType ? "🔬" : "🏠";
 
     if (!isMultiplayer || player.peerId === myPeerId) {
         showPurchaseModalUI(player, space);
     } else {
-        statusDiv.innerText = `🏠 ${space.name} ($${space.price}) disponível! Aguardando ${player.name}...`;
+        statusDiv.innerText = `${icon} ${space.name} ($${space.price}) disponível! Aguardando ${player.name}...${fichaNote}`;
     }
 }
 
@@ -313,10 +366,15 @@ function showPurchaseModalUI(player, space) {
     const statusDiv = document.getElementById("game-status");
     if (!statusDiv) return;
 
+    const icon = space.fichaType ? "🔬" : "🏠";
+    const fichaNote = space.fichaType
+        ? `<div style="margin-bottom: 10px; font-size: 0.8rem; color: #0891b2;">Você recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)} por parar aqui.</div>`
+        : "";
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; background: #1a293d; padding: 10px; border-radius: 6px;">
-            🏠 <strong>${space.name}</strong> disponível por <strong>$${space.price}</strong>.
+            ${icon} <strong>${space.name}</strong> disponível por <strong>$${space.price}</strong>.
         </div>
+        ${fichaNote}
         <div style="display: flex; gap: 10px;">
             <button id="btn-buy-prop" style="padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Comprar</button>
             <button id="btn-pass-prop" style="padding: 6px 12px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Passar</button>
@@ -357,6 +415,7 @@ function checkBankruptcy(player, creditorId) {
     if (player.money < 0) {
         player.isBankrupt = true;
         boardSpaces.forEach(s => { if (s.owner === player.id) s.owner = creditorId; });
+        refreshBoardOwnership();
         const msg = `💥 ${player.name} FALIU!`;
         const statusDiv = document.getElementById("game-status");
         if (statusDiv) statusDiv.innerText = msg;
@@ -414,6 +473,7 @@ function hostProcessBuyProperty(senderPeerId) {
     if (space && space.owner === null && player.money >= space.price) {
         player.money -= space.price;
         space.owner = player.id;
+        refreshBoardOwnership();
         const msg = `🎉 ${player.name} comprou ${space.name}!`;
         const statusDiv = document.getElementById("game-status");
         if (statusDiv) statusDiv.innerText = msg;
@@ -450,6 +510,7 @@ function syncGameState(statusMessage = null, diceDisplay = null) {
         currentPlayerIndex: currentPlayerIndex,
         isMoving: isMoving,
         awaitingDecision: awaitingDecision,
+        pendingTrade: pendingTrade,
         statusMessage: statusMessage || (document.getElementById("game-status") ? document.getElementById("game-status").innerText : ""),
         diceDisplay: diceDisplay || (document.getElementById("dice-display") ? document.getElementById("dice-display").innerText : "")
     });
@@ -473,6 +534,9 @@ function applyGameStateSync(payload) {
     if (payload.currentPlayerIndex !== undefined) currentPlayerIndex = payload.currentPlayerIndex;
     if (payload.isMoving !== undefined) isMoving = payload.isMoving;
     if (payload.awaitingDecision !== undefined) awaitingDecision = payload.awaitingDecision;
+    if (payload.pendingTrade !== undefined) pendingTrade = payload.pendingTrade;
+
+    refreshBoardOwnership();
 
     if (payload.diceDisplay) {
         const diceDisplayEl = document.getElementById("dice-display");
@@ -501,6 +565,8 @@ function applyGameStateSync(payload) {
             if (statusDiv) statusDiv.innerText = `Aguardando decisão de ${currentPlayer.name}...`;
         }
     }
+
+    refreshTradeUI();
 }
 
 // ==========================================
@@ -524,7 +590,9 @@ window.startMultiplayerGame = function(lobbyPlayers) {
         position: 0,
         inJail: false,
         jailTurns: 0,
-        isBankrupt: false
+        isBankrupt: false,
+        fichasDiscreta: 0,
+        fichasContinua: 0
     }));
 
     resetBoardState();

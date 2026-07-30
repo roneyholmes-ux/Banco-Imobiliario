@@ -49,6 +49,30 @@ class ActionRouter {
                 }
                 break;
 
+            case "REQUEST_PROPOSE_TRADE":
+                if (isHost && typeof window.hostProcessProposeTrade === "function") {
+                    window.hostProcessProposeTrade(senderPeerId, payload);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_PROPOSE_TRADE (Apenas o Host pode processar).");
+                }
+                break;
+
+            case "REQUEST_RESPOND_TRADE":
+                if (isHost && typeof window.hostProcessRespondTrade === "function") {
+                    window.hostProcessRespondTrade(senderPeerId, payload ? payload.accept : false);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_RESPOND_TRADE (Apenas o Host pode processar).");
+                }
+                break;
+
+            case "REQUEST_CANCEL_TRADE":
+                if (isHost && typeof window.hostProcessCancelTrade === "function") {
+                    window.hostProcessCancelTrade(senderPeerId);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_CANCEL_TRADE (Apenas o Host pode processar).");
+                }
+                break;
+
             // ==========================================
             // SINCRONIZAÇÃO DE ESTADO TRANSMITIDA PELO HOST
             // ==========================================

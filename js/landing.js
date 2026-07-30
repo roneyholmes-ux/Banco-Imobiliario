@@ -25,3 +25,14 @@ function toggleFaq(element) {
         icon.innerText = element.classList.contains('active') ? '-' : '+';
     }
 }
+
+// Fecha qualquer modal aberto (overlay visível) ao pressionar ESC
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay').forEach(modal => {
+            if (!modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+            }
+        });
+    }
+});
