@@ -16,7 +16,9 @@ let GAME_CONFIG = {
     fiancaPrisao: 500,
     taxaTroca: 200,
     taxaTrocaPercent: 0.10,
-    fichasPorVisita: 2
+    fichasPorVisita: 2,
+    pawnMoveStepDelay: 250,      // 200ms originais / 0.8 = 80% da velocidade
+    diceRollAnimationDuration: 750
 };
 
 const PRESETS = {
@@ -169,9 +171,12 @@ function rollDice() {
     executeRollDice();
 }
 
-function executeRollDice() {
+async function executeRollDice() {
     const player = players[currentPlayerIndex];
     if (!player || player.isBankrupt) return;
+
+    isMoving = true;
+    updateUI();
 
     if (player.inJail) {
         player.jailTurns += 1;
@@ -187,6 +192,7 @@ function executeRollDice() {
             const msg = `⛓️ ${player.name} continua na prisão (${player.jailTurns}º turno).`;
             const statusDiv = document.getElementById("game-status");
             if (statusDiv) statusDiv.innerText = msg;
+            isMoving = false;
             syncGameState(msg);
             nextTurn();
             return;
@@ -197,15 +203,72 @@ function executeRollDice() {
     const d2 = Math.floor(Math.random() * 6) + 1;
     const total = d1 + d2;
     const diceText = `🎲 ${d1} + ${d2} = ${total}`;
+
+    animateDiceCubes(d1, d2);
+    await new Promise(resolve => setTimeout(resolve, GAME_CONFIG.diceRollAnimationDuration));
+
     const diceDisplay = document.getElementById("dice-display");
     if (diceDisplay) diceDisplay.innerText = diceText;
+    popDiceDisplay();
 
     const statusMsg = `${player.name} tirou ${d1} e ${d2} (${total}). Avance ${total} casas!`;
     const statusDiv = document.getElementById("game-status");
     if (statusDiv) statusDiv.innerText = statusMsg;
 
-    syncGameState(statusMsg, diceText);
+    syncGameState(statusMsg, diceText, { d1, d2 });
     movePlayer(currentPlayerIndex, total);
+}
+
+// ==========================================
+// ANIMAÇÃO VISUAL DOS DADOS (CUBOS 3D EM CSS)
+// ==========================================
+// Ângulos (em múltiplos de 90°, sempre positivos) que trazem cada face para frente,
+// respeitando a convenção padrão de dado (faces opostas somam 7).
+const DIE_FACE_ANGLES = {
+    1: { x: 0, y: 0 },
+    2: { x: 0, y: 270 },
+    3: { x: 270, y: 0 },
+    4: { x: 90, y: 0 },
+    5: { x: 0, y: 90 },
+    6: { x: 0, y: 180 }
+};
+
+const diceCubeState = {
+    die1: { x: 0, y: 0 },
+    die2: { x: 0, y: 0 }
+};
+
+// Calcula o próximo ângulo (sempre girando para frente, nunca "desgirando") que termina
+// exatamente no ângulo alvo, somando voltas extras completas para dar efeito de rolagem.
+function nextDieRotation(currentAngle, targetMod) {
+    const currentMod = ((currentAngle % 360) + 360) % 360;
+    let delta = targetMod - currentMod;
+    if (delta < 0) delta += 360;
+    const extraSpins = (2 + Math.floor(Math.random() * 2)) * 360;
+    return currentAngle + delta + extraSpins;
+}
+
+function rollDieCube(dieEl, stateObj, value) {
+    const target = DIE_FACE_ANGLES[value];
+    stateObj.x = nextDieRotation(stateObj.x, target.x);
+    stateObj.y = nextDieRotation(stateObj.y, target.y);
+    if (dieEl) {
+        dieEl.style.transitionDuration = `${GAME_CONFIG.diceRollAnimationDuration}ms`;
+        dieEl.style.transform = `rotateX(${stateObj.x}deg) rotateY(${stateObj.y}deg)`;
+    }
+}
+
+function animateDiceCubes(d1, d2) {
+    rollDieCube(document.getElementById("die-1"), diceCubeState.die1, d1);
+    rollDieCube(document.getElementById("die-2"), diceCubeState.die2, d2);
+}
+
+function popDiceDisplay() {
+    const diceDisplay = document.getElementById("dice-display");
+    if (!diceDisplay) return;
+    diceDisplay.classList.remove("dice-pop");
+    void diceDisplay.offsetWidth;
+    diceDisplay.classList.add("dice-pop");
 }
 
 async function movePlayer(playerIndex, steps) {
@@ -216,8 +279,8 @@ async function movePlayer(playerIndex, steps) {
     for (let i = 0; i < steps; i++) {
         player.position = (player.position + 1) % 40;
         if (player.position === 0) {
-            player.money += GAME_CONFIG.goBonus;
-            const statusMsg = `💸 ${player.name} passou pela PARTIDA e recebeu $${GAME_CONFIG.goBonus}!`;
+            player.money -= GAME_CONFIG.goBonus;
+            const statusMsg = `💸 ${player.name} passou pela PARTIDA e pagou $${GAME_CONFIG.goBonus}!`;
             const statusLabel = document.getElementById("game-status");
             if (statusLabel) statusLabel.innerText = statusMsg;
             syncGameState(statusMsg);
@@ -225,7 +288,7 @@ async function movePlayer(playerIndex, steps) {
         }
         renderPawns();
         syncGameState();
-        await new Promise(resolve => setTimeout(resolve, 200));
+        await new Promise(resolve => setTimeout(resolve, GAME_CONFIG.pawnMoveStepDelay));
     }
 
     isMoving = false;
@@ -501,7 +564,7 @@ function hostProcessPassProperty(senderPeerId) {
 // ==========================================
 // SINCRONIZAÇÃO DE REDE (BROADCAST E RECEBIMENTO)
 // ==========================================
-function syncGameState(statusMessage = null, diceDisplay = null) {
+function syncGameState(statusMessage = null, diceDisplay = null, diceValues = null) {
     if (!isMultiplayer || !window.Network || !window.Network.isHost) return;
 
     sendNetworkAction("SYNC_GAME_STATE", {
@@ -512,7 +575,8 @@ function syncGameState(statusMessage = null, diceDisplay = null) {
         awaitingDecision: awaitingDecision,
         pendingTrade: pendingTrade,
         statusMessage: statusMessage || (document.getElementById("game-status") ? document.getElementById("game-status").innerText : ""),
-        diceDisplay: diceDisplay || (document.getElementById("dice-display") ? document.getElementById("dice-display").innerText : "")
+        diceDisplay: diceDisplay || (document.getElementById("dice-display") ? document.getElementById("dice-display").innerText : ""),
+        diceValues: diceValues
     });
 }
 
@@ -538,9 +602,16 @@ function applyGameStateSync(payload) {
 
     refreshBoardOwnership();
 
+    if (payload.diceValues) {
+        animateDiceCubes(payload.diceValues.d1, payload.diceValues.d2);
+    }
+
     if (payload.diceDisplay) {
         const diceDisplayEl = document.getElementById("dice-display");
-        if (diceDisplayEl) diceDisplayEl.innerText = payload.diceDisplay;
+        if (diceDisplayEl && diceDisplayEl.innerText !== payload.diceDisplay) {
+            diceDisplayEl.innerText = payload.diceDisplay;
+            popDiceDisplay();
+        }
     }
 
     if (payload.statusMessage) {
