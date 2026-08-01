@@ -110,7 +110,7 @@ function updateUI() {
 
     const currentPlayer = players[currentPlayerIndex];
     const myPeerId = window.Network ? window.Network.myPeerId : null;
-    const canProposeTradeNow = currentPlayer && !currentPlayer.isBankrupt && !isMoving && !awaitingDecision && !pendingTrade &&
+    const canProposeTradeNow = currentPlayer && !currentPlayer.isBankrupt && !isMoving && !awaitingDecision && !pendingTrade && !pendingCard &&
         (!isMultiplayer || currentPlayer.peerId === myPeerId);
 
     players.forEach((p, idx) => {
@@ -169,6 +169,6 @@ function updateUI() {
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) {
         const activePlayer = players[currentPlayerIndex];
-        rollBtn.disabled = isMoving || awaitingDecision || !!pendingTrade || (activePlayer ? activePlayer.isBankrupt : false);
+        rollBtn.disabled = isMoving || awaitingDecision || !!pendingTrade || !!pendingCard || (activePlayer ? activePlayer.isBankrupt : false);
     }
 }

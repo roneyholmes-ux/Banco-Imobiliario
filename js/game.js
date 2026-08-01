@@ -18,7 +18,8 @@ let GAME_CONFIG = {
     taxaTrocaPercent: 0.10,
     fichasPorVisita: 2,
     pawnMoveStepDelay: 250,      // 200ms originais / 0.8 = 80% da velocidade
-    diceRollAnimationDuration: 750
+    diceRollAnimationDuration: 750,
+    cardFichaPenalty: 500
 };
 
 const PRESETS = {
@@ -27,11 +28,30 @@ const PRESETS = {
     hardcore: { name: "Escassez", startingMoney: 15000, goBonus: 3000, taxaTroca: 500 }
 };
 
+// Baralho de "Sorte ou Revés": Cartas Objetivas (múltipla escolha, resposta correta
+// conhecida) e Cartas de Investigação (dissertativas, sem resposta oficial — o grupo
+// decide informalmente se a argumentação foi aceita). Ver js/cards.js para o fluxo.
 const CARDS = [
-    { text: "Sorte! Você tirou o 1º lugar no torneio de xadrez. Receba $100", type: "earn", value: 100 },
-    { text: "Revés! Pague a mensalidade da escola. Pague $50", type: "pay", value: 50 },
-    { text: "Sorte! Receba os dividendos de suas ações. Receba $200", type: "earn", value: 200 },
-    { text: "Revés! Multa por excesso de velocidade. Pague $30", type: "pay", value: 30 }
+    { id: 1, type: "objetiva", text: "Quando dizemos que uma grandeza depende de outra, significa que:", options: { A: "As duas sempre possuem o mesmo valor.", B: "A mudança em uma pode influenciar a outra.", C: "Elas nunca mudam.", D: "As duas precisam ser medidas da mesma forma." }, answer: "B" },
+    { id: 2, type: "objetiva", text: "Qual das situações representa uma grandeza contínua?", options: { A: "Número de alunos.", B: "Quantidade de carros.", C: "Temperatura ambiente.", D: "Número de livros." }, answer: "C" },
+    { id: 3, type: "objetiva", text: "Qual das situações representa uma grandeza discreta?", options: { A: "Massa corporal.", B: "Distância percorrida.", C: "Número de árvores.", D: "Tempo de viagem." }, answer: "C" },
+    { id: 4, type: "objetiva", text: "Antes de estudar uma relação entre grandezas, o pesquisador escolhe observar apenas alguns aspectos do fenômeno. Esse processo recebe o nome de:", options: { A: "Campo de variação.", B: "Isolado.", C: "Imagem.", D: "Contradomínio." }, answer: "B" },
+    { id: 5, type: "objetiva", text: "Uma variável independente é aquela que:", options: { A: "Sempre possui maior valor.", B: "Não sofre nenhuma alteração.", C: "É escolhida para explicar ou investigar a variação de outra.", D: "Depende da variável dependente." }, answer: "C" },
+    { id: 6, type: "objetiva", text: "Qual alternativa melhor representa uma relação funcional?", options: { A: "Cada pessoa possui exatamente uma data de nascimento.", B: "Cada pessoa possui vários amigos.", C: "Cada aluno possui vários professores.", D: "Cada cidade possui vários habitantes." }, answer: "A" },
+    { id: 7, type: "objetiva", text: "O domínio de uma função representa:", options: { A: "Apenas os valores realmente obtidos.", B: "Os valores que a variável de entrada pode assumir.", C: "Os maiores valores encontrados.", D: "Apenas os valores positivos." }, answer: "B" },
+    { id: 8, type: "objetiva", text: "A imagem corresponde:", options: { A: "A todos os valores possíveis.", B: "Aos valores efetivamente produzidos pela função.", C: "Ao conjunto de entrada.", D: "À lei de formação." }, answer: "B" },
+    { id: 9, type: "objetiva", text: "Quando encontramos uma regularidade em uma tabela de valores, normalmente estamos nos aproximando da construção de:", options: { A: "Um contradomínio.", B: "Uma lei de formação.", C: "Um domínio.", D: "Um isolado." }, answer: "B" },
+    { id: 10, type: "objetiva", text: "O principal objetivo de identificar variáveis em um fenômeno é:", options: { A: "Tornar os cálculos mais difíceis.", B: "Organizar a investigação das relações existentes.", C: "Aumentar a quantidade de dados.", D: "Eliminar a necessidade de observar o fenômeno." }, answer: "B" },
+    { id: 11, type: "dissertativa", text: "Você acredita que toda relação de dependência pode ser representada por uma função? Explique sua posição." },
+    { id: 12, type: "dissertativa", text: "Imagine que dois pesquisadores estão estudando exatamente o mesmo fenômeno, mas escolhem variáveis diferentes. Eles estão investigando o mesmo problema? Justifique." },
+    { id: 13, type: "dissertativa", text: "Em uma investigação, por que pode ser importante ignorar algumas características do fenômeno e concentrar-se apenas em duas grandezas?" },
+    { id: 14, type: "dissertativa", text: "Pense em uma situação do cotidiano em que uma grandeza depende claramente de outra. Explique como você identificou essa dependência." },
+    { id: 15, type: "dissertativa", text: "Você considera que um mesmo fenômeno pode gerar diferentes funções? Explique seu raciocínio." },
+    { id: 16, type: "dissertativa", text: "Às vezes um pesquisador encontra dados que não seguem o padrão esperado. Na sua opinião, isso significa necessariamente que a investigação está errada? Justifique." },
+    { id: 17, type: "dissertativa", text: "Dois pesquisadores discordam sobre quais variáveis devem ser investigadas primeiro. Como eles poderiam decidir qual caminho seguir?" },
+    { id: 18, type: "dissertativa", text: "Em alguns fenômenos existem dezenas de fatores envolvidos. Como decidir quais são realmente importantes para uma investigação?" },
+    { id: 19, type: "dissertativa", text: "Uma tabela pode mostrar que duas grandezas variam juntas. Isso é suficiente para afirmar que uma depende da outra? Explique." },
+    { id: 20, type: "dissertativa", text: "Durante uma investigação científica, é comum que pesquisadores mudem suas hipóteses conforme novos dados aparecem. Na sua opinião, por que isso faz parte do trabalho científico?" }
 ];
 
 const boardSpaces = [
@@ -133,6 +153,8 @@ function resetBoardState() {
     awaitingDecision = false;
     pendingTrade = null;
     closeTradeModal();
+    pendingCard = null;
+    closeCardModal();
     renderBoard();
     renderPawns();
     updateUI();
@@ -461,18 +483,7 @@ function showPurchaseModalUI(player, space) {
     };
 }
 
-function drawCard(player) {
-    const card = CARDS[Math.floor(Math.random() * CARDS.length)];
-    if (card.type === "earn") player.money += card.value;
-    else player.money -= card.value;
-
-    const msg = `🃏 Carta: "${card.text}"`;
-    const statusDiv = document.getElementById("game-status");
-    if (statusDiv) statusDiv.innerText = msg;
-    awaitingDecision = false;
-    syncGameState(msg);
-    nextTurn();
-}
+// drawCard(player) e todo o fluxo das Cartas Objetivas/de Investigação estão em js/cards.js
 
 function checkBankruptcy(player, creditorId) {
     if (player.money < 0) {
@@ -574,6 +585,7 @@ function syncGameState(statusMessage = null, diceDisplay = null, diceValues = nu
         isMoving: isMoving,
         awaitingDecision: awaitingDecision,
         pendingTrade: pendingTrade,
+        pendingCard: pendingCard,
         statusMessage: statusMessage || (document.getElementById("game-status") ? document.getElementById("game-status").innerText : ""),
         diceDisplay: diceDisplay || (document.getElementById("dice-display") ? document.getElementById("dice-display").innerText : ""),
         diceValues: diceValues
@@ -599,6 +611,7 @@ function applyGameStateSync(payload) {
     if (payload.isMoving !== undefined) isMoving = payload.isMoving;
     if (payload.awaitingDecision !== undefined) awaitingDecision = payload.awaitingDecision;
     if (payload.pendingTrade !== undefined) pendingTrade = payload.pendingTrade;
+    if (payload.pendingCard !== undefined) pendingCard = payload.pendingCard;
 
     refreshBoardOwnership();
 
@@ -638,6 +651,7 @@ function applyGameStateSync(payload) {
     }
 
     refreshTradeUI();
+    refreshCardUI();
 }
 
 // ==========================================

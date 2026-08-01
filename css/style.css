@@ -628,3 +628,146 @@ body {
 .footer-logos { display: flex; justify-content: center; gap: 40px; margin-bottom: 30px; }
 .logo-placeholder { font-weight: bold; color: white; border-left: 3px solid #ff4757; padding-left: 10px; font-size: 1.1rem; }
 .footer-copyright { font-size: 0.8rem; color: #57606f; }
+
+/* ==========================================
+   6. CARTAS DE SORTE OU REVÉS (FLIP 3D)
+   ========================================== */
+.card-modal-box {
+    max-width: 440px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.card-flip-wrapper {
+    perspective: 1200px;
+    width: 240px;
+    height: 320px;
+    margin: 4px auto 18px auto;
+}
+
+.card-flip-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.card-flip-inner.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-face {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 14px;
+    box-sizing: border-box;
+    overflow-y: auto;
+    padding: 18px;
+}
+
+.card-face-back {
+    background: linear-gradient(135deg, #1e293b, #0f172a);
+    border: 2px solid #38bdf8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #38bdf8;
+    text-align: center;
+}
+
+.card-face-front {
+    background: #f8fafc;
+    border: 2px solid #1e90ff;
+    color: #1e293b;
+    transform: rotateY(180deg);
+    text-align: left;
+}
+
+.card-type-badge {
+    display: inline-block;
+    font-size: 0.68rem;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: #1e90ff;
+    color: white;
+    margin-bottom: 10px;
+}
+
+.card-question-text {
+    font-size: 0.92rem;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 12px;
+}
+
+.card-options-list {
+    list-style: none;
+    padding: 0;
+    font-size: 0.82rem;
+    line-height: 1.6;
+    color: #334155;
+}
+
+.card-action-area {
+    text-align: center;
+}
+
+.card-action-hint {
+    color: #cbd5e1;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+}
+
+.card-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+}
+
+.card-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: white;
+    background: #334155;
+    transition: transform 0.15s;
+}
+
+.card-btn:hover {
+    transform: translateY(-2px);
+}
+
+.card-btn-primary { background: #1e90ff; }
+.card-btn-success { background: #2e7d32; }
+.card-btn-danger { background: #c62828; }
+
+.card-answer-row .card-btn {
+    min-width: 44px;
+}
+
+.card-outcome-badge {
+    font-weight: bold;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.card-outcome-badge.correct { color: #2e7d32; }
+.card-outcome-badge.incorrect { color: #c62828; }
+
+.card-answer-reveal {
+    font-size: 0.85rem;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+}

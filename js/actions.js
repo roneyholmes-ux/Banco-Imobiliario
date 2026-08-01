@@ -73,6 +73,14 @@ class ActionRouter {
                 }
                 break;
 
+            case "REQUEST_CARD_ACTION":
+                if (isHost && typeof window.hostProcessCardAction === "function") {
+                    window.hostProcessCardAction(senderPeerId, payload ? payload.step : null, payload);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_CARD_ACTION (Apenas o Host pode processar).");
+                }
+                break;
+
             // ==========================================
             // SINCRONIZAÇÃO DE ESTADO TRANSMITIDA PELO HOST
             // ==========================================
