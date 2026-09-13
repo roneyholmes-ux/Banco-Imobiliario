@@ -15,6 +15,7 @@ class MultiplayerManager {
         this.lobbyState = { players: [] };
         this.playerName = "Jogador " + Math.floor(Math.random() * 1000);
         this.overlay = null;
+        this.maxPlayers = 4;
 
         // Callbacks de eventos para desacoplar da camada network.js
         this.onDataReceived = null;      // Função fn(data, senderPeerId)
@@ -50,7 +51,7 @@ class MultiplayerManager {
     /**
      * Abre a interface gráfica simples do menu da sala
      */
-    openOnlineMenu() {
+    openOnlineMenu(roomId = null) {
         if (typeof Peer === "undefined") {
             alert("A biblioteca PeerJS não foi encontrada no navegador.");
             return;
@@ -64,8 +65,8 @@ class MultiplayerManager {
             <div class="rules-box text-center" style="max-width: 420px;">
                 <h2 style="color: #1e90ff; margin-bottom: 10px;">🌐 MODO ONLINE</h2>
                 <p style="color: #aaa; margin-bottom: 20px;">Crie uma sala ou entre em uma existente.</p>
-                <button id="btn-dyn-host" class="hero-btn-primary" style="width: 100%; margin-bottom: 10px;">👑 Criar Sala (Host)</button>
-                <button id="btn-dyn-join" class="hero-btn-primary" style="width: 100%; background: #2e7d32; margin-bottom: 15px;">🔗 Entrar em Sala</button>
+                <button id="btn-dyn-host" class="hero-btn-primary" style="width: 100%; margin-bottom: 10px;">Criar sala</button>
+                <button id="btn-dyn-join" class="hero-btn-primary" style="width: 100%; background: #527a68; margin-bottom: 15px;">Entrar com código</button>
                 <button class="menu-btn" style="background: transparent; color: #aaa; border: none; cursor: pointer;" onclick="window.location.href='index.html'">Voltar ao Menu</button>
             </div>
         `;
@@ -73,6 +74,10 @@ class MultiplayerManager {
 
         document.getElementById("btn-dyn-host").onclick = () => this.hostGame();
         document.getElementById("btn-dyn-join").onclick = () => this.joinGame();
+
+        if (roomId) {
+            this.joinGame(roomId);
+        }
     }
 
     /**
@@ -109,6 +114,11 @@ class MultiplayerManager {
             conn.on("data", data => {
                 console.log("[Multiplayer Host] Mensagem recebida:", data);
                 if (data.type === "PLAYER_JOINED") {
+                    if (this.lobbyState.players.length >= this.maxPlayers) {
+                        conn.send({ type: "ROOM_FULL", payload: { maxPlayers: this.maxPlayers } });
+                        conn.close();
+                        return;
+                    }
                     const newPlayerId = this.lobbyState.players.length;
                     this.lobbyState.players.push({
                         id: newPlayerId,
@@ -144,8 +154,8 @@ class MultiplayerManager {
     /**
      * Conecta a uma sala existente como Cliente
      */
-    joinGame() {
-        const roomId = prompt("Digite o Código da Sala (5 caracteres):");
+    joinGame(roomId = null) {
+        roomId = roomId || prompt("Digite o Código da Sala (5 caracteres):");
         if (!roomId) return;
 
         const name = prompt("Seu nome:", this.playerName);
@@ -181,6 +191,10 @@ class MultiplayerManager {
                 if (data.type === "LOBBY_UPDATE") {
                     this.lobbyState = data.payload;
                     this.updateLobbyUI();
+                } else if (data.type === "ROOM_FULL") {
+                    if (this.conn) this.conn.close();
+                    alert(`Esta sala já atingiu o limite de ${data.payload.maxPlayers} jogadores.`);
+                    if (this.overlay) this.openOnlineMenu();
                 } else if (data.type === "START_GAME") {
                     console.log("[Multiplayer Cliente] Recebido sinal para iniciar partida!");
                     if (this.overlay) this.overlay.remove();
@@ -216,20 +230,34 @@ class MultiplayerManager {
         if (!box) return;
 
         box.innerHTML = `
-            <h2 style="color:#1e90ff; margin-bottom: 10px;">SALA DE ESPERA</h2>
-            ${roomId ? `<div style="font-size:2rem; letter-spacing:4px; color:#1e90ff; font-weight:bold; margin:15px 0;">${roomId}</div>` : ''}
+            <h2 style="color:#0e4b3c; margin-bottom: 10px;">SALA DE ESPERA</h2>
+            ${roomId ? `<div class="room-invite"><div class="room-code-label">CÓDIGO DA SALA</div><div class="room-code">${roomId}</div><div id="room-qr" class="room-qr" aria-label="QR Code para entrar na sala"></div><p>Aponte a câmera para entrar diretamente.</p></div>` : ''}
             <div style="background:#282828; padding:15px; border-radius:8px; text-align:left; margin-bottom:15px;">
                 <h4 style="margin-bottom:10px; color:#ddd;">Jogadores na Sala:</h4>
                 <ul id="dyn-lobby-list" style="list-style:none; padding-left:0; color:#fff;"></ul>
             </div>
             ${this.isHost 
-                ? `<button id="btn-start-match" class="hero-btn-primary" style="width:100%;">🚀 Começar Partida</button>` 
+                ? `<button id="btn-start-match" class="hero-btn-primary" style="width:100%;">Começar partida</button>`
                 : `<p style="color:#ffb300; font-size:0.9rem;">⏳ Aguardando Host iniciar a partida...</p>`
             }
         `;
 
         if (this.isHost) {
             document.getElementById("btn-start-match").onclick = () => this.startGame();
+        }
+
+        if (roomId && typeof QRCode !== "undefined") {
+            const inviteUrl = new URL("game.html", window.location.href);
+            inviteUrl.searchParams.set("mode", "online");
+            inviteUrl.searchParams.set("room", roomId);
+            new QRCode(document.getElementById("room-qr"), {
+                text: inviteUrl.href,
+                width: 144,
+                height: 144,
+                colorDark: "#0e4b3c",
+                colorLight: "#fff9ef",
+                correctLevel: QRCode.CorrectLevel.M
+            });
         }
 
         this.updateLobbyUI();
@@ -265,6 +293,7 @@ class MultiplayerManager {
      */
     startGame() {
         if (!this.isHost) return;
+        if (this.lobbyState.players.length > this.maxPlayers) return;
 
         console.log("[Multiplayer Host] Transmitindo START_GAME...");
         this.broadcast({

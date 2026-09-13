@@ -1072,6 +1072,12 @@ body {
 .game-page .property-chip { border-radius: 3px; }.game-page .chip-restaurant { background: var(--game-green); }.game-page .chip-observatorio { background: #b86a43; }.game-page .chip-utility { background: #7a8d80; }
 .game-page .intervention-actions button { background: var(--game-green-dark); border-color: var(--game-green); color: var(--game-ivory); }.game-page .intervention-actions button:hover { background: var(--game-green); }
 .game-page .trade-btn { color: var(--game-orange); border-color: var(--game-orange); background: rgba(241, 90, 36, .08); }
+.game-page .room-invite { display: grid; justify-items: center; gap: 7px; margin: 14px 0; padding: 15px; background: var(--game-cream); border: 1px dashed var(--game-border); border-radius: 5px; }
+.game-page .room-code-label { color: var(--game-green); font-size: .58rem; font-weight: 800; letter-spacing: .16em; }
+.game-page .room-code { color: var(--game-orange); font: 2rem 'Bree Serif', serif; letter-spacing: .18em; }
+.game-page .room-qr { display: grid; place-items: center; min-width: 144px; min-height: 144px; padding: 6px; background: var(--game-ivory); border: 1px solid var(--game-border); }
+.game-page .room-qr img, .game-page .room-qr canvas { display: block; max-width: 100%; height: auto; }
+.game-page .room-invite p { margin: 0; color: #64736c; font-size: .68rem; }
 
 @media (max-width: 1180px) {
     .game-page .board { grid-template-columns: repeat(11, 64px); grid-template-rows: repeat(11, 64px); width: 704px; height: 704px; }

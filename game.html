@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="css/style.css">
     <!-- Biblioteca PeerJS para Multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <!-- Gerador leve de QR Code para convites de sala -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body class="game-page">
 
@@ -100,7 +102,8 @@
             if (mode === 'online') {
                 // Chama a abertura do menu de sala na camada Multiplayer
                 if (window.Multiplayer && typeof window.Multiplayer.openOnlineMenu === 'function') {
-                    window.Multiplayer.openOnlineMenu();
+                    const roomId = urlParams.get('room');
+                    window.Multiplayer.openOnlineMenu(roomId);
                 } else {
                     alert("Erro ao carregar módulo online: window.Multiplayer não encontrado.");
                 }
