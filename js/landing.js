@@ -20,6 +20,7 @@ function selectGameMode(mode) {
 
 function toggleFaq(element) {
     element.classList.toggle('active');
+    element.setAttribute('aria-expanded', element.classList.contains('active') ? 'true' : 'false');
     const icon = element.querySelector('.faq-icon');
     if (icon) {
         icon.innerText = element.classList.contains('active') ? '-' : '+';

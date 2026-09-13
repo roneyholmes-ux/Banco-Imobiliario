@@ -9,24 +9,138 @@
 
 let GAME_CONFIG = {
     startingMoney: 25000,
-    goBonus: 2000,
     rentMultiplier: 1.0,
     impostoRenda: 2000,
     taxaLuxo: 1000,
     fiancaPrisao: 500,
     taxaTroca: 200,
     taxaTrocaPercent: 0.10,
-    fichasPorVisita: 2,
+    fichasPorVisita: 1,
     pawnMoveStepDelay: 250,      // 200ms originais / 0.8 = 80% da velocidade
     diceRollAnimationDuration: 750,
     cardFichaPenalty: 500
 };
 
 const PRESETS = {
-    standard: { name: "Padrão", startingMoney: 25000, goBonus: 2000, taxaTroca: 200 },
-    fast: { name: "Jogo Rápido", startingMoney: 40000, goBonus: 1000, taxaTroca: 100 },
-    hardcore: { name: "Escassez", startingMoney: 15000, goBonus: 3000, taxaTroca: 500 }
+    standard: { name: "Padrão", startingMoney: 25000, taxaTroca: 200 },
+    fast: { name: "Jogo Rápido", startingMoney: 40000, taxaTroca: 100 },
+    hardcore: { name: "Escassez", startingMoney: 15000, taxaTroca: 500 }
 };
+
+const FACTOR_DEFINITIONS = {
+    numeroCozinheiros: { name: "Número de Cozinheiros", value: 6, unit: "cozinheiros", control: true, discrete: true, cost: 1500, ficha: "discreta", step: 1 },
+    equipamentosCozinha: { name: "Equipamentos de Cozinha", value: 8, unit: "equipamentos", control: true, discrete: true, cost: 3000, ficha: "discreta", step: 1 },
+    precoMedioPratos: { name: "Preço Médio dos Pratos", value: 80, unit: "$", control: true, cost: 500, ficha: "continua", step: 1 },
+    orcamentoMarketing: { name: "Orçamento de Marketing", value: 1000, unit: "$", control: true, cost: 1000, ficha: "continua", step: 1000 },
+    estoqueDisponivel: { name: "Estoque Disponível", value: 500, unit: "kg", control: true, cost: 1000, ficha: "continua", step: 10 },
+    variedadeCardapio: { name: "Variedade do Cardápio", value: 12, unit: "pratos", control: true, discrete: true, cost: 1000, ficha: "discreta", step: 1 },
+    qualidadeIngredientes: { name: "Qualidade dos Ingredientes", value: 4, unit: "pontos", control: true, cost: 2000, ficha: "continua", step: 0.5 },
+    numeroMesas: { name: "Número de Mesas", value: 20, unit: "mesas", control: true, discrete: true, cost: 2500, ficha: "discreta", step: 1 },
+    tempoBasePrato: { name: "Tempo Base do Prato", value: 12, unit: "min", control: false },
+    complexidadePedidos: { name: "Complexidade Média dos Pedidos", value: 4, unit: "min", control: false },
+    tempoAdicionalAlteracoes: { name: "Tempo Adicional por Alterações", value: 3, unit: "min", control: false },
+    pedidosFila: { name: "Pedidos na Fila", value: 0, unit: "pedidos", control: false },
+    tempoMedioDespacho: { name: "Tempo Médio de Despacho", value: 5, unit: "min", control: false },
+    tempoTotalEspera: { name: "Tempo Total de Espera", value: 0, unit: "min", control: false, result: true },
+    demandaClientes: { name: "Demanda de Clientes", value: 0, unit: "pedidos", control: false, result: true },
+    avaliacaoClientes: { name: "Avaliação dos Clientes", value: 0, unit: "pontos", control: false, result: true },
+    custoCombustivel: { name: "Custo do Combustível", value: 100, unit: "$", control: false },
+    valorFrete: { name: "Valor do Frete", value: 0, unit: "$", control: false, result: true },
+    custoAlimentos: { name: "Custo dos Alimentos", value: 0, unit: "$", control: false },
+    desperdicioAlimentos: { name: "Desperdício de Alimentos", value: 0, unit: "kg", control: false, result: true },
+    faturamento: { name: "Faturamento", value: 0, unit: "$", control: false, result: true },
+    lucroOperacional: { name: "Lucro Operacional", value: 0, unit: "$", control: false, result: true }
+};
+
+const OBJECTIVE_CARDS = [
+    { id: "wait", name: "Fila tranquila", condition: "Tempo Total de Espera ≤ 20 minutos", formula: "T = base + complexidade + alterações + fila/equipamentos + despacho/cozinheiros", target: 20, factor: "tempoTotalEspera", operator: "≤", dependencies: ["tempoBasePrato", "complexidadePedidos", "tempoAdicionalAlteracoes", "pedidosFila", "equipamentosCozinha", "tempoMedioDespacho", "numeroCozinheiros"] },
+    { id: "demand", name: "Casa cheia", condition: "Demanda ≥ 60 pedidos", formula: "D = 50 × (1 + marketing/10000) × qualidade/4 × variedade/12 × 80/preço", target: 60, factor: "demandaClientes", operator: "≥", dependencies: ["orcamentoMarketing", "qualidadeIngredientes", "variedadeCardapio", "precoMedioPratos"] },
+    { id: "queue", name: "Fila organizada", condition: "Pedidos na Fila ≤ 10", formula: "F = demanda × 0,35 / (mesas/10 + cozinheiros/6 + equipamentos/8)", target: 10, factor: "pedidosFila", operator: "≤", dependencies: ["demandaClientes", "numeroMesas", "numeroCozinheiros", "equipamentosCozinha"] },
+    { id: "freight", name: "Logística eficiente", condition: "Valor do Frete ≤ $150", formula: "Frete = 100 + combustível × 0,5", target: 150, factor: "valorFrete", operator: "≤", dependencies: ["custoCombustivel"] },
+    { id: "waste", name: "Desperdício controlado", condition: "Desperdício ≤ 10 kg", formula: "W = estoque/50 + fila/2 - demanda/20 - variedade/10", target: 10, factor: "desperdicioAlimentos", operator: "≤", dependencies: ["estoqueDisponivel", "demandaClientes", "pedidosFila", "variedadeCardapio"] },
+    { id: "rating", name: "Boa experiência", condition: "Avaliação dos Clientes ≥ 4,0", formula: "A = 5 + (qualidade - 4)×0,2 - espera/30 - desperdício/100", target: 4, factor: "avaliacaoClientes", operator: "≥", dependencies: ["qualidadeIngredientes", "tempoTotalEspera", "desperdicioAlimentos"] },
+    { id: "revenue", name: "Alta receita", condition: "Faturamento ≥ $5.000", formula: "F = preço × demanda × (1 - fila/(demanda + 1))", target: 5000, factor: "faturamento", operator: "≥", dependencies: ["precoMedioPratos", "demandaClientes", "pedidosFila"] },
+    { id: "profit", name: "Operação rentável", condition: "Lucro Operacional ≥ $2.500", formula: "L = faturamento - alimentos - pedidos atendidos×frete - marketing - cozinheiros×150", target: 2500, factor: "lucroOperacional", operator: "≥", dependencies: ["faturamento", "custoAlimentos", "demandaClientes", "valorFrete", "orcamentoMarketing", "numeroCozinheiros"] }
+];
+
+const EXTERNAL_FACTOR_CARDS = [
+    { name: "Alta internacional do petróleo", first: [{ factor: "custoCombustivel", modifier: 0.10 }], second: [{ factor: "custoCombustivel", modifier: 0.15 }] },
+    { name: "Problemas na safra", first: [{ factor: "custoAlimentos", modifier: 0.10 }], second: [{ factor: "custoAlimentos", modifier: 0.05 }, { factor: "valorFrete", modifier: 0.05 }] },
+    { name: "Movimento sazonal", first: [{ factor: "demandaClientes", modifier: -0.10 }], second: [{ factor: "demandaClientes", modifier: 0.20 }] },
+    { name: "Logística de fim de ano", first: [{ factor: "valorFrete", modifier: -0.05 }], second: [{ factor: "valorFrete", modifier: 0.15 }] },
+    { name: "Alterações nos hábitos de consumo", first: [{ factor: "complexidadePedidos", modifier: 0.10 }], second: [{ factor: "tempoAdicionalAlteracoes", modifier: 0.15 }] }
+];
+
+let factorValues = {};
+let externalFactorModifiers = {};
+let activeExternalCard = null;
+let recentChanges = [];
+let yearNumber = 1;
+let cycleNumber = 0;
+
+function resetFactors() {
+    factorValues = Object.fromEntries(Object.entries(FACTOR_DEFINITIONS).map(([key, definition]) => [key, definition.value]));
+    externalFactorModifiers = {};
+    recentChanges = [];
+    recalculateFactors();
+}
+
+function getFactorValue(key) {
+    return Number(factorValues[key] || 0);
+}
+
+function applyExternalModifier(key, value) {
+    return value * (1 + (externalFactorModifiers[key] || 0));
+}
+
+function getExternalFactorValue(key) {
+    return applyExternalModifier(key, getFactorValue(key));
+}
+
+function recalculateFactors() {
+    const get = key => getFactorValue(key);
+    factorValues.demandaClientes = applyExternalModifier("demandaClientes", 50 * (1 + get("orcamentoMarketing") / 10000) * (get("qualidadeIngredientes") / 4) * (get("variedadeCardapio") / 12) * (80 / Math.max(1, get("precoMedioPratos"))));
+    factorValues.pedidosFila = applyExternalModifier("pedidosFila", get("demandaClientes") * 0.35 / (get("numeroMesas") / 10 + get("numeroCozinheiros") / 6 + get("equipamentosCozinha") / 8));
+    factorValues.tempoTotalEspera = applyExternalModifier("tempoTotalEspera", get("tempoBasePrato") + getExternalFactorValue("complexidadePedidos") + getExternalFactorValue("tempoAdicionalAlteracoes") + get("pedidosFila") / Math.max(1, get("equipamentosCozinha")) + get("tempoMedioDespacho") / Math.max(1, get("numeroCozinheiros")));
+    factorValues.valorFrete = applyExternalModifier("valorFrete", 100 + getExternalFactorValue("custoCombustivel") * 0.5);
+    factorValues.custoAlimentos = applyExternalModifier("custoAlimentos", get("demandaClientes") * 20);
+    factorValues.desperdicioAlimentos = applyExternalModifier("desperdicioAlimentos", Math.max(0, get("estoqueDisponivel") / 50 + get("pedidosFila") / 2 - get("demandaClientes") / 20 - get("variedadeCardapio") / 10));
+    factorValues.avaliacaoClientes = applyExternalModifier("avaliacaoClientes", Math.max(0, Math.min(5, 5 + (get("qualidadeIngredientes") - 4) * 0.2 - get("tempoTotalEspera") / 30 - get("desperdicioAlimentos") / 100)));
+    factorValues.faturamento = applyExternalModifier("faturamento", get("precoMedioPratos") * get("demandaClientes") * (1 - get("pedidosFila") / (get("demandaClientes") + 1)));
+    const servedOrders = Math.max(0, get("demandaClientes") - get("pedidosFila"));
+    factorValues.lucroOperacional = applyExternalModifier("lucroOperacional", get("faturamento") - get("custoAlimentos") - servedOrders * get("valorFrete") - get("orcamentoMarketing") - get("numeroCozinheiros") * 150);
+}
+
+function assignObjectives() {
+    players.forEach((player, index) => {
+        const card = OBJECTIVE_CARDS[index % OBJECTIVE_CARDS.length];
+        player.objective = { ...card, fulfilled: false };
+    });
+}
+
+function updateObjectiveStatus(player) {
+    if (!player.objective) return false;
+    const value = getFactorValue(player.objective.factor);
+    player.objective.currentValue = value;
+    player.objective.fulfilled = player.objective.operator === "≤" ? value <= player.objective.target : value >= player.objective.target;
+    return player.objective.fulfilled;
+}
+
+function applyExternalCard(card) {
+    externalFactorModifiers = {};
+    const secondSemester = players.length > 0 && players.every(player => player.passedFestaJunina);
+    const effects = secondSemester ? card.second : card.first;
+    effects.forEach(effect => { externalFactorModifiers[effect.factor] = effect.modifier; });
+    activeExternalCard = { ...card, semester: secondSemester ? "Segundo semestre" : "Primeiro semestre", effects };
+    recalculateFactors();
+}
+
+function drawExternalFactorCard() {
+    const card = EXTERNAL_FACTOR_CARDS[Math.floor(Math.random() * EXTERNAL_FACTOR_CARDS.length)];
+    applyExternalCard(card);
+    const effects = activeExternalCard.effects.map(effect => `${FACTOR_DEFINITIONS[effect.factor].name}: ${effect.modifier > 0 ? "+" : ""}${Math.round(effect.modifier * 100)}%`).join("; ");
+    return `🌐 ${card.name} (${activeExternalCard.semester}): ${effects}`;
+}
 
 // Baralho de "Sorte ou Revés": Cartas Objetivas (múltipla escolha, resposta correta
 // conhecida) e Cartas de Investigação (dissertativas, sem resposta oficial — o grupo
@@ -56,45 +170,45 @@ const CARDS = [
 
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Lado do Quadrado", type: "property", color: "cor-marrom", price: 60, rent: 2, owner: null, grandezaType: "continua" },
+    { id: 1, name: "Número de Cozinheiros", type: "property", factorKey: "numeroCozinheiros", price: 60, rent: 2, owner: null },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Área", type: "property", color: "cor-marrom", price: 60, rent: 4, owner: null, grandezaType: "continua" },
+    { id: 3, name: "Equipamentos de Cozinha", type: "property", factorKey: "equipamentosCozinha", price: 60, rent: 4, owner: null },
     { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Observatório Ambiental", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua", color: "cor-observatorio" },
-    { id: 6, name: "Distância Percorrida", type: "property", color: "cor-azul-claro", price: 100, rent: 6, owner: null, grandezaType: "continua" },
+    { id: 5, name: "Laboratório de Alimentos", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua" },
+    { id: 6, name: "Preço Médio dos Pratos", type: "property", factorKey: "precoMedioPratos", price: 100, rent: 6, owner: null },
     { id: 7, name: "Sorte ou Revés", type: "special" },
-    { id: 8, name: "Velocidade", type: "property", color: "cor-azul-claro", price: 100, rent: 6, owner: null, grandezaType: "continua" },
-    { id: 9, name: "Tempo de Deslocamento", type: "property", color: "cor-azul-claro", price: 120, rent: 8, owner: null, grandezaType: "continua" },
+    { id: 8, name: "Orçamento de Marketing", type: "property", factorKey: "orcamentoMarketing", price: 100, rent: 6, owner: null },
+    { id: 9, name: "Estoque Disponível", type: "property", factorKey: "estoqueDisponivel", price: 120, rent: 8, owner: null },
     { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Temperatura", type: "property", color: "cor-rosa", price: 140, rent: 10, owner: null, grandezaType: "continua" },
+    { id: 11, name: "Variedade do Cardápio", type: "property", factorKey: "variedadeCardapio", price: 140, rent: 10, owner: null },
     { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 13, name: "Umidade do Ar", type: "property", color: "cor-rosa", price: 140, rent: 10, owner: null, grandezaType: "continua" },
-    { id: 14, name: "Pressão Atmosférica", type: "property", color: "cor-rosa", price: 160, rent: 12, owner: null, grandezaType: "continua" },
-    { id: 15, name: "Laboratório Experimental", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua", color: "cor-observatorio" },
-    { id: 16, name: "Produção", type: "property", color: "cor-laranja", price: 180, rent: 14, owner: null, grandezaType: "discreta" },
+    { id: 13, name: "Qualidade dos Ingredientes", type: "property", factorKey: "qualidadeIngredientes", price: 140, rent: 10, owner: null },
+    { id: 14, name: "Número de Mesas", type: "property", factorKey: "numeroMesas", price: 160, rent: 12, owner: null },
+    { id: 15, name: "Centro de Controle Financeiro", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua" },
+    { id: 16, name: "Tempo Base do Prato", type: "property", factorKey: "tempoBasePrato", price: 180, rent: 14, owner: null },
     { id: 17, name: "Sorte ou Revés", type: "special" },
-    { id: 18, name: "Demanda", type: "property", color: "cor-laranja", price: 180, rent: 14, owner: null, grandezaType: "discreta" },
-    { id: 19, name: "Preço", type: "property", color: "cor-laranja", price: 200, rent: 16, owner: null, grandezaType: "continua" },
-    { id: 20, name: "PARADA LIVRE", type: "special", cssClass: "corner-space" },
-    { id: 21, name: "Consumo Elétrico", type: "property", color: "cor-vermelho", price: 220, rent: 18, owner: null, grandezaType: "continua" },
+    { id: 18, name: "Complexidade Média dos Pedidos", type: "property", factorKey: "complexidadePedidos", price: 180, rent: 14, owner: null },
+    { id: 19, name: "Tempo Adicional por Alterações", type: "property", factorKey: "tempoAdicionalAlteracoes", price: 200, rent: 16, owner: null },
+    { id: 20, name: "FESTA JUNINA", type: "special", cssClass: "corner-space" },
+    { id: 21, name: "Pedidos na Fila", type: "property", factorKey: "pedidosFila", price: 220, rent: 18, owner: null },
     { id: 22, name: "Sorte ou Revés", type: "special" },
-    { id: 23, name: "Potência", type: "property", color: "cor-vermelho", price: 220, rent: 18, owner: null, grandezaType: "continua" },
-    { id: 24, name: "Tempo de Uso", type: "property", color: "cor-vermelho", price: 240, rent: 20, owner: null, grandezaType: "continua" },
-    { id: 25, name: "Centro Estatístico", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta", color: "cor-observatorio" },
-    { id: 26, name: "Horas de Estudo", type: "property", color: "cor-amarelo", price: 260, rent: 22, owner: null, grandezaType: "continua" },
+    { id: 23, name: "Tempo Médio de Despacho", type: "property", factorKey: "tempoMedioDespacho", price: 220, rent: 18, owner: null },
+    { id: 24, name: "Tempo Total de Espera", type: "property", factorKey: "tempoTotalEspera", price: 240, rent: 20, owner: null },
+    { id: 25, name: "Centro de Gestão de Pessoas", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta" },
+    { id: 26, name: "Demanda de Clientes", type: "property", factorKey: "demandaClientes", price: 260, rent: 22, owner: null },
     { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 28, name: "Número de Exercícios", type: "property", color: "cor-amarelo", price: 260, rent: 22, owner: null, grandezaType: "discreta" },
-    { id: 29, name: "Desempenho", type: "property", color: "cor-amarelo", price: 280, rent: 24, owner: null, grandezaType: "continua" },
+    { id: 28, name: "Avaliação dos Clientes", type: "property", factorKey: "avaliacaoClientes", price: 260, rent: 22, owner: null },
+    { id: 29, name: "Custo do Combustível", type: "property", factorKey: "custoCombustivel", price: 280, rent: 24, owner: null },
     { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Número de Indivíduos", type: "property", color: "cor-verde", price: 300, rent: 26, owner: null, grandezaType: "discreta" },
-    { id: 32, name: "Taxa de Natalidade", type: "property", color: "cor-verde", price: 300, rent: 26, owner: null, grandezaType: "continua" },
+    { id: 31, name: "Valor do Frete", type: "property", factorKey: "valorFrete", price: 300, rent: 26, owner: null },
+    { id: 32, name: "Custo dos Alimentos", type: "property", factorKey: "custoAlimentos", price: 300, rent: 26, owner: null },
     { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Taxa de Mortalidade", type: "property", color: "cor-verde", price: 320, rent: 28, owner: null, grandezaType: "continua" },
-    { id: 35, name: "Instituto Demográfico", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta", color: "cor-observatorio" },
+    { id: 34, name: "Desperdício de Alimentos", type: "property", factorKey: "desperdicioAlimentos", price: 320, rent: 28, owner: null },
+    { id: 35, name: "Centro de Dados e Atendimento", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta" },
     { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Frequência Cardíaca", type: "property", color: "cor-azul-escuro", price: 350, rent: 35, owner: null, grandezaType: "discreta" },
+    { id: 37, name: "Faturamento", type: "property", factorKey: "faturamento", price: 350, rent: 35, owner: null },
     { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Massa Corporal", type: "property", color: "cor-azul-escuro", price: 400, rent: 50, owner: null, grandezaType: "continua" }
+    { id: 39, name: "Lucro Operacional", type: "property", factorKey: "lucroOperacional", price: 400, rent: 50, owner: null }
 ];
 
 const PLAYER_PRESETS = [
@@ -111,6 +225,7 @@ let currentPlayerIndex = 0;
 let isMoving = false;
 let awaitingDecision = false;
 let isMultiplayer = false;
+let gameOver = false;
 
 function getGridPosition(index) {
     if (index >= 0 && index <= 10) return { row: 11, col: 11 - index };
@@ -135,9 +250,14 @@ function initializePlayers(count = 2) {
             jailTurns: 0,
             isBankrupt: false,
             fichasDiscreta: 0,
-            fichasContinua: 0
+            fichasContinua: 0,
+            objective: null,
+            passedFestaJunina: false,
+            finishedYear: false,
+            playedThisCycle: false
         });
     }
+    assignObjectives();
     resetBoardState();
 }
 
@@ -151,6 +271,16 @@ function resetBoardState() {
     currentPlayerIndex = 0;
     isMoving = false;
     awaitingDecision = false;
+    gameOver = false;
+    yearNumber = 1;
+    cycleNumber = 0;
+    activeExternalCard = null;
+    resetFactors();
+    players.forEach(player => {
+        player.passedFestaJunina = false;
+        player.finishedYear = false;
+        player.playedThisCycle = false;
+    });
     pendingTrade = null;
     closeTradeModal();
     pendingCard = null;
@@ -160,7 +290,7 @@ function resetBoardState() {
     updateUI();
     const statusDiv = document.getElementById("game-status");
     if (statusDiv && players.length > 0) {
-        statusDiv.innerText = `Partida iniciada! É a vez de ${players[0].name}. Role os dados!`;
+        statusDiv.innerText = `Ano ${yearNumber} iniciado! É a vez de ${players[0].name}. Role os dados!`;
     }
 }
 
@@ -168,9 +298,9 @@ function resetBoardState() {
 // ROLAGEM DE DADOS E MOVIMENTAÇÃO
 // ==========================================
 function rollDice() {
-    if (isMoving || awaitingDecision) return;
+    if (isMoving || awaitingDecision || gameOver) return;
     const player = players[currentPlayerIndex];
-    if (!player || player.isBankrupt) return;
+    if (!player || player.isBankrupt || player.finishedYear) return;
 
     // Se for modo Multiplayer Online
     if (isMultiplayer && window.Network) {
@@ -300,13 +430,18 @@ async function movePlayer(playerIndex, steps) {
 
     for (let i = 0; i < steps; i++) {
         player.position = (player.position + 1) % 40;
+        if (player.position === 20) {
+            player.passedFestaJunina = true;
+        }
         if (player.position === 0) {
-            player.money -= GAME_CONFIG.goBonus;
-            const statusMsg = `💸 ${player.name} passou pela PARTIDA e pagou $${GAME_CONFIG.goBonus}!`;
+            player.finishedYear = true;
+            const statusMsg = `📘 ${player.name} cruzou a PARTIDA e entrou no Fechamento do Exercício.`;
             const statusLabel = document.getElementById("game-status");
             if (statusLabel) statusLabel.innerText = statusMsg;
             syncGameState(statusMsg);
             updateUI();
+            renderPawns();
+            break;
         }
         renderPawns();
         syncGameState();
@@ -339,9 +474,9 @@ function handleLanding(player) {
             }
             return;
         } else {
-            let msg = `${player.name} caiu na sua própria propriedade: ${space.name}.`;
+            let msg = `${player.name} caiu no fator sob sua própria gerência: ${space.name}.`;
             if (space.fichaType) {
-                msg += ` ${player.name} recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)}.`;
+                msg += ` ${player.name} recebeu ${GAME_CONFIG.fichasPorVisita} ficha ${fichaTypeLabel(space.fichaType)}.`;
             }
             const statusDiv = document.getElementById("game-status");
             if (statusDiv) statusDiv.innerText = msg;
@@ -360,8 +495,7 @@ function handleLanding(player) {
         if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
     } else if (space.name === "Imposto de Renda") {
-        player.money -= GAME_CONFIG.impostoRenda;
-        const msg = `💸 ${player.name} pagou $${GAME_CONFIG.impostoRenda} de Imposto de Renda.`;
+        const msg = `${player.name} passou pelo ponto de Imposto de Renda. A cobrança ocorrerá no Fechamento Anual.`;
         const statusDiv = document.getElementById("game-status");
         if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
@@ -378,7 +512,7 @@ function handleLanding(player) {
 
 function payRent(player, space) {
     const owner = players.find(p => p.id === space.owner);
-    const rentAmount = space.rent || 10;
+    const rentAmount = getEffectiveRent(space);
 
     player.money -= rentAmount;
     if (owner) owner.money += rentAmount;
@@ -402,6 +536,11 @@ function fichaTypeLabel(fichaType) {
     return fichaType === "continua" ? "Contínua" : "Discreta";
 }
 
+function getEffectiveRent(space) {
+    const baseRent = space.rent || 10;
+    return Math.max(0, Math.round(baseRent * (1 + (space.eventModifier || 0))));
+}
+
 function grantFicha(player, space) {
     if (!space.fichaType) return;
     const amount = GAME_CONFIG.fichasPorVisita;
@@ -414,7 +553,7 @@ function grantFicha(player, space) {
 
 function payRentWithFichaMessage(player, space) {
     const owner = players.find(p => p.id === space.owner);
-    const rentAmount = space.rent || 10;
+    const rentAmount = getEffectiveRent(space);
 
     player.money -= rentAmount;
     if (owner) owner.money += rentAmount;
@@ -424,7 +563,7 @@ function payRentWithFichaMessage(player, space) {
         return;
     }
 
-    const msg = `🔬 ${player.name} pagou $${rentAmount} de taxa de utilização para ${owner ? owner.name : "o Banco"} em ${space.name} e recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)}.`;
+    const msg = `🔬 ${player.name} pagou $${rentAmount} de taxa de utilização para ${owner ? owner.name : "o Banco"} em ${space.name} e recebeu ${GAME_CONFIG.fichasPorVisita} ficha ${fichaTypeLabel(space.fichaType)}.`;
     const statusDiv = document.getElementById("game-status");
     if (statusDiv) statusDiv.innerText = msg;
     syncGameState(msg);
@@ -435,7 +574,7 @@ function showPurchaseModal(player, space) {
     const statusDiv = document.getElementById("game-status");
     if (!statusDiv) return;
 
-    const fichaNote = space.fichaType ? ` ${player.name} já recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)} por parar aqui.` : "";
+    const fichaNote = space.fichaType ? ` ${player.name} já recebeu ${GAME_CONFIG.fichasPorVisita} ficha ${fichaTypeLabel(space.fichaType)} por parar aqui.` : "";
     syncGameState(`Aguardando decisão de ${player.name} sobre ${space.name}...${fichaNote}`);
     const myPeerId = window.Network ? window.Network.myPeerId : null;
     const icon = space.fichaType ? "🔬" : "🏠";
@@ -443,7 +582,7 @@ function showPurchaseModal(player, space) {
     if (!isMultiplayer || player.peerId === myPeerId) {
         showPurchaseModalUI(player, space);
     } else {
-        statusDiv.innerText = `${icon} ${space.name} ($${space.price}) disponível! Aguardando ${player.name}...${fichaNote}`;
+        statusDiv.innerText = `${icon} ${space.name} ($${space.price}) disponível para gerência! Aguardando ${player.name}...${fichaNote}`;
     }
 }
 
@@ -453,7 +592,7 @@ function showPurchaseModalUI(player, space) {
 
     const icon = space.fichaType ? "🔬" : "🏠";
     const fichaNote = space.fichaType
-        ? `<div style="margin-bottom: 10px; font-size: 0.8rem; color: #0891b2;">Você recebeu ${GAME_CONFIG.fichasPorVisita} Fichas de Grandeza ${fichaTypeLabel(space.fichaType)} por parar aqui.</div>`
+        ? `<div style="margin-bottom: 10px; font-size: 0.8rem; color: #0891b2;">Você recebeu ${GAME_CONFIG.fichasPorVisita} ficha ${fichaTypeLabel(space.fichaType)} por parar aqui.</div>`
         : "";
     statusDiv.innerHTML = `
         <div style="margin-bottom: 10px; background: #1a293d; padding: 10px; border-radius: 6px;">
@@ -461,7 +600,7 @@ function showPurchaseModalUI(player, space) {
         </div>
         ${fichaNote}
         <div style="display: flex; gap: 10px;">
-            <button id="btn-buy-prop" style="padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Comprar</button>
+            <button id="btn-buy-prop" style="padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Assumir gerência</button>
             <button id="btn-pass-prop" style="padding: 6px 12px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Passar</button>
         </div>
     `;
@@ -499,30 +638,119 @@ function checkBankruptcy(player, creditorId) {
 }
 
 function nextTurn() {
-    if (players.length === 0) return;
+    if (players.length === 0 || gameOver) return;
 
-    const activePlayers = players.filter(p => !p.isBankrupt);
+    const currentPlayer = players[currentPlayerIndex];
+    if (currentPlayer && !currentPlayer.isBankrupt) currentPlayer.playedThisCycle = true;
+
+    const activePlayers = players.filter(player => !player.isBankrupt);
     if (activePlayers.length <= 1 && players.length > 1) {
-        const winner = activePlayers[0] || players[0];
-        const msg = `🏆 <strong>FIM DE JOGO!</strong> ${winner.name} venceu!`;
-        const statusDiv = document.getElementById("game-status");
-        if (statusDiv) statusDiv.innerHTML = msg;
-        syncGameState(msg);
+        finishGame(activePlayers[0] || players[0], "restaram jogadores ativos");
         return;
     }
 
-    do {
-        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
-    } while (players[currentPlayerIndex].isBankrupt);
+    if (activePlayers.length > 0 && activePlayers.every(player => player.finishedYear)) {
+        closeAnnualExercise();
+        return;
+    }
 
+    let cycleMessage = "";
+    if (activePlayers.length > 0 && activePlayers.every(player => player.playedThisCycle || player.finishedYear)) {
+        cycleNumber += 1;
+        activePlayers.forEach(player => { player.playedThisCycle = false; });
+        cycleMessage = drawExternalFactorCard();
+    }
+
+    let nextIndex = currentPlayerIndex;
+    do {
+        nextIndex = (nextIndex + 1) % players.length;
+    } while (players[nextIndex].isBankrupt || players[nextIndex].finishedYear || players[nextIndex].playedThisCycle);
+    currentPlayerIndex = nextIndex;
     awaitingDecision = false;
     updateUI();
 
     const nextPlayer = players[currentPlayerIndex];
-    const msg = `É a vez de ${nextPlayer.name}. Role os dados!`;
+    const msg = `${cycleMessage ? `${cycleMessage} ` : ""}Ciclo ${cycleNumber}, Ano ${yearNumber}: é a vez de ${nextPlayer.name}. Role os dados!`;
     const statusDiv = document.getElementById("game-status");
     if (statusDiv) statusDiv.innerText = msg;
-    
+    syncGameState(msg);
+}
+
+function finishGame(winner, reason) {
+    gameOver = true;
+    const msg = `🏆 FIM DE JOGO! ${winner.name} venceu porque ${reason}.`;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
+    syncGameState(msg);
+}
+
+function closeAnnualExercise() {
+    recalculateFactors();
+    const activePlayers = players.filter(player => !player.isBankrupt);
+    const fulfilledPlayers = activePlayers.filter(updateObjectiveStatus);
+
+    if (fulfilledPlayers.length === 1) {
+        finishGame(fulfilledPlayers[0], "cumpriu integralmente o objetivo");
+        return;
+    }
+    if (fulfilledPlayers.length > 1) {
+        const highestMoney = Math.max(...fulfilledPlayers.map(player => player.money));
+        const richest = fulfilledPlayers.filter(player => player.money === highestMoney);
+        if (richest.length === 1) {
+            finishGame(richest[0], "cumpriu o objetivo e terminou com mais dinheiro");
+            return;
+        }
+        const msg = `⚖️ ${richest.map(player => player.name).join(" e ")} empataram no dinheiro após cumprir o objetivo. O desempate ainda não está definido.`;
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
+        gameOver = true;
+        syncGameState(msg);
+        return;
+    }
+
+    activePlayers.forEach(player => {
+        player.money -= GAME_CONFIG.impostoRenda;
+        if (player.money < 0) {
+            player.isBankrupt = true;
+            boardSpaces.forEach(space => {
+                if (space.owner === player.id) space.owner = null;
+            });
+        }
+    });
+
+    const survivors = players.filter(player => !player.isBankrupt);
+    if (survivors.length === 1) {
+        finishGame(survivors[0], "os demais jogadores não conseguiram pagar o Imposto de Renda");
+        return;
+    }
+    if (survivors.length === 0) {
+        gameOver = true;
+        const msg = "🏁 O ano terminou sem jogadores sobreviventes.";
+        const statusDiv = document.getElementById("game-status");
+        if (statusDiv) statusDiv.innerText = msg;
+        syncGameState(msg);
+        return;
+    }
+
+    yearNumber += 1;
+    cycleNumber = 0;
+    activeExternalCard = null;
+    externalFactorModifiers = {};
+    resetFactors();
+    survivors.forEach(player => {
+        player.position = 0;
+        player.passedFestaJunina = false;
+        player.finishedYear = false;
+        player.playedThisCycle = false;
+    });
+    assignObjectives();
+    currentPlayerIndex = players.findIndex(player => !player.isBankrupt);
+    renderBoard();
+    renderPawns();
+    updateUI();
+    const msg = `📅 Fechamento concluído. Todos pagaram $${GAME_CONFIG.impostoRenda}. Começou o Ano ${yearNumber}.`;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
     syncGameState(msg);
 }
 
@@ -548,7 +776,7 @@ function hostProcessBuyProperty(senderPeerId) {
         player.money -= space.price;
         space.owner = player.id;
         refreshBoardOwnership();
-        const msg = `🎉 ${player.name} comprou ${space.name}!`;
+        const msg = `🎉 ${player.name} assumiu a gerência de ${space.name}!`;
         const statusDiv = document.getElementById("game-status");
         if (statusDiv) statusDiv.innerText = msg;
         awaitingDecision = false;
@@ -564,12 +792,46 @@ function hostProcessPassProperty(senderPeerId) {
     if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
 
     const space = boardSpaces[player.position];
-    const msg = `${player.name} não comprou ${space.name}.`;
+    const msg = `${player.name} não assumiu a gerência de ${space.name}.`;
     const statusDiv = document.getElementById("game-status");
     if (statusDiv) statusDiv.innerText = msg;
     awaitingDecision = false;
     syncGameState(msg);
     nextTurn();
+}
+
+function hostProcessInterveneFactor(senderPeerId, factorKey, direction) {
+    if (isMultiplayer && window.Network && !window.Network.isHost) return;
+    const player = players[currentPlayerIndex];
+    const definition = FACTOR_DEFINITIONS[factorKey];
+    const space = boardSpaces.find(candidate => candidate.factorKey === factorKey);
+    if (!player || player.isBankrupt || player.finishedYear || !definition || !definition.control || !space || space.owner !== player.id) return;
+    if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
+
+    const multiplier = direction === "down" ? -1 : 1;
+    const nextValue = getFactorValue(factorKey) + multiplier * definition.step;
+    if (nextValue < 0 || player.money < definition.cost) return;
+    const fichaKey = definition.ficha === "continua" ? "fichasContinua" : "fichasDiscreta";
+    if ((player[fichaKey] || 0) < (factorKey === "equipamentosCozinha" || factorKey === "qualidadeIngredientes" || factorKey === "numeroMesas" ? 2 : 1)) return;
+
+    const fichaCost = factorKey === "equipamentosCozinha" || factorKey === "qualidadeIngredientes" || factorKey === "numeroMesas" ? 2 : 1;
+    player[fichaKey] -= fichaCost;
+    player.money -= definition.cost;
+    factorValues[factorKey] = nextValue;
+    recalculateFactors();
+    space.lastIntervention = multiplier > 0 ? "+" : "-";
+    recentChanges.unshift({ player: player.name, factor: definition.name, sign: space.lastIntervention, value: nextValue });
+    recentChanges = recentChanges.slice(0, 8);
+    const msg = `🛠️ ${player.name} ${multiplier > 0 ? "aumentou" : "reduziu"} ${definition.name} para ${formatFactorValue(factorKey)}.`;
+    const statusDiv = document.getElementById("game-status");
+    if (statusDiv) statusDiv.innerText = msg;
+    updateUI();
+    syncGameState(msg);
+}
+
+function formatFactorValue(factorKey) {
+    const value = getFactorValue(factorKey);
+    return `${Number.isInteger(value) ? value : value.toFixed(1)} ${FACTOR_DEFINITIONS[factorKey].unit}`;
 }
 
 // ==========================================
@@ -580,7 +842,13 @@ function syncGameState(statusMessage = null, diceDisplay = null, diceValues = nu
 
     sendNetworkAction("SYNC_GAME_STATE", {
         players: players,
-        boardSpaces: boardSpaces.map(s => ({ id: s.id, owner: s.owner, houses: s.houses || 0 })),
+        boardSpaces: boardSpaces.map(s => ({ id: s.id, owner: s.owner, houses: s.houses || 0, lastIntervention: s.lastIntervention || "" })),
+        factorValues: factorValues,
+        recentChanges: recentChanges,
+        yearNumber: yearNumber,
+        cycleNumber: cycleNumber,
+        activeExternalCard: activeExternalCard,
+        gameOver: gameOver,
         currentPlayerIndex: currentPlayerIndex,
         isMoving: isMoving,
         awaitingDecision: awaitingDecision,
@@ -603,16 +871,23 @@ function applyGameStateSync(payload) {
             if (localSpace) {
                 localSpace.owner = syncSpace.owner;
                 localSpace.houses = syncSpace.houses;
+                localSpace.lastIntervention = syncSpace.lastIntervention || "";
             }
         });
     }
+
+    if (payload.factorValues) factorValues = payload.factorValues;
+    if (payload.recentChanges) recentChanges = payload.recentChanges;
+    if (payload.yearNumber !== undefined) yearNumber = payload.yearNumber;
+    if (payload.cycleNumber !== undefined) cycleNumber = payload.cycleNumber;
+    if (payload.activeExternalCard !== undefined) activeExternalCard = payload.activeExternalCard;
+    if (payload.gameOver !== undefined) gameOver = payload.gameOver;
 
     if (payload.currentPlayerIndex !== undefined) currentPlayerIndex = payload.currentPlayerIndex;
     if (payload.isMoving !== undefined) isMoving = payload.isMoving;
     if (payload.awaitingDecision !== undefined) awaitingDecision = payload.awaitingDecision;
     if (payload.pendingTrade !== undefined) pendingTrade = payload.pendingTrade;
     if (payload.pendingCard !== undefined) pendingCard = payload.pendingCard;
-
     refreshBoardOwnership();
 
     if (payload.diceValues) {
@@ -677,8 +952,14 @@ window.startMultiplayerGame = function(lobbyPlayers) {
         jailTurns: 0,
         isBankrupt: false,
         fichasDiscreta: 0,
-        fichasContinua: 0
+        fichasContinua: 0,
+        objective: null,
+        passedFestaJunina: false,
+        finishedYear: false,
+        playedThisCycle: false
     }));
+
+    assignObjectives();
 
     resetBoardState();
 
@@ -690,4 +971,5 @@ window.startMultiplayerGame = function(lobbyPlayers) {
 window.hostProcessRollDice = hostProcessRollDice;
 window.hostProcessBuyProperty = hostProcessBuyProperty;
 window.hostProcessPassProperty = hostProcessPassProperty;
+window.hostProcessInterveneFactor = hostProcessInterveneFactor;
 window.applyGameStateSync = applyGameStateSync;

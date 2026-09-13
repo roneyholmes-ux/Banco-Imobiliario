@@ -3,19 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mesa de Jogo - Banco Imobiliário</title>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <title>Mesa de Fatores | Mesa de Jogo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bree+Serif&family=Caveat:wght@500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="css/style.css">
     <!-- Biblioteca PeerJS para Multiplayer -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
-<body style="background: #0b131e;">
+<body class="game-page">
 
     <!-- BARRA SUPERIOR DO JOGO -->
     <nav class="navbar" style="position: relative; background: #070c14;">
-        <div class="nav-logo">🎲 BANCO IMOBILIÁRIO</div>
+        <a class="nav-logo" href="index.html" aria-label="Mesa de Fatores, início"><span class="brand-mark" aria-hidden="true">∑</span><span><strong>MESA DE FATORES</strong><small>MATEMÁTICA TAMBÉM SE SERVE</small></span></a>
         <ul class="nav-links">
-            <li><a href="index.html" style="color: #ff4757; font-weight: bold;">⬅️ Sair para o Menu</a></li>
+            <li><a href="index.html">Voltar ao início</a></li>
         </ul>
     </nav>
 
@@ -30,6 +32,7 @@
                 <div class="control-panel">
                     <div class="status-box">
                         <h3>Painel de Controle</h3>
+                        <div class="year-status"><strong>Ano <span id="year-number">1</span></strong> · Ciclo <span id="cycle-number">0</span> · <span id="semester-name">Primeiro semestre</span></div>
                         <div class="dice-3d-wrapper">
                             <div class="die" id="die-1">
                                 <div class="die-face face-front"><span class="pip p-mc"></span></div>
@@ -58,6 +61,17 @@
                     <div class="players-box">
                         <h3>Jogadores</h3>
                         <div id="players-list"></div>
+                    </div>
+
+                    <div class="event-box" id="restaurant-event-panel">
+                        <h3>Carta de Fator Externo ativa</h3>
+                        <div id="restaurant-event-name">Nenhum evento ativo</div>
+                        <div id="restaurant-event-effects">A primeira carta será sorteada ao fim do primeiro ciclo.</div>
+                    </div>
+
+                    <div class="event-box">
+                        <h3>Alterações recentes</h3>
+                        <div id="recent-changes">Nenhuma intervenção registrada.</div>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 /**
  * trade.js
- * Sistema de Trocas: negociação de propriedades e dinheiro entre jogadores (Host-Authoritative).
+ * Sistema de Trocas: negociação de gerências e dinheiro entre jogadores (Host-Authoritative).
  *
  * Regras:
  * - Apenas o jogador da vez pode propor uma troca, para qualquer outro jogador ativo.
@@ -18,8 +18,8 @@ function calculateTradeFee(offerMoney, requestMoney) {
 // ==========================================
 // AÇÕES DISPARADAS PELA UI (CLIENTE OU LOCAL)
 // ==========================================
-function proposeTrade(toPlayerId, offerProperties, offerMoney, requestProperties, requestMoney) {
-    const payload = { toPlayerId, offerProperties, offerMoney, requestProperties, requestMoney };
+function proposeTrade(toPlayerId, offerProperties, offerMoney, requestProperties, requestMoney, fromPlayerId = null) {
+    const payload = { toPlayerId, offerProperties, offerMoney, requestProperties, requestMoney, fromPlayerId: fromPlayerId ?? (players[currentPlayerIndex] ? players[currentPlayerIndex].id : null) };
     if (isMultiplayer && window.Network && !window.Network.isHost) {
         sendNetworkAction("REQUEST_PROPOSE_TRADE", payload);
     } else {
@@ -48,9 +48,11 @@ function cancelTrade() {
 // ==========================================
 function hostProcessProposeTrade(senderPeerId, payload) {
     if (isMultiplayer && window.Network && !window.Network.isHost) return;
-    if (pendingTrade || isMoving || awaitingDecision) return;
+    if (pendingTrade || isMoving || awaitingDecision || pendingCard) return;
 
-    const proposer = players[currentPlayerIndex];
+    const proposer = isMultiplayer && senderPeerId
+        ? players.find(player => player.peerId === senderPeerId)
+        : players.find(player => player.id === payload.fromPlayerId) || players[currentPlayerIndex];
     if (!proposer || proposer.isBankrupt) return;
     if (isMultiplayer && senderPeerId && proposer.peerId !== senderPeerId) return;
 
@@ -224,7 +226,7 @@ function openTradeProposalModalUI(proposer, target) {
                         ${proposerProps.length ? proposerProps.map(s => `
                             <label style="display:block; font-size:0.8rem; margin-bottom:4px;">
                                 <input type="checkbox" class="trade-offer-prop" value="${s.id}"> ${s.name}
-                            </label>`).join("") : `<p style="color:#888; font-size:0.8rem;">Nenhuma propriedade.</p>`}
+                            </label>`).join("") : `<p style="color:#888; font-size:0.8rem;">Nenhuma gerência.</p>`}
                     </div>
                     <label style="font-size:0.85rem;">Dinheiro (máx $${proposer.money}):
                         <input type="number" id="trade-offer-money" min="0" max="${proposer.money}" value="0" style="width:90px; margin-left:6px;">
@@ -236,7 +238,7 @@ function openTradeProposalModalUI(proposer, target) {
                         ${targetProps.length ? targetProps.map(s => `
                             <label style="display:block; font-size:0.8rem; margin-bottom:4px;">
                                 <input type="checkbox" class="trade-request-prop" value="${s.id}"> ${s.name}
-                            </label>`).join("") : `<p style="color:#888; font-size:0.8rem;">Nenhuma propriedade.</p>`}
+                            </label>`).join("") : `<p style="color:#888; font-size:0.8rem;">Nenhuma gerência.</p>`}
                     </div>
                     <label style="font-size:0.85rem;">Dinheiro (máx $${target.money}):
                         <input type="number" id="trade-request-money" min="0" max="${target.money}" value="0" style="width:90px; margin-left:6px;">
@@ -273,7 +275,7 @@ function openTradeProposalModalUI(proposer, target) {
         const fee = calculateTradeFee(offerMoney, requestMoney);
 
         if (offerProperties.length === 0 && requestProperties.length === 0 && offerMoney === 0 && requestMoney === 0) {
-            alert("Selecione ao menos uma propriedade ou valor para negociar.");
+            alert("Selecione ao menos uma gerência ou valor para negociar.");
             return;
         }
         if (offerMoney + fee > proposer.money) {
@@ -290,7 +292,7 @@ function openTradeProposalModalUI(proposer, target) {
         // local), proposeTrade() já dispara hostProcessProposeTrade -> refreshTradeUI(), que troca
         // este modal pelo de resposta/espera — fechar de novo aqui removeria esse novo modal.
         const willSendToHost = isMultiplayer && window.Network && !window.Network.isHost;
-        proposeTrade(target.id, offerProperties, offerMoney, requestProperties, requestMoney);
+        proposeTrade(target.id, offerProperties, offerMoney, requestProperties, requestMoney, proposer.id);
         if (willSendToHost) closeTradeModal();
     };
 }

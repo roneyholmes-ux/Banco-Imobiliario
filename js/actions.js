@@ -49,6 +49,14 @@ class ActionRouter {
                 }
                 break;
 
+            case "REQUEST_INTERVENE_FACTOR":
+                if (isHost && typeof window.hostProcessInterveneFactor === "function") {
+                    window.hostProcessInterveneFactor(senderPeerId, payload ? payload.factorKey : null, payload ? payload.direction : null);
+                } else if (!isHost) {
+                    console.warn("[Actions] Cliente ignorou REQUEST_INTERVENE_FACTOR (Apenas o Host pode processar).");
+                }
+                break;
+
             case "REQUEST_PROPOSE_TRADE":
                 if (isHost && typeof window.hostProcessProposeTrade === "function") {
                     window.hostProcessProposeTrade(senderPeerId, payload);

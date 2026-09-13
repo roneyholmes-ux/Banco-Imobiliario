@@ -126,7 +126,7 @@ function advanceAfterOutcome(drawer, correct) {
     if (mode === "individual") {
         if (correct) {
             pendingCard.phase = "reward-choice";
-            const msg = `✅ Resposta correta! ${drawer.name} deve escolher o tipo das 2 Fichas de Investigação recebidas.`;
+            const msg = `✅ Resposta correta! ${drawer.name} deve escolher o tipo das 2 fichas recebidas.`;
             updateStatus(msg);
             syncGameState(msg);
         } else {
@@ -171,7 +171,7 @@ function handleChooseReward(senderPeerId, drawer, payload) {
     if (pendingCard.mode === "individual") {
         if (types.length !== 2) return;
         types.forEach(t => addFicha(drawer, t, 1));
-        pendingCard.resultMessage = `🔬 ${drawer.name} recebeu 2 Fichas de Investigação (${types.map(fichaTypeLabel).join(" + ")}).`;
+        pendingCard.resultMessage = `🔬 ${drawer.name} recebeu 2 fichas (${types.map(fichaTypeLabel).join(" + ")}).`;
     } else {
         if (types.length !== 1) return;
         const type = types[0];
@@ -316,7 +316,7 @@ function renderCardActionArea(overlay, drawer, isLocalDrawer, myPeerId) {
                 <p class="card-action-hint">Como você quer responder?</p>
                 <div class="card-btn-row">
                     <button id="btn-mode-individual" class="card-btn">🧍 Individual</button>
-                    <button id="btn-mode-colaborativa" class="card-btn card-btn-primary">🤝 Investigação Colaborativa</button>
+                    <button id="btn-mode-colaborativa" class="card-btn card-btn-primary">🤝 Resposta com ajuda</button>
                 </div>
             `;
             area.querySelector("#btn-mode-individual").onclick = () => chooseCardMode("individual");
@@ -369,7 +369,7 @@ function renderCardActionArea(overlay, drawer, isLocalDrawer, myPeerId) {
         if (isLocalDrawer) {
             if (pendingCard.mode === "individual") {
                 area.innerHTML = `
-                    <p class="card-action-hint">Escolha o tipo das 2 Fichas de Investigação que você vai receber:</p>
+                    <p class="card-action-hint">Escolha o tipo das 2 fichas que você vai receber:</p>
                     <div class="card-btn-row">
                         <button id="btn-reward-cc" class="card-btn">🔵🔵 2x Contínua</button>
                         <button id="btn-reward-dd" class="card-btn">🟣🟣 2x Discreta</button>
