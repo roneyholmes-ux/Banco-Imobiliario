@@ -48,7 +48,7 @@ function cancelTrade() {
 // ==========================================
 function hostProcessProposeTrade(senderPeerId, payload) {
     if (isMultiplayer && window.Network && !window.Network.isHost) return;
-    if (pendingTrade || isMoving || awaitingDecision || pendingCard) return;
+    if (pendingTrade || isMoving || awaitingDecision || pendingCard || gameOver) return;
 
     const proposer = isMultiplayer && senderPeerId
         ? players.find(player => player.peerId === senderPeerId)

@@ -10,6 +10,7 @@
 
 class NetworkBridge {
     constructor() {
+        this.requestCounter = 0;
         this.init();
     }
 
@@ -90,10 +91,12 @@ class NetworkBridge {
             return;
         }
 
+        this.requestCounter += 1;
         const message = {
             type: type,
             payload: payload,
-            senderPeerId: this.myPeerId
+            senderPeerId: this.myPeerId,
+            requestId: `${this.myPeerId}-${Date.now()}-${this.requestCounter}`
         };
 
         window.Multiplayer.sendRaw(message);

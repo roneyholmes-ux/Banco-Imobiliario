@@ -1160,7 +1160,7 @@ body {
     grid-column: 2 / 7;
     align-self: center;
     justify-self: center;
-    width: min(100% - 16px, 340px);
+    width: min(100% - 16px, 470px);
     min-width: 0;
     gap: 0;
     padding: 16px 18px 14px;
@@ -1172,19 +1172,29 @@ body {
     color: var(--game-text);
 }
 .game-page .board-market h4 { margin-bottom: 4px; color: var(--game-orange); font: 800 .62rem 'Inter', sans-serif; letter-spacing: .18em; text-align: left; }
-.game-page .market-row { padding: 5px 0; border-bottom: 1px dashed var(--game-border); font-size: .74rem; line-height: 1.3; }
-.game-page .market-row span { color: #64736c; }
-.game-page .market-row strong { color: var(--game-green-dark); font-size: .76rem; }
-.game-page .market-divider { display: none; }
+/* Fatores externos: cartões de status (sem compra, gerente, taxa ou intervenção). */
+.game-page .market-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 6px; }
+.game-page .market-card { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 7px 9px 6px; background: var(--game-ivory); border: 1px solid var(--game-border); border-top: 4px solid #9aa89f; border-radius: 4px; }
+.game-page .market-card.is-up { border-top-color: var(--game-orange); }
+.game-page .market-card.is-down { border-top-color: var(--game-green); }
+.game-page .market-card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.game-page .market-card-name { overflow: hidden; color: #64736c; font-size: .64rem; font-weight: 700; white-space: nowrap; text-overflow: ellipsis; }
+.game-page .market-card-symbol { color: var(--game-orange); font: italic 1rem 'Bree Serif', serif; line-height: 1; }
+.game-page .market-card-value { color: var(--game-green-dark); font: 1.2rem/1.1 'Bree Serif', serif; }
+.game-page .market-card-unit { color: #64736c; font-size: .6rem; }
+.game-page .market-card-change { font-size: .6rem; font-weight: 700; }
+.game-page .market-card.is-up .market-card-change { color: var(--game-orange); }
+.game-page .market-card.is-down .market-card-change { color: var(--game-green); }
 .game-page .market-event { gap: 2px; margin-top: 10px; }
 .game-page .market-event-label { color: var(--game-orange); font-size: .58rem; font-weight: 800; letter-spacing: .16em; opacity: 1; }
 .game-page #restaurant-event-name { margin: 0; color: var(--game-green-dark); font: .95rem/1.2 'Bree Serif', serif; }
-.game-page #restaurant-event-effects { color: #64736c; font-size: .7rem; line-height: 1.4; }
+.game-page .market-event-text { color: #64736c; font-size: .68rem; font-style: italic; line-height: 1.35; }
+.game-page #restaurant-event-effects { color: var(--game-green-dark); font-size: .7rem; font-weight: 600; line-height: 1.4; }
 .game-page .market-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--game-border); color: #64736c; font-size: .62rem; font-weight: 600; }
 .game-page .market-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .game-page .legend-swatch { display: inline-block; width: 16px; height: 5px; border-radius: 2px; }
-.game-page .legend-controllable { background: var(--game-green); }
-.game-page .legend-result { background: #b86a43; }
+.game-page .legend-continua { background: var(--game-green); }
+.game-page .legend-discreta { background: #b86a43; }
 
 .game-page .space {
     justify-content: flex-start;
@@ -1216,8 +1226,8 @@ body {
     text-shadow: none;
 }
 .game-page .property-tag { height: 5px; background: var(--game-green); border-bottom: 0; }
-.game-page .factor-controllable .property-tag { background: var(--game-green); }
-.game-page .factor-result .property-tag { background: #b86a43; }
+.game-page .ficha-continua .property-tag { background: var(--game-green); }
+.game-page .ficha-discreta .property-tag { background: #b86a43; }
 .game-page .space-station .property-tag { background: #9aa89f; }
 .game-page .factor-info { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 100%; max-width: 100%; font-size: .86em; line-height: 1.1; }
 .game-page .factor-value-row { display: flex; align-items: baseline; justify-content: center; gap: 3px; max-width: 100%; }
@@ -1253,7 +1263,9 @@ body {
 .game-page .player-row { background: var(--game-cream); border-color: var(--game-border); color: var(--game-text); border-radius: 5px; }
 .game-page .player-patrimonio { color: #64736c; }.game-page .player-fichas { color: var(--game-green); }.game-page .player-objective { color: var(--game-orange); }
 .game-page .property-chip { border-radius: 3px; }.game-page .chip-restaurant { background: var(--game-green); }.game-page .chip-observatorio { background: #b86a43; }.game-page .chip-utility { background: #7a8d80; }
-.game-page .intervention-actions button { background: var(--game-green-dark); border-color: var(--game-green); color: var(--game-ivory); }.game-page .intervention-actions button:hover { background: var(--game-green); }
+.game-page .intervention-actions button { background: var(--game-green-dark); border-color: var(--game-green); color: var(--game-ivory); }.game-page .intervention-actions button:hover:not(:disabled) { background: var(--game-green); }
+.game-page .intervention-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.game-page .player-objective small { display: block; margin-top: 2px; line-height: 1.45; }
 .game-page .trade-btn { color: var(--game-orange); border-color: var(--game-orange); background: rgba(241, 90, 36, .08); }
 .game-page .room-invite { display: grid; justify-items: center; gap: 7px; margin: 14px 0; padding: 15px; background: var(--game-cream); border: 1px dashed var(--game-border); border-radius: 5px; }
 .game-page .room-code-label { color: var(--game-green); font-size: .58rem; font-weight: 800; letter-spacing: .16em; }
@@ -1285,8 +1297,12 @@ body {
     .game-page .space > .owner-badge { right: 2px; width: 7px; height: 7px; }
     .game-page .board-market { width: calc(100% - 4px); padding: 10px 10px 9px; border-top-width: 3px; box-shadow: 3px 4px 0 rgba(228, 215, 196, .85); }
     .game-page .board-market h4 { font-size: .5rem; }
-    .game-page .market-row { padding: 3px 0; font-size: .6rem; }.game-page .market-row strong { font-size: .62rem; }
-    .game-page .market-event { margin-top: 6px; }.game-page #restaurant-event-name { font-size: .74rem; }.game-page #restaurant-event-effects { font-size: .58rem; }
+    .game-page .market-cards { gap: 4px; margin-top: 4px; }
+    .game-page .market-card { padding: 4px 5px 3px; border-top-width: 3px; }
+    .game-page .market-card-name { font-size: .5rem; }.game-page .market-card-symbol { font-size: .7rem; }
+    .game-page .market-card-value { font-size: .8rem; }
+    .game-page .market-card-unit, .game-page .market-card-change { font-size: .48rem; }
+    .game-page .market-event { margin-top: 6px; }.game-page #restaurant-event-name { font-size: .74rem; }.game-page .market-event-text { font-size: .54rem; }.game-page #restaurant-event-effects { font-size: .56rem; }
     .game-page .market-legend { gap: 2px 10px; margin-top: 6px; padding-top: 5px; font-size: .52rem; }
     .game-page .control-panel { display: flex; width: 100%; }.game-page .status-box, .game-page .players-box, .game-page .event-box { width: 100%; }
 }

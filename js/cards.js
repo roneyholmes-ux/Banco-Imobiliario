@@ -32,11 +32,6 @@ function drawCard(player) {
     refreshCardUI();
 }
 
-function updateStatus(msg) {
-    const statusDiv = document.getElementById("game-status");
-    if (statusDiv) statusDiv.innerText = msg;
-}
-
 function addFicha(player, type, amount = 1) {
     if (type === "continua") player.fichasContinua = (player.fichasContinua || 0) + amount;
     else player.fichasDiscreta = (player.fichasDiscreta || 0) + amount;
@@ -137,9 +132,14 @@ function advanceAfterOutcome(drawer, correct) {
                 updateStatus(msg);
                 syncGameState(msg);
             } else {
-                drawer.money -= GAME_CONFIG.cardFichaPenalty;
+                const charge = applyMandatoryCharge(drawer, GAME_CONFIG.cardFichaPenalty, boardSpaces);
                 pendingCard.phase = "done";
-                pendingCard.resultMessage = `❌ Resposta incorreta. ${drawer.name} não possuía fichas e pagou $${GAME_CONFIG.cardFichaPenalty} de penalidade ao banco.`;
+                pendingCard.resultMessage = `❌ Resposta incorreta. ${drawer.name} não possuía fichas e pagou ${formatMoney(GAME_CONFIG.cardFichaPenalty)} de penalidade ao banco.`;
+                if (charge.eliminated) {
+                    pendingCard.resultMessage += ` Com saldo negativo, ${drawer.name} foi eliminado e suas gerências voltaram a ficar disponíveis.`;
+                    refreshBoardOwnership();
+                    renderPawns();
+                }
                 updateStatus(pendingCard.resultMessage);
                 syncGameState(pendingCard.resultMessage);
             }
@@ -175,7 +175,7 @@ function handleChooseReward(senderPeerId, drawer, payload) {
     } else {
         if (types.length !== 1) return;
         const type = types[0];
-        players.forEach(p => addFicha(p, type, 1));
+        players.filter(p => !p.isBankrupt).forEach(p => addFicha(p, type, 1));
         pendingCard.resultMessage = `🔬 Todos os jogadores receberam 1 Ficha de Grandeza ${fichaTypeLabel(type)}!`;
     }
 
@@ -206,10 +206,11 @@ function handleCloseCard(senderPeerId, drawer) {
     if (pendingCard.phase !== "done") return;
     if (isMultiplayer && senderPeerId && drawer.peerId !== senderPeerId) return;
 
+    const resultMessage = pendingCard.resultMessage || "";
     pendingCard = null;
     closeCardModal();
     syncGameState();
-    nextTurn();
+    nextTurn(resultMessage);
 }
 
 // ==========================================

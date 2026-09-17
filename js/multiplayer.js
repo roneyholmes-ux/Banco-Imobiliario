@@ -15,7 +15,7 @@ class MultiplayerManager {
         this.lobbyState = { players: [] };
         this.playerName = "Jogador " + Math.floor(Math.random() * 1000);
         this.overlay = null;
-        this.maxPlayers = 4;
+        this.maxPlayers = typeof GAME_CONFIG !== "undefined" ? GAME_CONFIG.maxJogadores : 4;
 
         // Callbacks de eventos para desacoplar da camada network.js
         this.onDataReceived = null;      // Função fn(data, senderPeerId)

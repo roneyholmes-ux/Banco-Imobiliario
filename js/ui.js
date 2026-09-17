@@ -1,9 +1,27 @@
 /**
  * ui.js
  * Desenha e sincroniza os elementos visuais do tabuleiro e painéis.
+ * Todos os valores exibidos vêm do estado global do mercado (marketState); nada é copiado por jogador.
  */
 
 let expandedPlayerIds = new Set();
+
+const SPECIAL_SPACE_DESCRIPTIONS = {
+    "PARTIDA": "Cruzar a PARTIDA conclui a volta do ano e leva ao Fechamento do Exercício.",
+    "Sorte ou Revés": "Carta de Investigação (objetiva ou aberta), resolvida de forma individual ou colaborativa.",
+    "FESTA JUNINA": "Divide o ano: quando todos os jogadores ativos passarem por aqui, começa o segundo semestre.",
+    "PRISÃO": "Quem estiver preso paga a fiança na próxima vez para voltar a jogar.",
+    "VÁ PARA A PRISÃO": "Vai direto para a PRISÃO.",
+    "Multa da Vigilância Sanitária": `Quem parar aqui paga ${formatMoney(GAME_CONFIG.multaVigilanciaSanitaria)} de multa ao banco. Se o saldo ficar negativo, é eliminado.`
+};
+
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+}
 
 function renderBoard() {
     const boardElement = document.getElementById("board");
@@ -11,19 +29,17 @@ function renderBoard() {
     boardElement.innerHTML = "";
 
     boardSpaces.forEach((space) => {
+        const definition = space.factorKey ? getFactorDefinition(space.factorKey) : null;
         const spaceDiv = document.createElement("div");
         spaceDiv.className = `space space-${space.type} ${space.cssClass || ''}`;
-        if (space.factorKey) {
-            const definition = FACTOR_DEFINITIONS[space.factorKey];
-            spaceDiv.classList.add(definition && definition.control ? "factor-controllable" : "factor-result");
-        }
+        if (definition) spaceDiv.classList.add(`ficha-${definition.ficha}`);
         spaceDiv.id = `space-${space.id}`;
 
         const pos = getGridPosition(space.id);
         spaceDiv.style.gridRow = pos.row;
         spaceDiv.style.gridColumn = pos.col;
 
-        if (["property", "station", "utility"].includes(space.type)) {
+        if (PURCHASABLE_TYPES.includes(space.type)) {
             const tag = document.createElement("div");
             tag.className = "property-tag";
             spaceDiv.appendChild(tag);
@@ -34,15 +50,15 @@ function renderBoard() {
         nameText.innerText = space.name;
         spaceDiv.appendChild(nameText);
 
-        if (space.factorKey && FACTOR_DEFINITIONS[space.factorKey]) {
+        if (definition) {
             const factorInfo = document.createElement("div");
             factorInfo.className = "factor-info";
             factorInfo.innerHTML = `
                 <div class="factor-value-row">
-                    <strong id="factor-value-${space.id}">${formatFactorValue(space.factorKey)}</strong>
-                    <span class="intervention-sign" id="intervention-sign-${space.id}">${space.lastIntervention || ""}</span>
+                    <strong id="factor-value-${space.id}"></strong>
+                    <span class="intervention-sign" id="intervention-sign-${space.id}"></span>
                 </div>
-                <span class="factor-manager" id="factor-manager-${space.id}">Sem gerente</span>
+                <span class="factor-manager" id="factor-manager-${space.id}"></span>
             `;
             spaceDiv.appendChild(factorInfo);
         }
@@ -53,24 +69,50 @@ function renderBoard() {
         spaceDiv.appendChild(tokensContainer);
 
         boardElement.appendChild(spaceDiv);
-
-        applySpaceOwnership(space, spaceDiv);
     });
+
+    refreshBoardOwnership();
 }
 
+// Detalhes da casa exibidos somente ao passar o mouse (atributo title).
 function getSpaceTooltip(space) {
-    const lines = [space.name];
-    const definition = space.factorKey ? FACTOR_DEFINITIONS[space.factorKey] : null;
+    const manager = players.find(player => player.id === space.owner);
+    const definition = space.factorKey ? getFactorDefinition(space.factorKey) : null;
+
     if (definition) {
-        lines.push(`Valor: ${formatFactorValue(space.factorKey)}`);
-        lines.push(definition.control ? "Fator controlável" : "Fator resultante/externo");
+        const key = space.factorKey;
+        const level = marketState.levels[key];
+        const lines = [
+            `${definition.name} (${definition.symbol})`,
+            `Valor atual: ${formatInternalValue(key, definition.values[level])} · nível ${level} de ${MAX_FACTOR_LEVEL} (inicial: ${definition.initialLevel})`,
+            `Níveis 0–${MAX_FACTOR_LEVEL}: ${definition.values.map(value => formatInternalValue(key, value)).join(" · ")}`,
+            `Ficha: ${fichaTypeLabel(definition.ficha).toLowerCase()}${definition.fichaNote ? ` (${definition.fichaNote})` : ""}`,
+            manager ? `Gerente: ${manager.name}` : `Sem gerente · aquisição: ${formatMoney(space.price)}`,
+            `Taxa de visita atual: ${formatMoney(getSpaceVisitFee(space, marketState))}`
+        ];
+        const up = getInterventionCost(key, level, level + 1);
+        const down = getInterventionCost(key, level, level - 1);
+        lines.push(up.ok
+            ? `Subir para ${formatInternalValue(key, definition.values[level + 1])}: ${formatMoney(up.money)} + ${formatFichas(up.fichas, up.fichaType)}`
+            : "Subir: já está no nível máximo");
+        lines.push(down.ok
+            ? `Reduzir para ${formatInternalValue(key, definition.values[level - 1])}: ${formatMoney(down.money)} + ${formatFichas(down.fichas, down.fichaType)} (sem devolução)`
+            : "Reduzir: já está no nível mínimo");
+        lines.push("Somente o gerente intervém, durante a própria vez.");
+        return lines.join("\n");
     }
-    if (space.price) {
-        const manager = players.find(player => player.id === space.owner);
-        lines.push(`Gerência: $${space.price}`);
-        lines.push(manager ? `Gerente: ${manager.name}` : "Sem gerente");
+
+    if (space.type === "station") {
+        return [
+            space.name,
+            `Quem parar aqui recebe ${GAME_CONFIG.fichasPorVisita} ficha ${fichaTypeLabel(space.fichaType).toLowerCase()}.`,
+            manager ? `Gerente: ${manager.name}` : `Sem gerente · aquisição: ${formatMoney(space.price)}`,
+            `Taxa de utilização: ${formatMoney(getSpaceVisitFee(space, marketState))}`
+        ].join("\n");
     }
-    return lines.join("\n");
+
+    const description = SPECIAL_SPACE_DESCRIPTIONS[space.name];
+    return description ? `${space.name}\n${description}` : space.name;
 }
 
 function applySpaceOwnership(space, spaceDiv) {
@@ -83,13 +125,15 @@ function applySpaceOwnership(space, spaceDiv) {
     spaceDiv.style.borderColor = "";
     spaceDiv.style.boxShadow = "";
 
-    if (!["property", "station", "utility"].includes(space.type) || space.owner === null || space.owner === undefined) {
+    if (!PURCHASABLE_TYPES.includes(space.type) || space.owner === null || space.owner === undefined) {
         return;
     }
 
     const owner = players.find(p => p.id === space.owner);
     if (!owner) return;
 
+    // A moldura de 2px da gerência é desenhada com a borda de 1px + uma sombra interna de 1px,
+    // para não roubar largura do conteúdo (em casas de ~48px isso quebrava palavras no meio).
     spaceDiv.style.borderColor = owner.color;
     spaceDiv.style.boxShadow = `inset 0 0 0 1px ${owner.color}, inset 0 0 8px ${owner.color}99`;
 
@@ -108,72 +152,88 @@ function refreshBoardOwnership() {
             const managerElement = document.getElementById(`factor-manager-${space.id}`);
             const signElement = document.getElementById(`intervention-sign-${space.id}`);
             const manager = players.find(player => player.id === space.owner);
-            if (valueElement) valueElement.innerText = formatFactorValue(space.factorKey);
+            if (valueElement) valueElement.innerText = formatInternalValue(space.factorKey, getFactorValue(marketState, space.factorKey));
             if (managerElement) managerElement.innerText = manager ? `Gerente: ${manager.name}` : "Sem gerente";
             if (signElement) signElement.innerText = space.lastIntervention || "";
         }
     });
 }
 
-function renderExternalCard() {
+// ==========================================
+// PAINEL CENTRAL: FATORES EXTERNOS E CARTA DE FLUÊNCIA
+// ==========================================
+function renderMarketPanel() {
+    const cardsElement = document.getElementById("market-cards");
+    if (cardsElement) {
+        cardsElement.innerHTML = EXTERNAL_KEYS.map(key => {
+            const definition = RESTAURANT_RULESET.external[key];
+            const value = marketState.external[key];
+            const previous = marketState.previousExternal ? marketState.previousExternal[key] : undefined;
+            const changed = previous !== undefined && previous !== value;
+            const direction = changed ? (value > previous ? "up" : "down") : "";
+            const change = changed
+                ? `<span class="market-card-change">${direction === "up" ? "▲" : "▼"} antes ${formatExternalValue(key, previous)}</span>`
+                : "";
+            const title = `${definition.name} (${definition.symbol}): ${formatExternalValue(key, value)} ${definition.unit}\nValor-base: ${formatExternalValue(key, definition.base)}\nAlterado somente pelas Cartas de Fluência.`;
+            return `
+                <div class="market-card${direction ? ` is-${direction}` : ""}" title="${escapeHtml(title)}">
+                    <div class="market-card-head"><span class="market-card-name">${definition.name}</span><span class="market-card-symbol">${definition.symbol}</span></div>
+                    <strong class="market-card-value">${formatExternalValue(key, value)}</strong>
+                    <span class="market-card-unit">${definition.unit}</span>
+                    ${change}
+                </div>
+            `;
+        }).join("");
+    }
+
     const nameElement = document.getElementById("restaurant-event-name");
+    const textElement = document.getElementById("restaurant-event-text");
     const effectsElement = document.getElementById("restaurant-event-effects");
-    if (!nameElement || !effectsElement) return;
-
-    const marketB = document.getElementById("market-b");
-    const marketA = document.getElementById("market-a");
-    const marketT = document.getElementById("market-t");
-    const marketJ = document.getElementById("market-j");
-
-    const marketState = typeof RESTAURANT_RULESET !== "undefined" ? RESTAURANT_RULESET.external : null;
-    const baseB = marketState ? marketState.b.initial : 6;
-    const baseA = marketState ? marketState.a.initial : 20;
-    const baseT = marketState ? marketState.t.initial : 0.10;
-    const baseJ = marketState ? marketState.j.initial : 0.12;
-    if (marketB) marketB.innerText = `R$ ${Number(baseB).toFixed(2).replace(".00", ",00")}`;
-    if (marketA) marketA.innerText = `R$ ${Number(baseA).toFixed(2).replace(".00", ",00")}`;
-    if (marketT) marketT.innerText = `${(baseT * 100).toFixed(0)}%`;
-    if (marketJ) marketJ.innerText = `${(baseJ * 100).toFixed(0)}%`;
+    const card = marketState.activeCard;
+    if (nameElement && effectsElement) {
+        if (!card) {
+            nameElement.innerText = "Nenhuma carta ativa";
+            if (textElement) textElement.innerText = "";
+            effectsElement.innerText = "A primeira Carta de Fluência será sorteada ao fim do primeiro ciclo.";
+        } else {
+            nameElement.innerText = `${card.name} · ${semesterLabel(card.semester)}`;
+            if (textElement) textElement.innerText = `“${card.text}”`;
+            effectsElement.innerText = describeFluencyEffects(card).join(" · ");
+        }
+    }
 
     const yearElement = document.getElementById("year-number");
     const cycleElement = document.getElementById("cycle-number");
     const semesterElement = document.getElementById("semester-name");
-    const changesElement = document.getElementById("recent-changes");
     if (yearElement) yearElement.innerText = yearNumber;
     if (cycleElement) cycleElement.innerText = cycleNumber;
-    if (semesterElement) semesterElement.innerText = activeExternalCard ? activeExternalCard.semester : "Primeiro semestre";
+    if (semesterElement) semesterElement.innerText = semesterLabel(getCurrentSemester(players));
+
+    const changesElement = document.getElementById("recent-changes");
     if (changesElement) {
         changesElement.innerHTML = recentChanges.length
-            ? recentChanges.map(change => `<div>${change.sign} ${change.player}: ${change.factor} (${change.value})</div>`).join("")
+            ? recentChanges.map(change => `<div>${change.direction === "up" ? "▲" : "▼"} ${change.playerName}: ${change.symbol} (${change.factorName}) ${formatInternalValue(change.factorKey, change.fromValue)} → ${formatInternalValue(change.factorKey, change.toValue)}</div>`).join("")
             : "Nenhuma intervenção registrada.";
     }
-
-    if (!activeExternalCard) {
-        nameElement.innerText = "Nenhum evento ativo";
-        effectsElement.innerText = "A primeira Carta de Fator Externo será sorteada ao fim do primeiro ciclo.";
-        return;
-    }
-
-    nameElement.innerText = `${activeExternalCard.name} · ${activeExternalCard.semester}`;
-    effectsElement.innerText = activeExternalCard.effects
-        .map(effect => `${FACTOR_DEFINITIONS[effect.factor].name}: ${effect.modifier > 0 ? "+" : ""}${Math.round(effect.modifier * 100)}%`)
-        .join(" · ");
 }
 
-function requestFactorIntervention(factorKey, direction) {
+function requestFactorIntervention(factorKey, delta) {
     if (isMultiplayer && window.Network && !window.Network.isHost) {
-        sendNetworkAction("REQUEST_INTERVENE_FACTOR", { factorKey, direction });
+        sendNetworkAction("REQUEST_INTERVENE_FACTOR", { factorKey, delta });
     } else {
-        hostProcessInterveneFactor(window.Network ? window.Network.myPeerId : null, factorKey, direction);
+        hostProcessInterveneFactor(window.Network ? window.Network.myPeerId : null, factorKey, delta);
     }
 }
 
+// Resultado sempre recalculado a partir do estado global atual.
 function renderObjectiveCard(player) {
-    if (!player.objective) return "🎯 Carta de Objetivo: A definir";
-    const value = player.objective.currentValue === undefined ? getFactorValue(player.objective.factor) : player.objective.currentValue;
-    const formatted = Number.isInteger(value) ? value : value.toFixed(1);
-    const status = player.objective.fulfilled ? "✅ cumprido" : "⏳ não cumprido";
-    return `🎯 <strong>${player.objective.name}</strong><br><small>${player.objective.condition}<br>Fórmula: ${player.objective.formula}<br>Atual: ${formatted} · ${status}</small>`;
+    if (!player.objective) return "🎯 Carta de Objetivo: a definir";
+    const objective = calculateObjective(player.objective.id, marketState);
+    if (!objective) return "🎯 Carta de Objetivo: a definir";
+    const status = objective.fulfilled ? "✅ cumprido" : "⏳ não cumprido";
+    const factors = objective.factorValues.map(factor => `${factor.symbol} = ${factor.formatted}`).join(" · ");
+    const title = objective.note ? ` title="${escapeHtml(objective.note)}"` : "";
+    return `<span${title}>🎯 <strong>${objective.name}</strong></span><br><small>Lei: ${objective.formula}<br>Fatores: ${factors}<br>Meta: ${objective.symbol} ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}<br>Atual: ${objective.symbol} = ${formatObjectiveValue(objective, objective.result)} · ${status}</small>`;
 }
 
 function renderPawns() {
@@ -193,7 +253,7 @@ function renderPawns() {
 }
 
 function getOwnedSpaces(playerId) {
-    return boardSpaces.filter(s => ["property", "station", "utility"].includes(s.type) && s.owner === playerId);
+    return boardSpaces.filter(s => PURCHASABLE_TYPES.includes(s.type) && s.owner === playerId);
 }
 
 function getPropertyChipClass(space) {
@@ -205,13 +265,14 @@ function getPropertyChipClass(space) {
 function updateUI() {
     const playersList = document.getElementById("players-list");
     if (!playersList) return;
-    renderExternalCard();
+    renderMarketPanel();
     refreshBoardOwnership();
     playersList.innerHTML = "";
 
     const currentPlayer = players[currentPlayerIndex];
     const myPeerId = window.Network ? window.Network.myPeerId : null;
     const canProposeTradeNow = !isMoving && !awaitingDecision && !pendingTrade && !pendingCard && !gameOver;
+    const rulesContext = getRulesContext();
 
     players.forEach((p, idx) => {
         const ownedSpaces = getOwnedSpaces(p.id);
@@ -225,11 +286,11 @@ function updateUI() {
 
         row.innerHTML = `
             <div class="player-row-header">
-                <span>${p.name}${p.isBankrupt ? " 💥" : ""}</span>
-                <span>$${p.money}</span>
+                <span>${p.name}${p.isBankrupt ? " 💥" : ""}${p.finishedYear && !p.isBankrupt ? " 📘" : ""}</span>
+                <span>${formatMoney(p.money)}</span>
             </div>
             <div class="player-patrimonio">
-                <span>Patrimônio: $${patrimonio} (${ownedSpaces.length} ${ownedSpaces.length === 1 ? "gerência" : "gerências"})</span>
+                <span>Patrimônio: ${formatMoney(patrimonio)} (${ownedSpaces.length} ${ownedSpaces.length === 1 ? "gerência" : "gerências"})</span>
                 ${ownedSpaces.length ? `<span class="expand-indicator">${isExpanded ? "▲" : "▼"}</span>` : ""}
             </div>
             <div class="player-fichas">
@@ -251,28 +312,35 @@ function updateUI() {
             };
         }
 
-        const canIntervene = p.id === (currentPlayer ? currentPlayer.id : null) && !p.finishedYear && !p.isBankrupt && !isMoving && !awaitingDecision &&
-            (!isMultiplayer || p.peerId === myPeerId);
-        const controllableSpaces = ownedSpaces.filter(space => space.factorKey && FACTOR_DEFINITIONS[space.factorKey] && FACTOR_DEFINITIONS[space.factorKey].control);
-        if (canIntervene && controllableSpaces.length) {
+        // Controles de intervenção: só para o gerente, na própria vez; habilitados quando a regra permite.
+        const isLocalCurrentPlayer = currentPlayer && p.id === currentPlayer.id && (!isMultiplayer || p.peerId === myPeerId);
+        const factorSpaces = ownedSpaces.filter(space => space.factorKey);
+        if (isLocalCurrentPlayer && !p.isBankrupt && !p.finishedYear && !gameOver && factorSpaces.length) {
             const interventionBox = document.createElement("div");
             interventionBox.className = "intervention-actions";
-            controllableSpaces.forEach(space => {
-                const definition = FACTOR_DEFINITIONS[space.factorKey];
-                const downButton = document.createElement("button");
-                downButton.innerText = `− ${definition.name}`;
-                downButton.title = `Reduzir por ${definition.step} ${definition.unit}`;
-                downButton.onclick = event => { event.stopPropagation(); requestFactorIntervention(space.factorKey, "down"); };
-                const upButton = document.createElement("button");
-                upButton.innerText = `+ ${definition.name}`;
-                upButton.title = `Aumentar por ${definition.step} ${definition.unit}`;
-                upButton.onclick = event => { event.stopPropagation(); requestFactorIntervention(space.factorKey, "up"); };
-                interventionBox.append(downButton, upButton);
+            factorSpaces.forEach(space => {
+                const key = space.factorKey;
+                const definition = getFactorDefinition(key);
+                const level = marketState.levels[key];
+                [1, -1].forEach(delta => {
+                    const target = level + delta;
+                    const button = document.createElement("button");
+                    const targetText = target >= MIN_FACTOR_LEVEL && target <= MAX_FACTOR_LEVEL ? formatInternalValue(key, definition.values[target]) : "—";
+                    button.innerText = `${delta > 0 ? "▲" : "▼"} ${definition.symbol}: ${formatInternalValue(key, definition.values[level])} → ${targetText}`;
+                    const validation = validateIntervention(rulesContext, p.id, key, delta);
+                    const cost = getInterventionCost(key, level, target);
+                    button.disabled = !validation.ok;
+                    button.title = validation.ok
+                        ? `${delta > 0 ? "Subir" : "Reduzir"} ${definition.name}: ${formatMoney(cost.money)} + ${formatFichas(cost.fichas, cost.fichaType)}${delta < 0 ? " (sem devolução)" : ""}`
+                        : validation.error;
+                    button.onclick = event => { event.stopPropagation(); requestFactorIntervention(key, delta); };
+                    interventionBox.appendChild(button);
+                });
             });
             row.appendChild(interventionBox);
         }
 
-        const canCurrentPlayerTrade = canProposeTradeNow && currentPlayer && p.id !== currentPlayer.id && !currentPlayer.isBankrupt &&
+        const canCurrentPlayerTrade = canProposeTradeNow && currentPlayer && p.id !== currentPlayer.id && !currentPlayer.isBankrupt && !p.isBankrupt &&
             (!isMultiplayer || currentPlayer.peerId === myPeerId);
         if (canCurrentPlayerTrade) {
             const tradeBtn = document.createElement("button");
@@ -287,6 +355,7 @@ function updateUI() {
             if (header) header.appendChild(tradeBtn);
         }
 
+        // Jogadores no Fechamento do Exercício continuam podendo negociar.
         if (canProposeTradeNow && p.finishedYear && !p.isBankrupt && (!isMultiplayer || p.peerId === myPeerId)) {
             const finishedTradeBtn = document.createElement("button");
             finishedTradeBtn.className = "trade-btn";
@@ -313,6 +382,31 @@ function updateUI() {
 
 function openTradeTargetModalUI(proposer) {
     const targets = players.filter(player => player.id !== proposer.id && !player.isBankrupt);
-    const target = targets[0];
-    if (target) openTradeProposalModalUI(proposer, target);
+    if (targets.length === 0) return;
+    if (targets.length === 1) {
+        openTradeProposalModalUI(proposer, targets[0]);
+        return;
+    }
+
+    closeTradeModal();
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "trade-modal-overlay";
+    overlay.innerHTML = `
+        <div class="rules-box text-center" style="max-width: 420px;">
+            <h2 style="color:#1e90ff; margin-bottom: 15px;">🤝 Negociar com quem?</h2>
+            <div class="card-btn-row" style="flex-direction: column;">
+                ${targets.map(target => `<button class="card-btn trade-target-btn" data-player-id="${target.id}">${target.name}</button>`).join("")}
+            </div>
+            <button id="btn-cancel-trade-target" class="card-btn card-btn-danger" style="margin-top: 15px;">Cancelar</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll(".trade-target-btn").forEach(button => {
+        button.onclick = () => {
+            const target = players.find(player => String(player.id) === button.dataset.playerId);
+            if (target) openTradeProposalModalUI(proposer, target);
+        };
+    });
+    document.getElementById("btn-cancel-trade-target").onclick = () => closeTradeModal();
 }

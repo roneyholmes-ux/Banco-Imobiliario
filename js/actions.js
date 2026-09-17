@@ -10,6 +10,11 @@
  */
 
 class ActionRouter {
+    constructor() {
+        // Uma mesma requisição (mesmo requestId) nunca é processada duas vezes pelo Host.
+        this.isDuplicateRequest = createRequestDeduper();
+    }
+
     /**
      * Processa e despacha a mensagem recebida da rede
      */
@@ -20,6 +25,10 @@ class ActionRouter {
         console.log(`[Actions] Processando ação: ${type} (Enviado por: ${senderPeerId || 'Host/Desconhecido'})`);
 
         const isHost = window.Network ? window.Network.isHost : false;
+        if (isHost && type.startsWith("REQUEST_") && this.isDuplicateRequest(message.requestId)) {
+            console.warn(`[Actions] Requisição duplicada ignorada: ${type} (${message.requestId})`);
+            return;
+        }
 
         switch (type) {
             // ==========================================
@@ -51,7 +60,8 @@ class ActionRouter {
 
             case "REQUEST_INTERVENE_FACTOR":
                 if (isHost && typeof window.hostProcessInterveneFactor === "function") {
-                    window.hostProcessInterveneFactor(senderPeerId, payload ? payload.factorKey : null, payload ? payload.direction : null);
+                    const delta = payload && payload.delta !== undefined ? payload.delta : (payload && payload.direction === "down" ? -1 : 1);
+                    window.hostProcessInterveneFactor(senderPeerId, payload ? payload.factorKey : null, delta);
                 } else if (!isHost) {
                     console.warn("[Actions] Cliente ignorou REQUEST_INTERVENE_FACTOR (Apenas o Host pode processar).");
                 }
