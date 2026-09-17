@@ -51,6 +51,7 @@ let isMoving = false;
 let awaitingDecision = false;
 let isMultiplayer = false;
 let gameOver = false;
+let gameResult = null; // resultado final exibido em destaque (vencedor, empate ou sem vencedor)
 
 // Estado único e compartilhado do restaurante (níveis internos + mercado externo).
 let marketState = getInitialMarketState();
@@ -127,6 +128,8 @@ function resetBoardState() {
     isMoving = false;
     awaitingDecision = false;
     gameOver = false;
+    gameResult = null;
+    refreshGameResultUI();
     yearNumber = 1;
     cycleNumber = 0;
     marketState = getInitialMarketState();
@@ -160,7 +163,12 @@ function beginYearTurns(prefix = "") {
 // ROLAGEM DE DADOS E MOVIMENTAÇÃO
 // ==========================================
 function rollDice() {
-    if (isMoving || awaitingDecision || gameOver) return;
+    // Com a partida encerrada, o botão dos dados passa a reabrir o resultado.
+    if (gameOver) {
+        showGameResultAgain();
+        return;
+    }
+    if (isMoving || awaitingDecision) return;
     const player = players[currentPlayerIndex];
     if (!player || player.isBankrupt || player.finishedYear) return;
 
@@ -491,7 +499,7 @@ function nextTurn(previousMessage = "") {
     const advance = resolveTurnAdvance(players, currentPlayerIndex);
     if (advance.type === "lastStanding") {
         if (advance.winner) finishGame(advance.winner, "é o único jogador ativo restante", lead);
-        else endGame(`${lead}🏁 Não restaram jogadores ativos. Partida encerrada sem vencedor.`);
+        else endGame(`${lead}🏁 Não restaram jogadores ativos. Partida encerrada sem vencedor.`, { type: "noWinner", reason: "não restaram jogadores ativos", context: lead.trim() });
         return;
     }
 
@@ -520,14 +528,24 @@ function nextTurn(previousMessage = "") {
 }
 
 function finishGame(winner, reason, lead = "") {
-    endGame(`${lead}🏆 FIM DE JOGO! ${winner.name} venceu porque ${reason}.`);
+    endGame(`${lead}🏆 FIM DE JOGO! ${winner.name} venceu porque ${reason}.`, { type: "winner", winnerIds: [winner.id], reason, context: lead.trim() });
 }
 
-function endGame(msg) {
+// Encerra a partida e mostra o resultado em destaque para todos os jogadores.
+function endGame(msg, result = {}) {
     gameOver = true;
+    const winnerIds = result.winnerIds || [];
+    gameResult = {
+        type: result.type || "noWinner",
+        winnerIds,
+        reason: result.reason || "",
+        context: result.context || "",
+        standings: buildFinalStandings(players, marketState, winnerIds)
+    };
     updateStatus(msg);
     updateUI();
     syncGameState(msg);
+    refreshGameResultUI();
 }
 
 function closeAnnualExercise() {
@@ -542,7 +560,7 @@ function closeAnnualExercise() {
         return;
     }
     if (outcome.type === "tie") {
-        endGame(`🤝 EMPATE! ${names(outcome.winners)} cumpriram a Carta de Objetivo e terminaram com o mesmo dinheiro em caixa.`);
+        endGame(`🤝 EMPATE! ${names(outcome.winners)} cumpriram a Carta de Objetivo e terminaram com o mesmo dinheiro em caixa.`, { type: "tie", winnerIds: outcome.winners.map(player => player.id), reason: "cumpriram a Carta de Objetivo e terminaram com o mesmo dinheiro em caixa" });
         return;
     }
 
@@ -556,7 +574,7 @@ function closeAnnualExercise() {
         return;
     }
     if (outcome.type === "noSurvivors") {
-        endGame(`🏁 Ninguém cumpriu a Carta de Objetivo nem conseguiu pagar o Imposto de Renda anual. Partida encerrada sem vencedor.`);
+        endGame(`🏁 Ninguém cumpriu a Carta de Objetivo nem conseguiu pagar o Imposto de Renda anual. Partida encerrada sem vencedor.`, { type: "noWinner", reason: "ninguém cumpriu a Carta de Objetivo nem conseguiu pagar o Imposto de Renda anual" });
         return;
     }
 
@@ -681,7 +699,8 @@ function syncGameState(statusMessage = null, diceDisplay = null, diceValues = nu
         pendingCard: pendingCard,
         statusMessage: statusMessage || (document.getElementById("game-status") ? document.getElementById("game-status").innerText : ""),
         diceDisplay: diceDisplay || (document.getElementById("dice-display") ? document.getElementById("dice-display").innerText : ""),
-        diceValues: diceValues
+        diceValues: diceValues,
+        gameResult: gameResult
     });
 }
 
@@ -706,6 +725,7 @@ function applyGameStateSync(payload) {
     if (payload.yearNumber !== undefined) yearNumber = payload.yearNumber;
     if (payload.cycleNumber !== undefined) cycleNumber = payload.cycleNumber;
     if (payload.gameOver !== undefined) gameOver = payload.gameOver;
+    if (payload.gameResult !== undefined) gameResult = payload.gameResult;
 
     if (payload.currentPlayerIndex !== undefined) currentPlayerIndex = payload.currentPlayerIndex;
     if (payload.isMoving !== undefined) isMoving = payload.isMoving;
@@ -751,23 +771,17 @@ function applyGameStateSync(payload) {
 
     refreshTradeUI();
     refreshCardUI();
+    refreshGameResultUI();
 }
 
 // ==========================================
 // INICIAIS E BINDINGS GLOBAIS
 // ==========================================
+// Modo local: a quantidade é escolhida em uma janela que só oferece de 2 a GAME_CONFIG.maxJogadores.
 function startPlayerSetup() {
-    let count = 2;
-    try {
-        if (typeof window !== "undefined" && typeof window.prompt === "function") {
-            const answer = window.prompt(`Quantos jogadores locais? (2 a ${GAME_CONFIG.maxJogadores})`, "2");
-            count = parseInt(answer, 10);
-        }
-    } catch (error) {
-        count = 2;
-    }
-    if (isNaN(count) || count < 2 || count > GAME_CONFIG.maxJogadores) count = 2;
-    initializePlayers(count);
+    openPlayerSetupModalUI(count => {
+        if (Number.isInteger(count) && count >= 2 && count <= GAME_CONFIG.maxJogadores) initializePlayers(count);
+    });
 }
 
 if (typeof window !== "undefined") {

@@ -149,7 +149,8 @@ function formatNumber(value, maxDecimals = 2) {
 
 function formatMoney(value, options = {}) {
     const digits = options.cents ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 2 };
-    return `R$ ${Number(value).toLocaleString("pt-BR", digits)}`;
+    const amount = Number(value);
+    return `${amount < 0 ? "−" : ""}R$ ${Math.abs(amount).toLocaleString("pt-BR", digits)}`;
 }
 
 function formatPercent(fraction) {
@@ -559,6 +560,30 @@ function resolveAnnualClosing(players, market, config = GAME_CONFIG) {
     return { type: "newYear", winners: [], results, eliminated, charged: true };
 }
 
+// Resumo final da partida: vencedores primeiro, depois jogadores ativos por dinheiro, eliminados por último.
+function buildFinalStandings(players, market, winnerIds = []) {
+    const rows = players.map(player => {
+        const objective = player.objective ? calculateObjective(player.objective.id, market) : null;
+        return {
+            id: player.id,
+            name: player.name,
+            color: player.color,
+            money: player.money,
+            eliminated: player.isBankrupt,
+            winner: winnerIds.includes(player.id),
+            objective: objective ? {
+                name: objective.name,
+                symbol: objective.symbol,
+                fulfilled: objective.fulfilled,
+                resultText: `${objective.symbol} = ${formatObjectiveValue(objective, objective.result)}`,
+                targetText: `meta ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}`
+            } : null
+        };
+    });
+    const rank = row => (row.winner ? 0 : row.eliminated ? 2 : 1);
+    return rows.sort((a, b) => rank(a) - rank(b) || b.money - a.money);
+}
+
 // ==========================================
 // MULTIPLAYER: DESCARTE DE REQUISIÇÕES REPETIDAS
 // ==========================================
@@ -625,6 +650,7 @@ if (typeof module !== "undefined" && module.exports) {
         stepPlayerForward,
         resolveTurnAdvance,
         resolveAnnualClosing,
+        buildFinalStandings,
         createRequestDeduper
     };
 }

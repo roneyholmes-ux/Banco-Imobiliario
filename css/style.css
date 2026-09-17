@@ -1273,6 +1273,33 @@ body {
 .game-page .room-qr { display: grid; place-items: center; min-width: 144px; min-height: 144px; padding: 6px; background: var(--game-ivory); border: 1px solid var(--game-border); }
 .game-page .room-qr img, .game-page .room-qr canvas { display: block; max-width: 100%; height: auto; }
 .game-page .room-invite p { margin: 0; color: #64736c; font-size: .68rem; }
+/* Resultado da partida */
+.game-page .result-modal-box { max-width: 540px; max-height: 92vh; overflow-y: auto; text-align: center; }
+.game-page .result-card { margin-bottom: 18px; padding: 20px 20px 16px; background: var(--game-ivory); border: 2px solid var(--game-orange); border-radius: 14px; color: var(--game-text); box-shadow: 0 0 0 5px rgba(241, 90, 36, .2); animation: result-pop .7s cubic-bezier(.34, 1.56, .64, 1); }
+.game-page .result-card.result-tie { border-color: #1e90ff; box-shadow: 0 0 0 5px rgba(30, 144, 255, .2); }
+.game-page .result-card.result-noWinner { border-color: #64748b; box-shadow: 0 0 0 5px rgba(100, 116, 139, .2); }
+.game-page .result-badge { background: var(--game-orange); letter-spacing: .12em; text-transform: uppercase; }
+.game-page .result-tie .result-badge { background: #1e90ff; }
+.game-page .result-noWinner .result-badge { background: #64748b; }
+.game-page .result-icon { margin: 4px 0 6px; font-size: 3.6rem; line-height: 1; }
+.game-page .result-title { margin: 0 0 6px; color: var(--game-green-dark); font: 1.75rem/1.15 'Bree Serif', serif; }
+.game-page .result-reason { max-width: 400px; margin: 0 auto 6px; color: #475569; font-size: .92rem; line-height: 1.45; }
+.game-page .result-context { max-width: 420px; margin: 0 auto 6px; color: #64736c; font-size: .75rem; font-style: italic; line-height: 1.4; }
+.game-page .result-standings { margin: 12px 0 0; padding: 0; border-top: 1px dashed var(--game-border); list-style: none; text-align: left; }
+.game-page .result-standings li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 6px; border-bottom: 1px dashed var(--game-border); }
+.game-page .result-standings li.is-winner { background: rgba(241, 90, 36, .09); border-radius: 6px; }
+.game-page .result-standings li.is-eliminated { opacity: .6; }
+.game-page .result-dot { width: 12px; height: 12px; border: 1.5px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0, 0, 0, .2); }
+.game-page .result-player strong { display: block; color: var(--game-green-dark); font-size: .9rem; }
+.game-page .result-player small { display: block; color: #64736c; font-size: .72rem; line-height: 1.35; }
+.game-page .result-money { color: var(--game-green-dark); font-size: .85rem; font-weight: 700; white-space: nowrap; }
+@keyframes result-pop { from { opacity: 0; transform: perspective(800px) rotateY(80deg) scale(.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .game-page .result-card { animation: none; } }
+/* Escolha do número de jogadores */
+.game-page .player-setup-box { max-width: 460px; }
+.game-page .player-setup-box h2 { margin-bottom: 10px; color: #1e90ff; }
+.game-page .player-setup-note { margin-bottom: 18px; color: #cbd5e1; font-size: .9rem; line-height: 1.45; }
+.game-page .player-setup-back { margin-top: 16px; background: transparent; color: #94a3b8; text-decoration: underline; }
 
 @media (max-width: 1180px) {
     .game-page .control-panel { flex-basis: 300px; width: 300px; }
@@ -1305,4 +1332,5 @@ body {
     .game-page .market-event { margin-top: 6px; }.game-page #restaurant-event-name { font-size: .74rem; }.game-page .market-event-text { font-size: .54rem; }.game-page #restaurant-event-effects { font-size: .56rem; }
     .game-page .market-legend { gap: 2px 10px; margin-top: 6px; padding-top: 5px; font-size: .52rem; }
     .game-page .control-panel { display: flex; width: 100%; }.game-page .status-box, .game-page .players-box, .game-page .event-box { width: 100%; }
+    .game-page .result-modal-box { padding: 18px; }.game-page .result-card { padding: 16px 12px 12px; }.game-page .result-title { font-size: 1.35rem; }.game-page .result-icon { font-size: 2.8rem; }
 }

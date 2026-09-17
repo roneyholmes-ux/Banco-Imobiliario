@@ -251,9 +251,10 @@ class MultiplayerManager {
             <h2 style="color:#0e4b3c; margin-bottom: 10px;">SALA DE ESPERA</h2>
             ${roomId ? `<div class="room-invite"><div class="room-code-label">CÓDIGO DA SALA</div><div class="room-code">${roomId}</div><div id="room-qr" class="room-qr" aria-label="QR Code para entrar na sala"></div><p>Aponte a câmera para entrar diretamente.</p></div>` : ''}
             <div style="background:#282828; padding:15px; border-radius:8px; text-align:left; margin-bottom:15px;">
-                <h4 style="margin-bottom:10px; color:#ddd;">Jogadores na Sala:</h4>
+                <h4 style="margin-bottom:10px; color:#ddd;">Jogadores na Sala (<span id="dyn-lobby-count">0</span>/${this.maxPlayers}):</h4>
                 <ul id="dyn-lobby-list" style="list-style:none; padding-left:0; color:#fff;"></ul>
             </div>
+            <p id="dyn-lobby-hint" style="color:#ffb300; font-size:0.85rem; margin:-5px 0 12px;"></p>
             ${this.isHost 
                 ? `<button id="btn-start-match" class="hero-btn-primary" style="width:100%;">Começar partida</button>`
                 : `<p style="color:#ffb300; font-size:0.9rem;">⏳ Aguardando Host iniciar a partida...</p>`
@@ -296,6 +297,23 @@ class MultiplayerManager {
             li.textContent = `${p.name} ${p.isHost ? "👑 (Host)" : ""}`;
             list.appendChild(li);
         });
+
+        // A partida precisa de 2 a maxPlayers jogadores.
+        const count = this.lobbyState.players.length;
+        const countElement = document.getElementById("dyn-lobby-count");
+        if (countElement) countElement.textContent = count;
+        const hint = document.getElementById("dyn-lobby-hint");
+        if (hint) {
+            hint.textContent = count < 2
+                ? `É preciso ter pelo menos 2 jogadores para começar (máximo de ${this.maxPlayers}).`
+                : count >= this.maxPlayers ? `Sala completa: ${this.maxPlayers} jogadores, o máximo permitido.` : "";
+        }
+        const startButton = document.getElementById("btn-start-match");
+        if (startButton) {
+            startButton.disabled = count < 2;
+            startButton.style.opacity = count < 2 ? "0.5" : "";
+            startButton.style.cursor = count < 2 ? "not-allowed" : "";
+        }
     }
 
     /**
@@ -311,7 +329,7 @@ class MultiplayerManager {
      */
     startGame() {
         if (!this.isHost) return;
-        if (this.lobbyState.players.length > this.maxPlayers) return;
+        if (this.lobbyState.players.length < 2 || this.lobbyState.players.length > this.maxPlayers) return;
 
         console.log("[Multiplayer Host] Transmitindo START_GAME...");
         this.broadcast({

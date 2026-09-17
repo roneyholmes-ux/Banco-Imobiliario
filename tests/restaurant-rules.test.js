@@ -31,6 +31,7 @@ const {
   startNewYearMarket,
   resolveTurnAdvance,
   resolveAnnualClosing,
+  buildFinalStandings,
   createRequestDeduper
 } = rules;
 
@@ -563,6 +564,23 @@ describe('Teste H — Ano', () => {
     assert.deepEqual(next.external, { b: 6, a: 20, t: 0.10, j: 0.12 });
     assert.equal(next.activeCard, null);
     assert.equal(next.levels.C, 3);
+  });
+
+  test('resumo final: vencedores primeiro, ativos por dinheiro e eliminados por último', () => {
+    const ctx = setup(4);
+    ctx.players[0].money = 1000;
+    ctx.players[1].money = 9000;
+    ctx.players[2].isBankrupt = true;
+    ctx.players[3].money = 5000;
+    ctx.market.levels.C = 3;
+    ctx.market.levels.Ec = 2;
+    const standings = buildFinalStandings(ctx.players, ctx.market, [0]);
+    assert.deepEqual(standings.map(row => row.id), [0, 1, 3, 2]);
+    assert.equal(standings[0].winner, true);
+    assert.equal(standings[0].objective.resultText, 'CR = 180 pratos por dia');
+    assert.equal(standings[0].objective.targetText, 'meta ≥ 180 pratos por dia');
+    assert.equal(standings[0].objective.fulfilled, true);
+    assert.equal(standings[3].eliminated, true);
   });
 });
 

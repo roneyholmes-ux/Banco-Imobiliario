@@ -5,6 +5,7 @@
  */
 
 let expandedPlayerIds = new Set();
+let gameResultDismissed = false;
 
 const SPECIAL_SPACE_DESCRIPTIONS = {
     "PARTIDA": "Cruzar a PARTIDA conclui a volta do ano e leva ao Fechamento do Exercício.",
@@ -375,8 +376,15 @@ function updateUI() {
     const rollBtn = document.getElementById("rollDice");
     if (rollBtn) {
         const activePlayer = players[currentPlayerIndex];
-        rollBtn.disabled = isMoving || awaitingDecision || !!pendingTrade || !!pendingCard || gameOver || (activePlayer ? activePlayer.isBankrupt || activePlayer.finishedYear : false);
-        rollBtn.title = activePlayer && activePlayer.finishedYear ? "Este jogador já está no Fechamento do Exercício." : "Rolar dados";
+        if (gameOver && gameResult) {
+            rollBtn.disabled = false;
+            rollBtn.innerText = "🏆 Ver resultado";
+            rollBtn.title = "Mostrar o resultado da partida";
+        } else {
+            rollBtn.innerText = "🎲 Jogar Dado";
+            rollBtn.disabled = isMoving || awaitingDecision || !!pendingTrade || !!pendingCard || gameOver || (activePlayer ? activePlayer.isBankrupt || activePlayer.finishedYear : false);
+            rollBtn.title = activePlayer && activePlayer.finishedYear ? "Este jogador já está no Fechamento do Exercício." : "Rolar dados";
+        }
     }
 }
 
@@ -409,4 +417,118 @@ function openTradeTargetModalUI(proposer) {
         };
     });
     document.getElementById("btn-cancel-trade-target").onclick = () => closeTradeModal();
+}
+
+// ==========================================
+// ESCOLHA DO NÚMERO DE JOGADORES (MODO LOCAL)
+// ==========================================
+function openPlayerSetupModalUI(onChoose) {
+    const max = GAME_CONFIG.maxJogadores;
+    const existing = document.getElementById("player-setup-overlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "player-setup-overlay";
+    const counts = [];
+    for (let count = 2; count <= max; count++) counts.push(count);
+    overlay.innerHTML = `
+        <div class="rules-box text-center player-setup-box" role="dialog" aria-modal="true" aria-labelledby="player-setup-title">
+            <h2 id="player-setup-title">👥 Quantos jogadores?</h2>
+            <p class="player-setup-note">A partida no mesmo dispositivo aceita de <strong>2 a ${max} jogadores</strong>. Não é possível jogar com mais de ${max}.</p>
+            <div class="card-btn-row">
+                ${counts.map(count => `<button class="card-btn card-btn-primary player-count-btn" data-count="${count}">${count} jogadores</button>`).join("")}
+            </div>
+            <button id="btn-player-setup-back" class="card-btn player-setup-back">Voltar ao início</button>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    overlay.querySelectorAll(".player-count-btn").forEach(button => {
+        button.onclick = () => {
+            overlay.remove();
+            onChoose(Number(button.dataset.count));
+        };
+    });
+    document.getElementById("btn-player-setup-back").onclick = () => { window.location.href = "index.html"; };
+}
+
+// ==========================================
+// RESULTADO DA PARTIDA (DESTAQUE NA TELA)
+// ==========================================
+function closeGameResultModal() {
+    const el = document.getElementById("game-result-overlay");
+    if (el) el.remove();
+}
+
+function refreshGameResultUI() {
+    if (!gameOver || !gameResult) {
+        closeGameResultModal();
+        gameResultDismissed = false;
+        return;
+    }
+    if (gameResultDismissed || document.getElementById("game-result-overlay")) return;
+    openGameResultModalUI();
+}
+
+function showGameResultAgain() {
+    gameResultDismissed = false;
+    refreshGameResultUI();
+}
+
+function openGameResultModalUI() {
+    const result = gameResult;
+    const winners = result.standings.filter(row => row.winner);
+    const names = winners.map(row => row.name).join(" e ");
+    const capitalize = text => text ? text.charAt(0).toUpperCase() + text.slice(1) : "";
+    const view = {
+        winner: { badge: "Fim de jogo", icon: "🏆", title: `${names} venceu!`, reason: `Venceu porque ${result.reason}.` },
+        tie: { badge: "Fim de jogo · empate", icon: "🤝", title: `Empate entre ${names}`, reason: `${capitalize(result.reason)}.` },
+        noWinner: { badge: "Fim de jogo", icon: "🏁", title: "Partida encerrada sem vencedor", reason: `${capitalize(result.reason)}.` }
+    }[result.type] || { badge: "Fim de jogo", icon: "🏁", title: "Partida encerrada", reason: "" };
+
+    const rows = result.standings.map(row => {
+        const objective = row.objective
+            ? `${row.objective.name} · ${row.objective.resultText} (${row.objective.targetText}) ${row.objective.fulfilled ? "✅" : "❌"}`
+            : "Sem Carta de Objetivo";
+        const classes = [row.winner ? "is-winner" : "", row.eliminated ? "is-eliminated" : ""].join(" ").trim();
+        return `
+            <li class="${classes}">
+                <span class="result-dot" style="background:${row.color || "#94a3b8"}"></span>
+                <div class="result-player"><strong>${row.winner ? "🏆 " : ""}${escapeHtml(row.name)}${row.eliminated ? " · eliminado" : ""}</strong><small>${escapeHtml(objective)}</small></div>
+                <span class="result-money">${formatMoney(row.money)}</span>
+            </li>
+        `;
+    }).join("");
+
+    closeGameResultModal();
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay";
+    overlay.id = "game-result-overlay";
+    overlay.innerHTML = `
+        <div class="rules-box result-modal-box" role="dialog" aria-modal="true" aria-labelledby="game-result-title">
+            <div class="result-card result-${result.type}">
+                <span class="card-type-badge result-badge">${view.badge}</span>
+                <div class="result-icon" aria-hidden="true">${view.icon}</div>
+                <h2 id="game-result-title" class="result-title">${escapeHtml(view.title)}</h2>
+                <p class="result-reason">${escapeHtml(view.reason)}</p>
+                ${result.context ? `<p class="result-context">${escapeHtml(result.context)}</p>` : ""}
+                <ol class="result-standings">${rows}</ol>
+            </div>
+            <div class="card-btn-row">
+                <button id="btn-result-close" class="card-btn">Ver tabuleiro</button>
+                ${isMultiplayer ? "" : `<button id="btn-result-new" class="card-btn card-btn-primary">Nova partida</button>`}
+                <button id="btn-result-home" class="card-btn">Voltar ao início</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
+
+    document.getElementById("btn-result-close").onclick = () => {
+        gameResultDismissed = true;
+        closeGameResultModal();
+    };
+    const newGameButton = document.getElementById("btn-result-new");
+    if (newGameButton) newGameButton.onclick = () => { window.location.reload(); };
+    document.getElementById("btn-result-home").onclick = () => { window.location.href = "index.html"; };
 }
