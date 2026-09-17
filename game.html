@@ -16,7 +16,7 @@
 <body class="game-page">
 
     <!-- BARRA SUPERIOR DO JOGO -->
-    <nav class="navbar" style="position: relative; background: #070c14;">
+    <nav class="navbar">
         <a class="nav-logo" href="index.html" aria-label="Mesa de Fatores, início"><span class="brand-mark" aria-hidden="true">∑</span><span><strong>MESA DE FATORES</strong><small>MATEMÁTICA TAMBÉM SE SERVE</small></span></a>
         <ul class="nav-links">
             <li><a href="index.html">Voltar ao início</a></li>
@@ -27,8 +27,29 @@
     <main class="section-game">
         <div class="section-container">
             <div class="container">
-                <!-- TABULEIRO GRID 11x11 -->
-                <div id="board" class="board"></div>
+                <div class="board-shell">
+                    <div id="board" class="board"></div>
+                    <div id="board-market" class="board-market" aria-live="polite">
+                        <h4>Mercado</h4>
+                        <div class="market-row"><span>Custo do Combustível</span><strong id="market-b">R$ 6,00</strong></div>
+                        <div class="market-row"><span>Custo dos Alimentos</span><strong id="market-a">R$ 20,00</strong></div>
+                        <div class="market-row"><span>Imposto</span><strong id="market-t">10%</strong></div>
+                        <div class="market-row"><span>Taxa Básica de Juros</span><strong id="market-j">12%</strong></div>
+
+                        <div class="market-divider"></div>
+
+                        <div class="market-event">
+                            <div class="market-event-label">Fator externo</div>
+                            <div id="restaurant-event-name" class="market-event-name">Nenhum evento ativo</div>
+                            <div id="restaurant-event-effects" class="market-event-effects">A primeira carta será sorteada ao fim do primeiro ciclo.</div>
+                        </div>
+
+                        <div class="market-legend" aria-label="Legenda das casas">
+                            <span><i class="legend-swatch legend-controllable"></i>Controlável</span>
+                            <span><i class="legend-swatch legend-result"></i>Resultante/externo</span>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- PAINEL LATERAL DE CONTROLE -->
                 <div class="control-panel">
@@ -65,10 +86,10 @@
                         <div id="players-list"></div>
                     </div>
 
-                    <div class="event-box" id="restaurant-event-panel">
+                    <div class="event-box hidden" id="restaurant-event-panel">
                         <h3>Carta de Fator Externo ativa</h3>
-                        <div id="restaurant-event-name">Nenhum evento ativo</div>
-                        <div id="restaurant-event-effects">A primeira carta será sorteada ao fim do primeiro ciclo.</div>
+                        <div id="restaurant-event-name-side">Nenhum evento ativo</div>
+                        <div id="restaurant-event-effects-side">A primeira carta será sorteada ao fim do primeiro ciclo.</div>
                     </div>
 
                     <div class="event-box">

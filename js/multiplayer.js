@@ -85,7 +85,13 @@ class MultiplayerManager {
      */
     hostGame() {
         this.isHost = true;
-        const name = prompt("Seu nome:", this.playerName);
+        let name = this.playerName || "Jogador 1";
+        try {
+            const entered = window.prompt("Seu nome:", this.playerName);
+            if (entered && entered.trim()) name = entered.trim();
+        } catch (error) {
+            name = this.playerName || "Jogador 1";
+        }
         if (!name) return;
         this.playerName = name.trim();
 
@@ -155,10 +161,22 @@ class MultiplayerManager {
      * Conecta a uma sala existente como Cliente
      */
     joinGame(roomId = null) {
-        roomId = roomId || prompt("Digite o Código da Sala (5 caracteres):");
+        let enteredRoomId = roomId;
+        try {
+            if (!enteredRoomId) enteredRoomId = window.prompt("Digite o Código da Sala (5 caracteres):");
+        } catch (error) {
+            enteredRoomId = null;
+        }
+        roomId = enteredRoomId;
         if (!roomId) return;
 
-        const name = prompt("Seu nome:", this.playerName);
+        let name = this.playerName || "Jogador";
+        try {
+            const enteredName = window.prompt("Seu nome:", this.playerName);
+            if (enteredName && enteredName.trim()) name = enteredName.trim();
+        } catch (error) {
+            name = this.playerName || "Jogador";
+        }
         if (!name) return;
 
         this.playerName = name.trim();

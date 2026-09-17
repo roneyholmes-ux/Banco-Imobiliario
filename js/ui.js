@@ -12,7 +12,7 @@ function renderBoard() {
 
     boardSpaces.forEach((space) => {
         const spaceDiv = document.createElement("div");
-        spaceDiv.className = `space ${space.cssClass || ''}`;
+        spaceDiv.className = `space space-${space.type} ${space.cssClass || ''}`;
         if (space.factorKey) {
             const definition = FACTOR_DEFINITIONS[space.factorKey];
             spaceDiv.classList.add(definition && definition.control ? "factor-controllable" : "factor-result");
@@ -35,23 +35,16 @@ function renderBoard() {
         spaceDiv.appendChild(nameText);
 
         if (space.factorKey && FACTOR_DEFINITIONS[space.factorKey]) {
-            const definition = FACTOR_DEFINITIONS[space.factorKey];
             const factorInfo = document.createElement("div");
             factorInfo.className = "factor-info";
             factorInfo.innerHTML = `
-                <strong id="factor-value-${space.id}">${formatFactorValue(space.factorKey)}</strong>
-                <span>${definition.control ? "Controlável" : "Resultante/externo"}</span>
+                <div class="factor-value-row">
+                    <strong id="factor-value-${space.id}">${formatFactorValue(space.factorKey)}</strong>
+                    <span class="intervention-sign" id="intervention-sign-${space.id}">${space.lastIntervention || ""}</span>
+                </div>
                 <span class="factor-manager" id="factor-manager-${space.id}">Sem gerente</span>
-                <span class="intervention-sign" id="intervention-sign-${space.id}">${space.lastIntervention || ""}</span>
             `;
             spaceDiv.appendChild(factorInfo);
-        }
-
-        if (space.price) {
-            const priceText = document.createElement("div");
-            priceText.innerText = space.factorKey ? `Gerência: $${space.price}` : `$${space.price}`;
-            priceText.style.marginTop = "auto";
-            spaceDiv.appendChild(priceText);
         }
 
         const tokensContainer = document.createElement("div");
@@ -65,13 +58,29 @@ function renderBoard() {
     });
 }
 
+function getSpaceTooltip(space) {
+    const lines = [space.name];
+    const definition = space.factorKey ? FACTOR_DEFINITIONS[space.factorKey] : null;
+    if (definition) {
+        lines.push(`Valor: ${formatFactorValue(space.factorKey)}`);
+        lines.push(definition.control ? "Fator controlável" : "Fator resultante/externo");
+    }
+    if (space.price) {
+        const manager = players.find(player => player.id === space.owner);
+        lines.push(`Gerência: $${space.price}`);
+        lines.push(manager ? `Gerente: ${manager.name}` : "Sem gerente");
+    }
+    return lines.join("\n");
+}
+
 function applySpaceOwnership(space, spaceDiv) {
     spaceDiv = spaceDiv || document.getElementById(`space-${space.id}`);
     if (!spaceDiv) return;
+    spaceDiv.title = getSpaceTooltip(space);
 
     const existingBadge = spaceDiv.querySelector(".owner-badge");
     if (existingBadge) existingBadge.remove();
-    spaceDiv.style.border = "";
+    spaceDiv.style.borderColor = "";
     spaceDiv.style.boxShadow = "";
 
     if (!["property", "station", "utility"].includes(space.type) || space.owner === null || space.owner === undefined) {
@@ -81,8 +90,8 @@ function applySpaceOwnership(space, spaceDiv) {
     const owner = players.find(p => p.id === space.owner);
     if (!owner) return;
 
-    spaceDiv.style.border = `2px solid ${owner.color}`;
-    spaceDiv.style.boxShadow = `inset 0 0 8px ${owner.color}99`;
+    spaceDiv.style.borderColor = owner.color;
+    spaceDiv.style.boxShadow = `inset 0 0 0 1px ${owner.color}, inset 0 0 8px ${owner.color}99`;
 
     const badge = document.createElement("div");
     badge.className = "owner-badge";
@@ -110,6 +119,21 @@ function renderExternalCard() {
     const nameElement = document.getElementById("restaurant-event-name");
     const effectsElement = document.getElementById("restaurant-event-effects");
     if (!nameElement || !effectsElement) return;
+
+    const marketB = document.getElementById("market-b");
+    const marketA = document.getElementById("market-a");
+    const marketT = document.getElementById("market-t");
+    const marketJ = document.getElementById("market-j");
+
+    const marketState = typeof RESTAURANT_RULESET !== "undefined" ? RESTAURANT_RULESET.external : null;
+    const baseB = marketState ? marketState.b.initial : 6;
+    const baseA = marketState ? marketState.a.initial : 20;
+    const baseT = marketState ? marketState.t.initial : 0.10;
+    const baseJ = marketState ? marketState.j.initial : 0.12;
+    if (marketB) marketB.innerText = `R$ ${Number(baseB).toFixed(2).replace(".00", ",00")}`;
+    if (marketA) marketA.innerText = `R$ ${Number(baseA).toFixed(2).replace(".00", ",00")}`;
+    if (marketT) marketT.innerText = `${(baseT * 100).toFixed(0)}%`;
+    if (marketJ) marketJ.innerText = `${(baseJ * 100).toFixed(0)}%`;
 
     const yearElement = document.getElementById("year-number");
     const cycleElement = document.getElementById("cycle-number");
@@ -162,6 +186,7 @@ function renderPawns() {
             const pawn = document.createElement("div");
             pawn.className = "pawn";
             pawn.style.backgroundColor = player.color;
+            pawn.title = player.name;
             container.appendChild(pawn);
         }
     });

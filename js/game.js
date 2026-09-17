@@ -27,6 +27,165 @@ const PRESETS = {
     hardcore: { name: "Escassez", startingMoney: 15000, taxaTroca: 500 }
 };
 
+const RESTAURANT_RULESET = {
+    internal: {
+        C: { symbol: "C", name: "Número de Cozinheiros", values: [2, 3, 4, 5], initialLevel: 1, initialValue: 3, unit: "cozinheiros", type: "discreta" },
+        Ec: { symbol: "Ec", name: "Equipamentos de Cozinha", values: [1, 2, 3, 4], initialLevel: 1, initialValue: 2, unit: "equipamentos", type: "discreta" },
+        Es: { symbol: "Es", name: "Equipamentos do Salão", values: [3, 4, 5, 6], initialLevel: 1, initialValue: 4, unit: "equipamentos", type: "discreta" },
+        M: { symbol: "M", name: "Orçamento de Marketing", values: [1000, 2000, 3000, 4000], initialLevel: 2, initialValue: 3000, unit: "R$", type: "continua" },
+        P: { symbol: "P", name: "Preço Médio dos Pratos", values: [37, 40, 43, 46], initialLevel: 1, initialValue: 40, unit: "R$", type: "continua" },
+        V: { symbol: "V", name: "Variedade do Cardápio", values: [4, 5, 6, 7], initialLevel: 2, initialValue: 6, unit: "itens", type: "discreta" },
+        S: { symbol: "S", name: "Capacidade do Estoque", values: [80, 100, 120, 140], initialLevel: 1, initialValue: 100, unit: "kg", type: "continua" },
+        Q: { symbol: "Q", name: "Qualidade dos Ingredientes", values: [1, 2, 3, 4], initialLevel: 2, initialValue: 3, unit: "pontos", type: "discreta" },
+        N: { symbol: "N", name: "Funcionários do Salão", values: [2, 3, 4, 5], initialLevel: 1, initialValue: 3, unit: "funcionários", type: "discreta" },
+        H: { symbol: "H", name: "Tempo Diário de Operação", values: [6, 8, 10, 12], initialLevel: 1, initialValue: 8, unit: "h", type: "continua" },
+        I: { symbol: "I", name: "Ingredientes Comprados", values: [40, 60, 70, 80], initialLevel: 1, initialValue: 60, unit: "kg", type: "continua" }
+    },
+    external: {
+        b: { symbol: "b", name: "Custo do Combustível", unit: "R$/litro", initial: 6 },
+        a: { symbol: "a", name: "Custo dos Alimentos", unit: "R$/kg", initial: 20 },
+        t: { symbol: "t", name: "Imposto", unit: "alíquota", initial: 0.10 },
+        j: { symbol: "j", name: "Taxa Básica de Juros", unit: "ao ano", initial: 0.12 }
+    },
+    objectiveCards: [
+        { name: "Cozinha de alto rendimento", factors: ["C", "Ec"], formula: "CR = 12 × C × Ec", target: 180, operator: ">=", evaluate: (internal) => 12 * internal.C * internal.Ec, initialResult: 72 },
+        { name: "Salão preparado", factors: ["H", "N", "Es"], formula: "SP = H × (2 × N + Es)", target: 125, operator: ">=", evaluate: (internal) => internal.H * (2 * internal.N + internal.Es), initialResult: 80 },
+        { name: "Marca fortalecida", factors: ["M", "V", "Q"], formula: "MF = M / 1000 + V + 2 × Q", target: 18, operator: ">=", evaluate: (internal) => internal.M / 1000 + internal.V + 2 * internal.Q, initialResult: 15 },
+        { name: "Frete inteligente", factors: ["b", "I", "S"], formula: "FI = 100 + 5 × b + 2 × I − S", target: 90, operator: "<=", evaluate: (internal, external) => 100 + 5 * external.b + 2 * internal.I - internal.S, initialResult: 150 },
+        { name: "Margem bruta do lote-padrão", factors: ["P", "I", "a"], formula: "MB = 50 × P − I × a", target: 1300, operator: ">=", evaluate: (internal, external) => 50 * internal.P - internal.I * external.a, initialResult: 800 },
+        { name: "Capital enxuto", factors: ["j", "Ec", "Es"], formula: "CE = j × (2000 × Ec + 1000 × Es)", target: 650, operator: "<=", evaluate: (internal, external) => external.j * (2000 * internal.Ec + 1000 * internal.Es), initialResult: 960 },
+        { name: "Receita potencial líquida", factors: ["P", "H", "t"], formula: "RP = 6 × P × H × (1 − t)", target: 2700, operator: ">=", evaluate: (internal, external) => 6 * internal.P * internal.H * (1 - external.t), initialResult: 1728 },
+        { name: "Atratividade comercial", factors: ["M", "V", "Q", "P"], formula: "AC = M / 1000 + V + Q + (50 − P) / 5", target: 16, operator: ">=", evaluate: (internal) => internal.M / 1000 + internal.V + internal.Q + (50 - internal.P) / 5, initialResult: 14 }
+    ],
+    fluencyCards: [
+        { name: "Combustíveis", first: { b: 0.10 }, second: { b: 0.15 } },
+        { name: "Agricultura", first: { a: 0.10 }, second: { a: -0.08 } },
+        { name: "Movimento de cargas", first: { b: 0.08, a: 0.05 }, second: { b: 0.12 } },
+        { name: "Fornecimento", first: { a: 0.05 }, second: { a: -0.05 } },
+        { name: "Turismo", first: { a: 0.05 }, second: { a: 0.05, b: 0.10 } },
+        { name: "Clima", first: { a: 0.08 }, second: { a: 0.12 } },
+        { name: "Economia", first: { b: 0.05, a: 0.05 }, second: { a: 0.10, j: 0.08333333333333333 } },
+        { name: "Política econômica", first: { t: 0.09 }, second: { t: 0.11 } },
+        { name: "Política monetária", first: { j: 0.13 }, second: { j: 0.11 } }
+    ]
+};
+
+function toInternalValue(factorKey, levelOrValue) {
+    const definition = RESTAURANT_RULESET.internal[factorKey];
+    if (!definition) return levelOrValue;
+    if (typeof levelOrValue === 'number' && Number.isInteger(levelOrValue) && levelOrValue >= 0 && levelOrValue <= 3) {
+        return definition.values[levelOrValue];
+    }
+    return levelOrValue;
+}
+
+function getInitialMarketState() {
+    const internal = {};
+    Object.keys(RESTAURANT_RULESET.internal).forEach((factorKey) => {
+        const definition = RESTAURANT_RULESET.internal[factorKey];
+        internal[factorKey] = definition.initialValue ?? toInternalValue(factorKey, definition.initialLevel ?? 0);
+    });
+    return {
+        internal,
+        external: {
+            b: RESTAURANT_RULESET.external.b.initial,
+            a: RESTAURANT_RULESET.external.a.initial,
+            t: RESTAURANT_RULESET.external.t.initial,
+            j: RESTAURANT_RULESET.external.j.initial
+        },
+        semester: 'primeiro',
+        activeCard: null,
+        lastEventText: null
+    };
+}
+
+function createPlayer(name) {
+    return {
+        id: name,
+        name,
+        money: 25000,
+        position: 0,
+        fichasDiscreta: 0,
+        fichasContinua: 0,
+        isBankrupt: false,
+        finishedYear: false,
+        passedFestaJunina: false,
+        objective: null
+    };
+}
+
+function createObjectiveDeck() {
+    return RESTAURANT_RULESET.objectiveCards.map((card) => ({ ...card }));
+}
+
+function calculateObjectiveCard(name, internal, external, context = {}) {
+    const state = context.state || { internal, external };
+    const deck = context.objectiveDeck || RESTAURANT_RULESET.objectiveCards;
+    const objective = deck.find(card => card.name === name) || deck[0];
+    const resolvedInternal = state.internal || internal || {};
+    const resolvedExternal = state.external || external || {};
+    const result = typeof objective.evaluate === 'function' ? objective.evaluate(resolvedInternal, resolvedExternal) : 0;
+    const fulfilled = objective.operator === '<=' ? result <= objective.target : result >= objective.target;
+    return { ...objective, result, fulfilled, currentValue: result };
+}
+
+function applyFactorDelta(state, factorKey, delta, options = {}) {
+    const marketState = state || getInitialMarketState();
+    const key = factorKey || 'C';
+    const valid = Object.prototype.hasOwnProperty.call(RESTAURANT_RULESET.internal, key);
+    if (!valid) {
+        return { ...marketState, error: 'fator inexistente' };
+    }
+    const definition = RESTAURANT_RULESET.internal[key];
+    const previousValue = marketState.internal[key];
+    const currentIndex = definition.values.indexOf(previousValue);
+    const nextIndex = currentIndex + Number(delta);
+    const inRange = nextIndex >= 0 && nextIndex <= definition.values.length - 1;
+    if (!inRange) {
+        return { ...marketState, internal: { ...marketState.internal, [key]: previousValue }, error: 'nível fora do intervalo permitido' };
+    }
+    const updatedInternal = { ...marketState.internal, [key]: definition.values[nextIndex] };
+    return { ...marketState, internal: updatedInternal, error: null };
+}
+
+function getActiveExternalCard(state) {
+    return state && state.activeCard ? state.activeCard : null;
+}
+
+function applyExternalEvent(state, cardName, semester) {
+    const marketState = state || getInitialMarketState();
+    const normalizedName = (cardName || '').toLowerCase();
+    const card = RESTAURANT_RULESET.fluencyCards.find((entry) => {
+        const name = entry.name.toLowerCase();
+        return name === normalizedName || name.replace(/[^a-z]/g, '') === normalizedName.replace(/[^a-z]/g, '');
+    }) || RESTAURANT_RULESET.fluencyCards[0];
+    const normalizedSemester = String(semester || 'primeiro').toLowerCase();
+    const picked = normalizedSemester === 'segundo' || normalizedSemester === 'second' ? card.second : card.first;
+    const base = { b: 6, a: 20, t: 0.10, j: 0.12 };
+    const nextExternal = { ...base };
+    Object.keys(nextExternal).forEach((key) => {
+        if (picked[key] === undefined) return;
+        const delta = Number(picked[key]);
+        if (key === 'b' || key === 'a') {
+            nextExternal[key] = base[key] * (1 + delta);
+            return;
+        }
+        if (key === 't' || key === 'j') {
+            nextExternal[key] = delta;
+            return;
+        }
+        nextExternal[key] = base[key];
+    });
+    const nextState = {
+        ...marketState,
+        external: nextExternal,
+        semester: normalizedSemester === 'segundo' || normalizedSemester === 'second' ? 'segundo' : 'primeiro',
+        activeCard: { ...card, semester: normalizedSemester === 'segundo' || normalizedSemester === 'second' ? 'Segundo semestre' : 'Primeiro semestre', effect: picked },
+        lastEventText: `${card.name} (${normalizedSemester === 'segundo' || normalizedSemester === 'second' ? 'Segundo semestre' : 'Primeiro semestre'}): ${JSON.stringify(picked)}`
+    };
+    return nextState;
+}
+
 const FACTOR_DEFINITIONS = {
     numeroCozinheiros: { name: "Número de Cozinheiros", value: 6, unit: "cozinheiros", control: true, discrete: true, cost: 1500, ficha: "discreta", step: 1 },
     equipamentosCozinha: { name: "Equipamentos de Cozinha", value: 8, unit: "equipamentos", control: true, discrete: true, cost: 3000, ficha: "discreta", step: 1 },
@@ -170,45 +329,29 @@ const CARDS = [
 
 const boardSpaces = [
     { id: 0, name: "PARTIDA", type: "special", cssClass: "corner-space" },
-    { id: 1, name: "Número de Cozinheiros", type: "property", factorKey: "numeroCozinheiros", price: 60, rent: 2, owner: null },
+    { id: 1, name: "Número de Cozinheiros", type: "property", factorKey: "numeroCozinheiros", price: 3500, rent: 350, owner: null },
     { id: 2, name: "Sorte ou Revés", type: "special" },
-    { id: 3, name: "Equipamentos de Cozinha", type: "property", factorKey: "equipamentosCozinha", price: 60, rent: 4, owner: null },
-    { id: 4, name: "Imposto de Renda", type: "special" },
-    { id: 5, name: "Laboratório de Alimentos", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua" },
-    { id: 6, name: "Preço Médio dos Pratos", type: "property", factorKey: "precoMedioPratos", price: 100, rent: 6, owner: null },
-    { id: 7, name: "Sorte ou Revés", type: "special" },
-    { id: 8, name: "Orçamento de Marketing", type: "property", factorKey: "orcamentoMarketing", price: 100, rent: 6, owner: null },
-    { id: 9, name: "Estoque Disponível", type: "property", factorKey: "estoqueDisponivel", price: 120, rent: 8, owner: null },
-    { id: 10, name: "PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 11, name: "Variedade do Cardápio", type: "property", factorKey: "variedadeCardapio", price: 140, rent: 10, owner: null },
-    { id: 12, name: "Cia. de Saneamento", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 13, name: "Qualidade dos Ingredientes", type: "property", factorKey: "qualidadeIngredientes", price: 140, rent: 10, owner: null },
-    { id: 14, name: "Número de Mesas", type: "property", factorKey: "numeroMesas", price: 160, rent: 12, owner: null },
-    { id: 15, name: "Centro de Controle Financeiro", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua" },
-    { id: 16, name: "Tempo Base do Prato", type: "property", factorKey: "tempoBasePrato", price: 180, rent: 14, owner: null },
+    { id: 3, name: "Equipamentos de Cozinha", type: "property", factorKey: "equipamentosCozinha", price: 4000, rent: 400, owner: null },
+    { id: 4, name: "Revisão Operacional", type: "special" },
+    { id: 5, name: "Orçamento de Marketing", type: "property", factorKey: "orcamentoMarketing", price: 3500, rent: 350, owner: null },
+    { id: 6, name: "FESTA JUNINA", type: "special", cssClass: "corner-space" },
+    { id: 7, name: "Preço Médio dos Pratos", type: "property", factorKey: "precoMedioPratos", price: 4000, rent: 400, owner: null },
+    { id: 8, name: "Centro de Observação", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua" },
+    { id: 9, name: "Estoque Disponível", type: "property", factorKey: "estoqueDisponivel", price: 3800, rent: 380, owner: null },
+    { id: 10, name: "Sorte ou Revés", type: "special" },
+    { id: 11, name: "Variedade do Cardápio", type: "property", factorKey: "variedadeCardapio", price: 2800, rent: 280, owner: null },
+    { id: 12, name: "PRISÃO", type: "special", cssClass: "corner-space" },
+    { id: 13, name: "Qualidade dos Ingredientes", type: "property", factorKey: "qualidadeIngredientes", price: 3000, rent: 300, owner: null },
+    { id: 14, name: "Funcionários do Salão", type: "property", factorKey: "numeroMesas", price: 3300, rent: 330, owner: null },
+    { id: 15, name: "Centro de Observação", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta" },
+    { id: 16, name: "Tempo Base do Prato", type: "property", factorKey: "tempoBasePrato", price: 3300, rent: 330, owner: null },
     { id: 17, name: "Sorte ou Revés", type: "special" },
-    { id: 18, name: "Complexidade Média dos Pedidos", type: "property", factorKey: "complexidadePedidos", price: 180, rent: 14, owner: null },
-    { id: 19, name: "Tempo Adicional por Alterações", type: "property", factorKey: "tempoAdicionalAlteracoes", price: 200, rent: 16, owner: null },
-    { id: 20, name: "FESTA JUNINA", type: "special", cssClass: "corner-space" },
-    { id: 21, name: "Pedidos na Fila", type: "property", factorKey: "pedidosFila", price: 220, rent: 18, owner: null },
-    { id: 22, name: "Sorte ou Revés", type: "special" },
-    { id: 23, name: "Tempo Médio de Despacho", type: "property", factorKey: "tempoMedioDespacho", price: 220, rent: 18, owner: null },
-    { id: 24, name: "Tempo Total de Espera", type: "property", factorKey: "tempoTotalEspera", price: 240, rent: 20, owner: null },
-    { id: 25, name: "Centro de Gestão de Pessoas", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta" },
-    { id: 26, name: "Demanda de Clientes", type: "property", factorKey: "demandaClientes", price: 260, rent: 22, owner: null },
-    { id: 27, name: "Cia. de Força e Luz", type: "utility", price: 150, rent: 15, owner: null },
-    { id: 28, name: "Avaliação dos Clientes", type: "property", factorKey: "avaliacaoClientes", price: 260, rent: 22, owner: null },
-    { id: 29, name: "Custo do Combustível", type: "property", factorKey: "custoCombustivel", price: 280, rent: 24, owner: null },
-    { id: 30, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
-    { id: 31, name: "Valor do Frete", type: "property", factorKey: "valorFrete", price: 300, rent: 26, owner: null },
-    { id: 32, name: "Custo dos Alimentos", type: "property", factorKey: "custoAlimentos", price: 300, rent: 26, owner: null },
-    { id: 33, name: "Sorte ou Revés", type: "special" },
-    { id: 34, name: "Desperdício de Alimentos", type: "property", factorKey: "desperdicioAlimentos", price: 320, rent: 28, owner: null },
-    { id: 35, name: "Centro de Dados e Atendimento", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta" },
-    { id: 36, name: "Sorte ou Revés", type: "special" },
-    { id: 37, name: "Faturamento", type: "property", factorKey: "faturamento", price: 350, rent: 35, owner: null },
-    { id: 38, name: "Taxa de Luxo", type: "special" },
-    { id: 39, name: "Lucro Operacional", type: "property", factorKey: "lucroOperacional", price: 400, rent: 50, owner: null }
+    { id: 18, name: "VÁ PARA A PRISÃO", type: "special", cssClass: "corner-space" },
+    { id: 19, name: "Tempo Médio de Despacho", type: "property", factorKey: "tempoMedioDespacho", price: 3000, rent: 300, owner: null },
+    { id: 20, name: "Centro de Observação", type: "station", price: 200, rent: 20, owner: null, fichaType: "continua" },
+    { id: 21, name: "Complexidade Média dos Pedidos", type: "property", factorKey: "complexidadePedidos", price: 3200, rent: 320, owner: null },
+    { id: 22, name: "Centro de Observação", type: "station", price: 200, rent: 20, owner: null, fichaType: "discreta" },
+    { id: 23, name: "Taxa de Luxo", type: "special" }
 ];
 
 const PLAYER_PRESETS = [
@@ -228,10 +371,33 @@ let isMultiplayer = false;
 let gameOver = false;
 
 function getGridPosition(index) {
-    if (index >= 0 && index <= 10) return { row: 11, col: 11 - index };
-    if (index > 10 && index <= 20) return { row: 11 - (index - 10), col: 1 };
-    if (index > 20 && index <= 30) return { row: 1, col: index - 19 };
-    if (index > 30 && index <= 39) return { row: index - 29, col: 11 };
+    const ring = {
+        0: { row: 1, col: 1 },
+        1: { row: 1, col: 2 },
+        2: { row: 1, col: 3 },
+        3: { row: 1, col: 4 },
+        4: { row: 1, col: 5 },
+        5: { row: 1, col: 6 },
+        6: { row: 1, col: 7 },
+        7: { row: 2, col: 7 },
+        8: { row: 3, col: 7 },
+        9: { row: 4, col: 7 },
+        10: { row: 5, col: 7 },
+        11: { row: 6, col: 7 },
+        12: { row: 7, col: 7 },
+        13: { row: 7, col: 6 },
+        14: { row: 7, col: 5 },
+        15: { row: 7, col: 4 },
+        16: { row: 7, col: 3 },
+        17: { row: 7, col: 2 },
+        18: { row: 7, col: 1 },
+        19: { row: 6, col: 1 },
+        20: { row: 5, col: 1 },
+        21: { row: 4, col: 1 },
+        22: { row: 3, col: 1 },
+        23: { row: 2, col: 1 }
+    };
+    return ring[index] || { row: 4, col: 4 };
 }
 
 function initializePlayers(count = 2) {
@@ -427,10 +593,12 @@ async function movePlayer(playerIndex, steps) {
     isMoving = true;
     updateUI();
     let player = players[playerIndex];
+    const festaJuninaIndex = boardSpaces.findIndex(space => space.name === "FESTA JUNINA");
+    const boardLength = boardSpaces.length || 40;
 
     for (let i = 0; i < steps; i++) {
-        player.position = (player.position + 1) % 40;
-        if (player.position === 20) {
+        player.position = (player.position + 1) % boardLength;
+        if (festaJuninaIndex !== -1 && player.position === festaJuninaIndex) {
             player.passedFestaJunina = true;
         }
         if (player.position === 0) {
@@ -494,8 +662,14 @@ function handleLanding(player) {
         const statusDiv = document.getElementById("game-status");
         if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
-    } else if (space.name === "Imposto de Renda") {
-        const msg = `${player.name} passou pelo ponto de Imposto de Renda. A cobrança ocorrerá no Fechamento Anual.`;
+    } else if (space.name === "Revisão Operacional") {
+        players.forEach((candidate) => {
+            if (!candidate.isBankrupt) {
+                addFicha(candidate, "continua", 1);
+                addFicha(candidate, "discreta", 1);
+            }
+        });
+        const msg = `📊 Revisão Operacional: todos os jogadores ganharam 1 ficha contínua e 1 ficha discreta.`;
         const statusDiv = document.getElementById("game-status");
         if (statusDiv) statusDiv.innerText = msg;
         syncGameState(msg);
@@ -933,43 +1107,67 @@ function applyGameStateSync(payload) {
 // INICIAIS E BINDINGS GLOBAIS
 // ==========================================
 function startPlayerSetup() {
-    let count = prompt("Quantos jogadores locais? (2 a 6)", "2");
-    count = parseInt(count);
+    let count = 2;
+    try {
+        if (typeof window !== "undefined" && typeof window.prompt === "function") {
+            const answer = window.prompt("Quantos jogadores locais? (2 a 6)", "2");
+            count = parseInt(answer, 10);
+        }
+    } catch (error) {
+        count = 2;
+    }
     if (isNaN(count) || count < 2 || count > 6) count = 2;
     initializePlayers(count);
 }
 
-window.startMultiplayerGame = function(lobbyPlayers) {
-    isMultiplayer = true;
-    players = lobbyPlayers.map((lp, idx) => ({
-        id: idx,
-        peerId: lp.peerId || lp.id,
-        name: lp.name || `Jogador ${idx + 1}`,
-        color: PLAYER_PRESETS[idx % PLAYER_PRESETS.length].color,
-        money: GAME_CONFIG.startingMoney,
-        position: 0,
-        inJail: false,
-        jailTurns: 0,
-        isBankrupt: false,
-        fichasDiscreta: 0,
-        fichasContinua: 0,
-        objective: null,
-        passedFestaJunina: false,
-        finishedYear: false,
-        playedThisCycle: false
-    }));
+if (typeof window !== "undefined") {
+    window.startMultiplayerGame = function(lobbyPlayers) {
+        isMultiplayer = true;
+        players = lobbyPlayers.map((lp, idx) => ({
+            id: idx,
+            peerId: lp.peerId || lp.id,
+            name: lp.name || `Jogador ${idx + 1}`,
+            color: PLAYER_PRESETS[idx % PLAYER_PRESETS.length].color,
+            money: GAME_CONFIG.startingMoney,
+            position: 0,
+            inJail: false,
+            jailTurns: 0,
+            isBankrupt: false,
+            fichasDiscreta: 0,
+            fichasContinua: 0,
+            objective: null,
+            passedFestaJunina: false,
+            finishedYear: false,
+            playedThisCycle: false
+        }));
 
-    assignObjectives();
+        assignObjectives();
 
-    resetBoardState();
+        resetBoardState();
 
-    if (window.Network && window.Network.isHost) {
-        syncGameState("A partida começou! Role os dados.");
-    }
-};
+        if (window.Network && window.Network.isHost) {
+            syncGameState("A partida começou! Role os dados.");
+        }
+    };
 
-window.hostProcessRollDice = hostProcessRollDice;
-window.hostProcessBuyProperty = hostProcessBuyProperty;
-window.hostProcessPassProperty = hostProcessPassProperty;
-window.hostProcessInterveneFactor = hostProcessInterveneFactor;
-window.applyGameStateSync = applyGameStateSync;
+    window.hostProcessRollDice = hostProcessRollDice;
+    window.hostProcessBuyProperty = hostProcessBuyProperty;
+    window.hostProcessPassProperty = hostProcessPassProperty;
+    window.hostProcessInterveneFactor = hostProcessInterveneFactor;
+    window.applyGameStateSync = applyGameStateSync;
+}
+
+if (typeof module !== "undefined") {
+    module.exports = {
+        GAME_CONFIG,
+        PRESETS,
+        RESTAURANT_RULESET,
+        getInitialMarketState,
+        createPlayer,
+        createObjectiveDeck,
+        calculateObjectiveCard,
+        applyFactorDelta,
+        getActiveExternalCard,
+        applyExternalEvent
+    };
+}
