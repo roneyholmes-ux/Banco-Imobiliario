@@ -1113,6 +1113,14 @@ body {
     font-family: 'Inter', sans-serif;
 }
 
+.feedback-fab { position: fixed; right: 24px; bottom: 24px; z-index: 5000; display: grid; place-items: center; width: 62px; height: 62px; border-radius: 50%; background: #ff2f7d; color: #fff; box-shadow: 0 8px 18px rgba(31, 43, 40, .28); font-size: 2rem; font-weight: 400; line-height: 1; text-decoration: none; transition: transform .2s, box-shadow .2s; }
+.feedback-fab:hover { color: #fff; transform: translateY(-3px) scale(1.04); box-shadow: 0 12px 24px rgba(31, 43, 40, .34); }
+.feedback-fab:focus-visible { outline: 3px solid var(--color-green-dark); outline-offset: 4px; }
+
+@media (max-width: 680px) {
+    .feedback-fab { right: 16px; bottom: 16px; width: 56px; height: 56px; }
+}
+
 .game-page h1, .game-page h2, .game-page h3, .game-page h4,
 .game-page .nav-logo strong { font-family: 'Bree Serif', serif; font-weight: 400; letter-spacing: 0; }
 .game-page .navbar {
