@@ -27,24 +27,22 @@
     <main class="section-game">
         <div class="section-container">
             <div class="container">
-                <div class="board-shell">
-                    <div id="board" class="board"></div>
-                    <div id="board-market" class="board-market" aria-live="polite">
-                        <h4>Mercado</h4>
-                        <div id="market-cards" class="market-cards"></div>
+                <div class="board-column">
+                    <div class="board-shell">
+                        <div id="board" class="board"></div>
+                        <div id="board-market" class="board-market" aria-live="polite">
+                            <h4>Condições externas</h4>
+                            <div id="market-cards" class="market-cards"></div>
+                            <div class="market-fixed-note">Parâmetros fixos durante toda a partida</div>
 
-                        <div class="market-event">
-                            <div class="market-event-label">Carta de Fluência · cenário fictício</div>
-                            <div id="restaurant-event-name" class="market-event-name">Nenhuma carta ativa</div>
-                            <div id="restaurant-event-text" class="market-event-text"></div>
-                            <div id="restaurant-event-effects" class="market-event-effects">A primeira Carta de Fluência será sorteada ao fim do primeiro ciclo.</div>
-                        </div>
-
-                        <div class="market-legend" aria-label="Legenda das casas">
-                            <span><i class="legend-swatch legend-continua"></i>Ficha contínua</span>
-                            <span><i class="legend-swatch legend-discreta"></i>Ficha discreta</span>
+                            <div class="market-legend" aria-label="Legenda das casas">
+                                <span><i class="legend-swatch legend-continua"></i>Ficha contínua</span>
+                                <span><i class="legend-swatch legend-discreta"></i>Ficha discreta</span>
+                            </div>
                         </div>
                     </div>
+
+                    <div id="current-player-objective" class="player-objective-focus" aria-live="polite"></div>
                 </div>
 
                 <!-- PAINEL LATERAL DE CONTROLE -->
@@ -101,7 +99,7 @@
     <script src="js/game.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/trade.js"></script>
-    <script src="js/cards.js"></script>
+    <script src="js/cards.js?v=20261012"></script>
 
     <!-- INICIALIZADOR CONFORME O MODO (URL QUERY) -->
     <script>

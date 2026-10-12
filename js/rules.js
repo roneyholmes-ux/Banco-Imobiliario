@@ -3,8 +3,8 @@
  * Configurações e regras puras do restaurante compartilhado (sem acesso ao DOM).
  *
  * Princípios:
- * - Existe UM único estado de mercado: os níveis dos 11 fatores internos e os valores dos 4 fatores
- *   externos. Todos os jogadores e todas as Cartas de Objetivo usam esse mesmo estado.
+ * - Existe UM único estado compartilhado: os níveis dos 11 fatores internos e os valores fixos dos 4
+ *   fatores externos. Todos os jogadores e todas as Cartas de Objetivo usam esse mesmo estado.
  * - A gerência dá direito a intervir no fator, receber a taxa de visita e negociar a gerência.
  *   Ela nunca é exigida para calcular ou cumprir uma Carta de Objetivo.
  *
@@ -60,8 +60,8 @@ const RESTAURANT_RULESET = {
     },
     // t e j são guardados como fração (0,10 e 0,12) e exibidos como porcentagem.
     external: {
-        b: { symbol: "b", name: "Combustível", unit: "por litro", base: 6, format: "money" },
-        a: { symbol: "a", name: "Alimentos", unit: "por kg", base: 20, format: "money" },
+        b: { symbol: "b", name: "Custo do Combustível", unit: "por litro", base: 6, format: "money" },
+        a: { symbol: "a", name: "Custo dos Alimentos", unit: "por kg", base: 20, format: "money" },
         t: { symbol: "t", name: "Imposto", unit: "alíquota", base: 0.10, format: "percent" },
         j: { symbol: "j", name: "Taxa Básica de Juros", unit: "ao ano", base: 0.12, format: "percent" }
     },
@@ -74,37 +74,6 @@ const RESTAURANT_RULESET = {
         { id: 6, name: "Capital enxuto", symbol: "CE", factors: ["j", "Ec", "Es"], formula: "CE = j × (2000 × Ec + 1000 × Es)", target: 650, operator: "<=", format: "money", unit: "por ano", note: "Custo anual de oportunidade do capital imobilizado nos equipamentos. Não é descontado do caixa.", evaluate: (internal, external) => external.j * (2000 * internal.Ec + 1000 * internal.Es) },
         { id: 7, name: "Receita potencial líquida", symbol: "RP", factors: ["P", "H", "t"], formula: "RP = 6 × P × H × (1 − t)", target: 2700, operator: ">=", format: "money", unit: "por dia", note: "Cenário-padrão de seis refeições por hora. Receita potencial, não faturamento acumulado.", evaluate: (internal, external) => 6 * internal.P * internal.H * (1 - external.t) },
         { id: 8, name: "Atratividade comercial", symbol: "AC", factors: ["M", "V", "Q", "P"], formula: "AC = M / 1000 + V + Q + (50 − P) / 5", target: 16, operator: ">=", format: "number", unit: "pontos", note: "Índice fictício, expresso em pontos.", evaluate: (internal) => internal.M / 1000 + internal.V + internal.Q + (50 - internal.P) / 5 }
-    ],
-    // percent: variação sobre o valor-base (b e a). set: novo valor absoluto (t e j).
-    // Textos e percentuais são situações fictícias criadas para o jogo.
-    fluencyCards: [
-        { id: "combustiveis", name: "Combustíveis",
-            first: { text: "Uma restrição temporária no abastecimento pressiona os preços.", percent: { b: 0.10 } },
-            second: { text: "As viagens de fim de ano ampliam a procura por combustível.", percent: { b: 0.15 } } },
-        { id: "agricultura", name: "Agricultura",
-            first: { text: "Problemas climáticos prejudicam parte da safra.", percent: { a: 0.10 } },
-            second: { text: "Uma nova safra amplia a oferta de produtos.", percent: { a: -0.08 } } },
-        { id: "movimento-de-cargas", name: "Movimento de cargas",
-            first: { text: "Dificuldades na distribuição pressionam transporte e abastecimento.", percent: { b: 0.08, a: 0.05 } },
-            second: { text: "O aumento da circulação de veículos pressiona os combustíveis.", percent: { b: 0.12 } } },
-        { id: "fornecimento", name: "Fornecimento",
-            first: { text: "Problemas na entrega de insumos elevam os preços de compra.", percent: { a: 0.05 } },
-            second: { text: "A regularização do fornecimento reduz os preços.", percent: { a: -0.05 } } },
-        { id: "turismo", name: "Turismo",
-            first: { text: "O aumento temporário da procura por alimentos na região pressiona os preços.", percent: { a: 0.05 } },
-            second: { text: "A alta temporada amplia o consumo de alimentos e combustíveis.", percent: { a: 0.05, b: 0.10 } } },
-        { id: "clima", name: "Clima",
-            first: { text: "Chuvas intensas comprometem o transporte da produção agrícola.", percent: { a: 0.08 } },
-            second: { text: "Uma estiagem reduz a oferta de produtos agrícolas.", percent: { a: 0.12 } } },
-        { id: "economia", name: "Economia",
-            first: { text: "Uma elevação generalizada dos custos pressiona insumos.", percent: { b: 0.05, a: 0.05 } },
-            second: { text: "A pressão inflacionária encarece alimentos e há elevação simulada dos juros.", percent: { a: 0.10 }, set: { j: 0.13 } } },
-        { id: "politica-economica", name: "Política econômica",
-            first: { text: "Um programa fictício de incentivo tributário reduz a alíquota efetiva.", set: { t: 0.09 } },
-            second: { text: "Uma mudança tributária no cenário simulado eleva a alíquota.", set: { t: 0.11 } } },
-        { id: "politica-monetaria", name: "Política monetária",
-            first: { text: "Uma decisão simulada eleva a taxa básica de juros.", set: { j: 0.13 } },
-            second: { text: "Uma decisão simulada reduz a taxa básica de juros.", set: { j: 0.11 } } }
     ]
 };
 
@@ -205,7 +174,7 @@ function getBaseExternal() {
 function getInitialMarketState() {
     const levels = {};
     Object.keys(RESTAURANT_RULESET.internal).forEach(key => { levels[key] = RESTAURANT_RULESET.internal[key].initialLevel; });
-    return { levels, external: getBaseExternal(), previousExternal: null, activeCard: null };
+    return { levels, external: getBaseExternal() };
 }
 
 // Valores dos fatores internos derivados dos níveis globais (não existem cópias por jogador).
@@ -219,12 +188,12 @@ function getInternalValues(market) {
 
 function getFactorValue(market, key) {
     if (RESTAURANT_RULESET.internal[key]) return RESTAURANT_RULESET.internal[key].values[market.levels[key]];
-    return market.external[key];
+    return RESTAURANT_RULESET.external[key] ? RESTAURANT_RULESET.external[key].base : undefined;
 }
 
-// Ao virar o ano: mercado volta aos valores-base e o evento termina; os níveis internos são mantidos.
+// Ao virar o ano: os fatores externos permanecem fixos e os níveis internos são mantidos.
 function startNewYearMarket(market) {
-    return { levels: { ...market.levels }, external: getBaseExternal(), previousExternal: null, activeCard: null };
+    return { levels: { ...market.levels }, external: getBaseExternal() };
 }
 
 // ==========================================
@@ -249,11 +218,12 @@ function calculateObjective(cardIdOrName, market) {
     const card = findObjectiveCard(cardIdOrName);
     if (!card) return null;
     const internal = getInternalValues(market);
-    const result = card.evaluate(internal, market.external);
+    const external = getBaseExternal();
+    const result = card.evaluate(internal, external);
     const fulfilled = card.operator === "<=" ? result <= card.target : result >= card.target;
     const factorValues = card.factors.map(symbol => {
         const isInternal = Boolean(RESTAURANT_RULESET.internal[symbol]);
-        const value = isInternal ? internal[symbol] : market.external[symbol];
+        const value = isInternal ? internal[symbol] : external[symbol];
         return {
             symbol,
             name: isInternal ? RESTAURANT_RULESET.internal[symbol].name : RESTAURANT_RULESET.external[symbol].name,
@@ -269,15 +239,10 @@ function evaluateAllObjectives(market) {
 }
 
 // ==========================================
-// CARTAS DE FLUÊNCIA E SEMESTRES
+// SEMESTRES
 // ==========================================
 function normalizeText(text) {
-    return String(text || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
-}
-
-function findFluencyCard(idOrName) {
-    const wanted = normalizeText(idOrName);
-    return RESTAURANT_RULESET.fluencyCards.find(card => normalizeText(card.id) === wanted || normalizeText(card.name) === wanted) || null;
+    return String(text || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 }
 
 function normalizeSemester(semester) {
@@ -291,46 +256,8 @@ function getCurrentSemester(players) {
     return active.length > 0 && active.every(player => player.passedFestaJunina) ? "segundo" : "primeiro";
 }
 
-// Aplica somente a carta atual sobre os valores-base (sem acumular eventos anteriores).
-function applyFluencyCard(market, cardIdOrName, semester) {
-    const card = findFluencyCard(cardIdOrName);
-    if (!card) throw new Error(`Carta de Fluência inexistente: ${cardIdOrName}`);
-    const semesterKey = normalizeSemester(semester);
-    const effect = semesterKey === "segundo" ? card.second : card.first;
-    const base = getBaseExternal();
-    const external = { ...base };
-    Object.entries(effect.percent || {}).forEach(([key, percent]) => {
-        external[key] = Math.round(base[key] * (1 + percent) * 100) / 100;
-    });
-    Object.entries(effect.set || {}).forEach(([key, value]) => { external[key] = value; });
-    return {
-        levels: { ...market.levels },
-        external,
-        previousExternal: { ...market.external },
-        activeCard: { id: card.id, name: card.name, semester: semesterKey, text: effect.text, percent: { ...(effect.percent || {}) }, set: { ...(effect.set || {}) } }
-    };
-}
-
-function drawFluencyCard(market, players, random = Math.random) {
-    const cards = RESTAURANT_RULESET.fluencyCards;
-    const card = cards[Math.floor(random() * cards.length) % cards.length];
-    return applyFluencyCard(market, card.id, getCurrentSemester(players));
-}
-
 function semesterLabel(semester) {
     return normalizeSemester(semester) === "segundo" ? "Segundo semestre" : "Primeiro semestre";
-}
-
-function describeFluencyEffects(activeCard) {
-    if (!activeCard) return [];
-    const parts = [];
-    Object.entries(activeCard.percent || {}).forEach(([key, percent]) => {
-        parts.push(`${RESTAURANT_RULESET.external[key].name} ${percent > 0 ? "+" : "−"}${formatNumber(Math.abs(percent) * 100)}%`);
-    });
-    Object.entries(activeCard.set || {}).forEach(([key, value]) => {
-        parts.push(`${RESTAURANT_RULESET.external[key].name} passa de ${formatExternalValue(key, RESTAURANT_RULESET.external[key].base)} para ${formatExternalValue(key, value)}`);
-    });
-    return parts;
 }
 
 // ==========================================
@@ -510,7 +437,7 @@ function stepPlayerForward(player, boardSpaces) {
 }
 
 // Decide o que acontece após o fim de um turno. O fechamento anual tem prioridade sobre o fim de
-// ciclo, para que nenhuma Carta de Fluência seja aplicada entre a última jogada e a verificação das metas.
+// ciclo, para que as metas sejam verificadas antes do início do próximo ano.
 function resolveTurnAdvance(players, currentIndex) {
     const current = players[currentIndex];
     if (current && !current.isBankrupt) current.playedThisCycle = true;
@@ -630,12 +557,8 @@ if (typeof module !== "undefined" && module.exports) {
         assignObjectiveCards,
         calculateObjective,
         evaluateAllObjectives,
-        findFluencyCard,
         getCurrentSemester,
-        applyFluencyCard,
-        drawFluencyCard,
         semesterLabel,
-        describeFluencyEffects,
         createBoardSpaces,
         getVisitFee,
         getSpaceVisitFee,

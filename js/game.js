@@ -1,7 +1,7 @@
 /**
  * game.js
  * Fluxo da partida (Host-Authoritative): turnos, movimentação, casas,
- * intervenções, Cartas de Fluência, fechamento anual e sincronização.
+ * intervenções, fechamento anual e sincronização.
  *
  * Responsabilidades:
  * - O Host executa regras, movimenta peças, altera dinheiro/propriedades e transmite o estado.
@@ -10,30 +10,25 @@
  * Configurações e regras puras (fatores, custos, taxas, cartas, fórmulas) ficam em js/rules.js.
  */
 
-// Baralho de "Sorte ou Revés": Cartas Objetivas (múltipla escolha, resposta correta
-// conhecida) e Cartas de Investigação (dissertativas, sem resposta oficial — o grupo
-// decide informalmente se a argumentação foi aceita). Ver js/cards.js para o fluxo.
+// Baralho de "Sorte ou Revés": situações e questões de múltipla escolha. As referências
+// pedagógicas são metadados internos e não são exibidas aos jogadores.
 const CARDS = [
-    { id: 1, type: "objetiva", text: "Quando dizemos que uma grandeza depende de outra, significa que:", options: { A: "As duas sempre possuem o mesmo valor.", B: "A mudança em uma pode influenciar a outra.", C: "Elas nunca mudam.", D: "As duas precisam ser medidas da mesma forma." }, answer: "B" },
-    { id: 2, type: "objetiva", text: "Qual das situações representa uma grandeza contínua?", options: { A: "Número de alunos.", B: "Quantidade de carros.", C: "Temperatura ambiente.", D: "Número de livros." }, answer: "C" },
-    { id: 3, type: "objetiva", text: "Qual das situações representa uma grandeza discreta?", options: { A: "Massa corporal.", B: "Distância percorrida.", C: "Número de árvores.", D: "Tempo de viagem." }, answer: "C" },
-    { id: 4, type: "objetiva", text: "Antes de estudar uma relação entre grandezas, o pesquisador escolhe observar apenas alguns aspectos do fenômeno. Esse processo recebe o nome de:", options: { A: "Campo de variação.", B: "Isolado.", C: "Imagem.", D: "Contradomínio." }, answer: "B" },
-    { id: 5, type: "objetiva", text: "Uma variável independente é aquela que:", options: { A: "Sempre possui maior valor.", B: "Não sofre nenhuma alteração.", C: "É escolhida para explicar ou investigar a variação de outra.", D: "Depende da variável dependente." }, answer: "C" },
-    { id: 6, type: "objetiva", text: "Qual alternativa melhor representa uma relação funcional?", options: { A: "Cada pessoa possui exatamente uma data de nascimento.", B: "Cada pessoa possui vários amigos.", C: "Cada aluno possui vários professores.", D: "Cada cidade possui vários habitantes." }, answer: "A" },
-    { id: 7, type: "objetiva", text: "O domínio de uma função representa:", options: { A: "Apenas os valores realmente obtidos.", B: "Os valores que a variável de entrada pode assumir.", C: "Os maiores valores encontrados.", D: "Apenas os valores positivos." }, answer: "B" },
-    { id: 8, type: "objetiva", text: "A imagem corresponde:", options: { A: "A todos os valores possíveis.", B: "Aos valores efetivamente produzidos pela função.", C: "Ao conjunto de entrada.", D: "À lei de formação." }, answer: "B" },
-    { id: 9, type: "objetiva", text: "Quando encontramos uma regularidade em uma tabela de valores, normalmente estamos nos aproximando da construção de:", options: { A: "Um contradomínio.", B: "Uma lei de formação.", C: "Um domínio.", D: "Um isolado." }, answer: "B" },
-    { id: 10, type: "objetiva", text: "O principal objetivo de identificar variáveis em um fenômeno é:", options: { A: "Tornar os cálculos mais difíceis.", B: "Organizar a investigação das relações existentes.", C: "Aumentar a quantidade de dados.", D: "Eliminar a necessidade de observar o fenômeno." }, answer: "B" },
-    { id: 11, type: "dissertativa", text: "Você acredita que toda relação de dependência pode ser representada por uma função? Explique sua posição." },
-    { id: 12, type: "dissertativa", text: "Imagine que dois pesquisadores estão estudando exatamente o mesmo fenômeno, mas escolhem variáveis diferentes. Eles estão investigando o mesmo problema? Justifique." },
-    { id: 13, type: "dissertativa", text: "Em uma investigação, por que pode ser importante ignorar algumas características do fenômeno e concentrar-se apenas em duas grandezas?" },
-    { id: 14, type: "dissertativa", text: "Pense em uma situação do cotidiano em que uma grandeza depende claramente de outra. Explique como você identificou essa dependência." },
-    { id: 15, type: "dissertativa", text: "Você considera que um mesmo fenômeno pode gerar diferentes funções? Explique seu raciocínio." },
-    { id: 16, type: "dissertativa", text: "Às vezes um pesquisador encontra dados que não seguem o padrão esperado. Na sua opinião, isso significa necessariamente que a investigação está errada? Justifique." },
-    { id: 17, type: "dissertativa", text: "Dois pesquisadores discordam sobre quais variáveis devem ser investigadas primeiro. Como eles poderiam decidir qual caminho seguir?" },
-    { id: 18, type: "dissertativa", text: "Em alguns fenômenos existem dezenas de fatores envolvidos. Como decidir quais são realmente importantes para uma investigação?" },
-    { id: 19, type: "dissertativa", text: "Uma tabela pode mostrar que duas grandezas variam juntas. Isso é suficiente para afirmar que uma depende da outra? Explique." },
-    { id: 20, type: "dissertativa", text: "Durante uma investigação científica, é comum que pesquisadores mudem suas hipóteses conforme novos dados aparecem. Na sua opinião, por que isso faz parte do trabalho científico?" }
+    { id: 1, type: "objetiva", situation: "O restaurante manteve o cardápio, o marketing e o horário de funcionamento. Quando o preço médio passou de R$ 40 para R$ 46, o número de clientes observado diminuiu.", text: "Qual interpretação é mais adequada?", options: { A: "Aumentar o preço sempre reduz o número de clientes.", B: "Nesse recorte, a mudança do preço esteve acompanhada de uma mudança na quantidade de clientes, mas isso não garante que a relação seja igual em qualquer situação.", C: "As duas grandezas não possuem relação porque são medidas em unidades diferentes.", D: "O número de clientes determina obrigatoriamente o preço." }, answer: "B", pedagogicalReference: "Dependência; isolado; campo de variação" },
+    { id: 2, type: "objetiva", situation: "Durante uma reorganização do restaurante, a equipe compara mudanças possíveis.", text: "Qual alteração abaixo poderia assumir naturalmente um valor entre dois números inteiros?", options: { A: "Passar de 3 para 3,5 cozinheiros.", B: "Passar de 2 para 2,4 equipamentos de cozinha.", C: "Passar de 8 para 8,5 horas diárias de operação.", D: "Passar de 6 para 6,3 pratos no cardápio." }, answer: "C", pedagogicalReference: "Variável; grandeza contínua; campo de variação" },
+    { id: 3, type: "objetiva", situation: "Depois de algumas intervenções, o sistema registrou diferentes valores para os fatores do restaurante.", text: "Qual deles indica que provavelmente ocorreu um erro no registro?", options: { A: "4 cozinheiros.", B: "3 equipamentos de cozinha.", C: "6,5 opções de pratos no cardápio.", D: "10 horas diárias de operação." }, answer: "C", pedagogicalReference: "Variável; grandeza discreta; campo de variação" },
+    { id: 4, type: "objetiva", situation: "Os jogadores querem investigar se alterar o orçamento de marketing interfere em determinado resultado do restaurante.", text: "Qual comparação ajudaria mais nessa investigação?", options: { A: "Alterar marketing, preço e cardápio ao mesmo tempo.", B: "Alterar somente o marketing e manter as demais condições escolhidas para a análise.", C: "Comparar duas situações em que todos os fatores sejam diferentes.", D: "Alterar diretamente o resultado que se pretende observar." }, answer: "B", pedagogicalReference: "Isolado; dependência; investigação" },
+    { id: 5, type: "objetiva", situation: "Um grupo quer estudar como a variedade do cardápio interfere em um indicador de atratividade.", text: "Qual procedimento faz mais sentido?", options: { A: "Escolher valores para a variedade e observar o resultado produzido em cada situação.", B: "Escolher primeiro o resultado desejado e ignorar a variedade.", C: "Manter a variedade sempre igual e alterar somente o resultado.", D: "Modificar todas as grandezas em cada tentativa." }, answer: "A", pedagogicalReference: "Variável; dependência; isolado" },
+    { id: 6, type: "objetiva", situation: "Em duas jogadas, todos os fatores usados por uma Carta de Objetivo apresentaram exatamente os mesmos valores, mas o sistema calculou resultados diferentes.", text: "O que isso sugere?", options: { A: "Isso é esperado porque o restaurante é imprevisível.", B: "Há algum fator não considerado ou um problema na regra de cálculo.", C: "O segundo resultado deve ser aceito por ser mais recente.", D: "A mesma situação pode produzir qualquer resultado sem alterar a relação." }, answer: "B", pedagogicalReference: "Lei de formação; dependência; relação funcional" },
+    { id: 7, type: "objetiva", situation: "No jogo, o Número de Cozinheiros pode assumir 2, 3, 4 ou 5, e os Equipamentos de Cozinha podem assumir 1, 2, 3 ou 4.", text: "Qual situação o sistema deve rejeitar antes mesmo de calcular um objetivo?", options: { A: "4 cozinheiros e 3 equipamentos.", B: "5 cozinheiros e 4 equipamentos.", C: "2 cozinheiros e 1 equipamento.", D: "3,5 cozinheiros e 2 equipamentos." }, answer: "D", pedagogicalReference: "Domínio; campo de variação; variável discreta" },
+    { id: 8, type: "objetiva", situation: "Uma carta calcula a capacidade da cozinha pela regra 12 × cozinheiros × equipamentos. Considere os valores permitidos no jogo.", text: "Qual capacidade abaixo pode realmente ocorrer?", options: { A: "72 pratos/dia.", B: "84 pratos/dia.", C: "132 pratos/dia.", D: "168 pratos/dia." }, answer: "A", pedagogicalReference: "Imagem; domínio; lei de formação" },
+    { id: 9, type: "objetiva", situation: "Dois jogadores possuem objetivos diferentes: um deseja aumentar a capacidade da cozinha e o outro precisa reduzir o custo associado aos equipamentos.", text: "Qual decisão pode ajudar o primeiro e, ao mesmo tempo, dificultar o objetivo do segundo?", options: { A: "Aumentar os Equipamentos de Cozinha.", B: "Manter todos os fatores inalterados.", C: "Reduzir o preço médio dos pratos.", D: "Aumentar a variedade do cardápio." }, answer: "A", pedagogicalReference: "Interdependência; dependência" },
+    { id: 10, type: "objetiva", situation: "O Preço Médio dos Pratos apareceu, em quatro momentos da partida, como R$ 40 → R$ 43 → R$ 46 → R$ 43.", text: "O que essa sequência permite perceber melhor do que observar apenas o último valor?", options: { A: "Que o preço possui um único valor verdadeiro.", B: "Que a grandeza se transforma ao longo da partida e pode assumir diferentes estados.", C: "Que R$ 43 é necessariamente o melhor preço.", D: "Que os valores anteriores deixam de ter qualquer significado." }, answer: "B", pedagogicalReference: "Movimento; fluência; variação" },
+    { id: 11, type: "objetiva", situation: "Pelas regras atuais, o Preço Médio dos Pratos pode variar entre R$ 37 e R$ 46. Um jogador tenta definir R$ 52 para alcançar sua meta.", text: "Como o jogo deve tratar essa decisão?", options: { A: "Aceitar, pois qualquer preço é possível.", B: "Rejeitar, pois o valor está fora das condições admitidas para essa grandeza.", C: "Aceitar apenas se o jogador tiver dinheiro suficiente.", D: "Transformar automaticamente R$ 52 em R$ 46 sem avisar." }, answer: "B", pedagogicalReference: "Campo de variação; domínio" },
+    { id: 12, type: "objetiva", situation: "Mantendo os demais fatores constantes, foram registrados: Marketing R$ 1.000 → indicador 7; R$ 2.000 → indicador 8; R$ 3.000 → indicador 9.", text: "Qual regra reproduz os três registros?", options: { A: "Indicador = Marketing ÷ 1.000 + 6.", B: "Indicador = Marketing ÷ 100.", C: "Indicador = Marketing + 6.", D: "Indicador = 10 − Marketing ÷ 1.000." }, answer: "A", pedagogicalReference: "Regularidade; lei de formação; dependência" },
+    { id: 13, type: "objetiva", situation: "Um indicador do restaurante foi projetado para ser mostrado em uma escala de 0 a 20 pontos. Nas condições atuais do jogo, porém, as combinações disponíveis só estão produzindo valores entre 8 e 16.", text: "Para configurar a escala completa do mostrador, qual informação deve ser considerada?", options: { A: "Somente os valores já obtidos.", B: "A faixa de 0 a 20 para a qual o indicador foi definido.", C: "Apenas o maior valor já alcançado.", D: "Somente o valor da rodada atual." }, answer: "B", pedagogicalReference: "Contradomínio; imagem" },
+    { id: 14, type: "objetiva", situation: "Mantendo o tempo de operação e o imposto fixos, o preço médio e a receita potencial apresentaram os pares: (37; 1.598,40), (40; 1.728,00), (43; 1.857,60), (46; 1.987,20).", text: "Qual descrição combina melhor com um gráfico desses dados?", options: { A: "Os pontos seguem uma tendência crescente e alinhada.", B: "O gráfico deve ser horizontal.", C: "A receita diminui quando o preço aumenta.", D: "Não existe relação entre os valores porque as unidades são diferentes." }, answer: "A", pedagogicalReference: "Representação gráfica; dependência; lei de formação" },
+    { id: 15, type: "objetiva", situation: "O custo dos alimentos permanece fixo em R$ 20/kg. A quantidade comprada passa de 40 kg para 60 kg e os demais fatores permanecem iguais.", text: "Quanto muda o gasto com alimentos?", options: { A: "Aumenta R$ 20.", B: "Aumenta R$ 200.", C: "Aumenta R$ 400.", D: "Não se altera." }, answer: "C", pedagogicalReference: "Variação; dependência; parâmetro externo" },
+    { id: 16, type: "objetiva", situation: "Antes do horário de almoço, o gerente precisa decidir quantos funcionários manter no salão para atender uma quantidade esperada de clientes.", text: "Qual procedimento oferece uma base melhor para essa decisão?", options: { A: "Registrar como a capacidade de atendimento muda quando se alteram funcionários e outras condições relevantes.", B: "Escolher qualquer quantidade de funcionários porque não é possível estabelecer relações.", C: "Esperar o encerramento do dia e escolher retroativamente a quantidade desejada.", D: "Utilizar apenas o nome das grandezas, sem comparar seus valores." }, answer: "A", pedagogicalReference: "Necessidade do conceito; investigação; dependência" }
 ];
 
 const boardSpaces = createBoardSpaces();
@@ -299,7 +294,7 @@ async function movePlayer(playerIndex, steps) {
         const semesterBefore = getCurrentSemester(players);
         const step = stepPlayerForward(player, boardSpaces);
         if (semesterBefore === "primeiro" && getCurrentSemester(players) === "segundo") {
-            const msg = `🎉 Todos os jogadores passaram pela FESTA JUNINA: começa o segundo semestre. A próxima Carta de Fluência usará o efeito do segundo semestre.`;
+            const msg = `🎉 Todos os jogadores passaram pela FESTA JUNINA: começa o segundo semestre.`;
             updateStatus(msg);
             syncGameState(msg);
         }
@@ -450,14 +445,17 @@ function showPurchaseModalUI(player, space, errorMessage = "") {
         : "";
     const errorNote = errorMessage ? `<div style="margin-bottom: 10px; font-size: 0.8rem; color: #c62828;">${errorMessage}</div>` : "";
     statusDiv.innerHTML = `
-        <div style="margin-bottom: 10px; background: #1a293d; padding: 10px; border-radius: 6px;">
-            ${icon} <strong>${space.name}</strong> disponível por <strong>${formatMoney(space.price)}</strong>.
+        <div class="purchase-decision-box">
+            <div class="purchase-decision-header">
+                ${icon} <strong>${space.name}</strong>
+            </div>
+            <div class="purchase-decision-price">Disponível por <strong>${formatMoney(space.price)}</strong></div>
         </div>
         ${fichaNote}
         ${errorNote}
-        <div style="display: flex; gap: 10px;">
-            <button id="btn-buy-prop" style="padding: 6px 12px; background: #2e7d32; color: white; border: none; border-radius: 4px; cursor: pointer;">Assumir gerência</button>
-            <button id="btn-pass-prop" style="padding: 6px 12px; background: #c62828; color: white; border: none; border-radius: 4px; cursor: pointer;">Passar</button>
+        <div class="purchase-decision-actions">
+            <button id="btn-buy-prop" class="purchase-btn purchase-btn-buy">Assumir gerência</button>
+            <button id="btn-pass-prop" class="purchase-btn purchase-btn-pass">Passar</button>
         </div>
     `;
 
@@ -503,18 +501,13 @@ function nextTurn(previousMessage = "") {
         return;
     }
 
-    // O fechamento anual acontece antes de qualquer nova Carta de Fluência.
     if (advance.type === "closeYear") {
         closeAnnualExercise();
         return;
     }
 
-    let cycleMessage = "";
     if (advance.type === "cycleEnd") {
         cycleNumber += 1;
-        marketState = drawFluencyCard(marketState, players);
-        const card = marketState.activeCard;
-        cycleMessage = `🃏 Carta de Fluência — ${card.name} (${semesterLabel(card.semester).toLowerCase()}): "${card.text}" ${describeFluencyEffects(card).join("; ")}.`;
     }
 
     currentPlayerIndex = advance.nextIndex;
@@ -522,7 +515,7 @@ function nextTurn(previousMessage = "") {
     updateUI();
 
     const nextPlayer = players[currentPlayerIndex];
-    const msg = `${lead}${cycleMessage ? `${cycleMessage} ` : ""}Ciclo ${cycleNumber}, Ano ${yearNumber}: é a vez de ${nextPlayer.name}. Role os dados!`;
+    const msg = `${lead}Ciclo ${cycleNumber}, Ano ${yearNumber}: é a vez de ${nextPlayer.name}. Role os dados!`;
     updateStatus(msg);
     syncGameState(msg);
 }
@@ -720,7 +713,7 @@ function applyGameStateSync(payload) {
         });
     }
 
-    if (payload.marketState) marketState = payload.marketState;
+    if (payload.marketState) marketState = { ...payload.marketState, external: getBaseExternal() };
     if (payload.recentChanges) recentChanges = payload.recentChanges;
     if (payload.yearNumber !== undefined) yearNumber = payload.yearNumber;
     if (payload.cycleNumber !== undefined) cycleNumber = payload.cycleNumber;

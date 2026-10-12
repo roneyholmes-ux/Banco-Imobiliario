@@ -1,12 +1,10 @@
 /**
  * cards.js
- * Sistema de Cartas de Sorte ou Revés: Cartas Objetivas (múltipla escolha, com resposta
- * correta) e Cartas de Investigação (dissertativas, julgadas informalmente pelo grupo).
+ * Sistema de Cartas de Sorte ou Revés: perguntas de múltipla escolha com resposta correta.
  * Host-Authoritative, seguindo o mesmo padrão de trade.js.
  *
  * Fluxo (pendingCard.phase):
- *   choosing-mode -> answering (objetiva) | judging (dissertativa)
- *                 -> reward-choice | penalty-choice | done
+ *   choosing-mode -> answering -> reward-choice | penalty-choice | done
  */
 
 let pendingCard = null;
@@ -56,7 +54,6 @@ function sendCardAction(step, payload = {}) {
 
 function chooseCardMode(mode) { sendCardAction("choose-mode", { mode }); }
 function submitCardAnswer(letter) { sendCardAction("submit-answer", { letter }); }
-function judgeDissertativa(accepted) { sendCardAction("judge-dissertativa", { accepted }); }
 function chooseFichaReward(types) { sendCardAction("choose-reward", { types }); }
 function choosePenaltyFicha(fichaType) { sendCardAction("choose-penalty", { fichaType }); }
 function closeCardResult() { sendCardAction("close"); }
@@ -74,7 +71,6 @@ function hostProcessCardAction(senderPeerId, step, payload) {
     switch (step) {
         case "choose-mode": handleChooseMode(senderPeerId, drawer, payload); break;
         case "submit-answer": handleSubmitAnswer(senderPeerId, drawer, payload); break;
-        case "judge-dissertativa": handleJudgeDissertativa(senderPeerId, drawer, payload); break;
         case "choose-reward": handleChooseReward(senderPeerId, drawer, payload); break;
         case "choose-penalty": handleChoosePenalty(senderPeerId, drawer, payload); break;
         case "close": handleCloseCard(senderPeerId, drawer); break;
@@ -83,11 +79,12 @@ function hostProcessCardAction(senderPeerId, step, payload) {
 
 function handleChooseMode(senderPeerId, drawer, payload) {
     if (pendingCard.phase !== "choosing-mode") return;
+    if (pendingCard.card.type !== "objetiva") return;
     if (isMultiplayer && senderPeerId && drawer.peerId !== senderPeerId) return;
     if (payload.mode !== "individual" && payload.mode !== "colaborativa") return;
 
     pendingCard.mode = payload.mode;
-    pendingCard.phase = pendingCard.card.type === "objetiva" ? "answering" : "judging";
+    pendingCard.phase = "answering";
 
     const modeLabel = payload.mode === "individual" ? "Individual" : "Investigação Colaborativa";
     const msg = `🃏 ${drawer.name} escolheu responder no modo: ${modeLabel}.`;
@@ -105,14 +102,6 @@ function handleSubmitAnswer(senderPeerId, drawer, payload) {
     const correct = payload.letter === pendingCard.card.answer;
     pendingCard.outcome = correct ? "correct" : "incorrect";
     advanceAfterOutcome(drawer, correct);
-}
-
-function handleJudgeDissertativa(senderPeerId, drawer, payload) {
-    if (pendingCard.phase !== "judging") return;
-    if (isMultiplayer && senderPeerId && drawer.peerId === senderPeerId) return; // o autor não julga a própria resposta
-
-    pendingCard.outcome = payload.accepted ? "correct" : "incorrect";
-    advanceAfterOutcome(drawer, !!payload.accepted);
 }
 
 function advanceAfterOutcome(drawer, correct) {
@@ -152,7 +141,7 @@ function advanceAfterOutcome(drawer, correct) {
             syncGameState(msg);
         } else {
             pendingCard.phase = "done";
-            pendingCard.resultMessage = `❌ O grupo não teve a argumentação aceita. Ninguém perde fichas nem paga penalidade.`;
+            pendingCard.resultMessage = `❌ Resposta incorreta. Ninguém perde fichas nem paga penalidade.`;
             updateStatus(pendingCard.resultMessage);
             syncGameState(pendingCard.resultMessage);
         }
@@ -287,18 +276,23 @@ function buildCardModalShell() {
 
 function fillCardFrontContent(overlay, card) {
     const front = overlay.querySelector("#card-face-front");
-    if (!front || front.dataset.cardId === String(card.id)) return;
+    if (!front) return;
     front.dataset.cardId = String(card.id);
 
-    const badge = card.type === "objetiva" ? "📘 Carta Objetiva" : "💬 Carta de Investigação";
-    let optionsHtml = "";
-    if (card.type === "objetiva") {
-        optionsHtml = `<ul class="card-options-list">
-            ${Object.entries(card.options).map(([letter, text]) => `<li><strong>${letter})</strong> ${text}</li>`).join("")}
-        </ul>`;
-    }
+    const badge = `Carta de Sorte ou Revés · ${card.id}`;
+    const showAnswer = pendingCard.card.id === card.id && Boolean(pendingCard.outcome);
+    const optionsHtml = `<ul class="card-options-list">
+        ${Object.entries(card.options).map(([letter, text]) => {
+            const classes = [
+                showAnswer && letter === card.answer ? "is-correct" : "",
+                pendingCard.selectedAnswer === letter ? "is-selected" : ""
+            ].filter(Boolean).join(" ");
+            return `<li class="${classes}"><strong>${letter})</strong> ${text}</li>`;
+        }).join("")}
+    </ul>`;
     front.innerHTML = `
         <span class="card-type-badge">${badge}</span>
+        <p class="card-situation-text">${card.situation}</p>
         <p class="card-question-text">${card.text}</p>
         ${optionsHtml}
     `;
@@ -331,7 +325,7 @@ function renderCardActionArea(overlay, drawer, isLocalDrawer, myPeerId) {
     if (phase === "answering") {
         if (isLocalDrawer) {
             const modeNote = pendingCard.mode === "colaborativa"
-                ? `<p class="card-action-hint">🤝 Discutam em voz alta e depois enviem a resposta do grupo.</p>`
+                ? `<p class="card-action-hint">🤝 Escolham juntos uma alternativa e enviem a resposta do grupo.</p>`
                 : `<p class="card-action-hint">Responda sozinho, sem ajuda dos demais.</p>`;
             area.innerHTML = `
                 ${modeNote}
@@ -344,24 +338,6 @@ function renderCardActionArea(overlay, drawer, isLocalDrawer, myPeerId) {
             });
         } else {
             area.innerHTML = `<p class="card-action-hint">Aguardando a resposta de ${drawer.name}...</p>`;
-        }
-        return;
-    }
-
-    if (phase === "judging") {
-        const isLocalJudge = !isMultiplayer || drawer.peerId !== myPeerId;
-        if (isLocalJudge) {
-            area.innerHTML = `
-                <p class="card-action-hint">A argumentação de ${drawer.name} foi aceita pelo grupo?</p>
-                <div class="card-btn-row">
-                    <button id="btn-judge-accept" class="card-btn card-btn-success">✅ Aceitar</button>
-                    <button id="btn-judge-reject" class="card-btn card-btn-danger">❌ Recusar</button>
-                </div>
-            `;
-            area.querySelector("#btn-judge-accept").onclick = () => judgeDissertativa(true);
-            area.querySelector("#btn-judge-reject").onclick = () => judgeDissertativa(false);
-        } else {
-            area.innerHTML = `<p class="card-action-hint">Discuta sua resposta em voz alta com os demais jogadores. Eles vão decidir se ela demonstra compreensão suficiente.</p>`;
         }
         return;
     }
@@ -382,7 +358,7 @@ function renderCardActionArea(overlay, drawer, isLocalDrawer, myPeerId) {
                 area.querySelector("#btn-reward-cd").onclick = () => chooseFichaReward(["continua", "discreta"]);
             } else {
                 area.innerHTML = `
-                    <p class="card-action-hint">Escolha o tipo da Ficha de Investigação que todos os jogadores vão receber:</p>
+                    <p class="card-action-hint">Escolha o tipo de ficha que todos os jogadores vão receber:</p>
                     <div class="card-btn-row">
                         <button id="btn-reward-c" class="card-btn">🔵 Grandeza Contínua</button>
                         <button id="btn-reward-d" class="card-btn">🟣 Grandeza Discreta</button>
@@ -417,10 +393,8 @@ function renderCardActionArea(overlay, drawer, isLocalDrawer, myPeerId) {
     }
 
     if (phase === "done") {
-        const outcomeLabel = pendingCard.outcome === "correct" ? "✅ Aceito / Correto" : "❌ Não aceito / Incorreto";
-        const answerReveal = card.type === "objetiva"
-            ? `<p class="card-answer-reveal">Resposta correta: <strong>${card.answer}) ${card.options[card.answer]}</strong></p>`
-            : "";
+        const outcomeLabel = pendingCard.outcome === "correct" ? "✅ Resposta correta" : "❌ Resposta incorreta";
+        const answerReveal = `<p class="card-answer-reveal">Alternativa correta: <strong>${card.answer}) ${card.options[card.answer]}</strong></p>`;
         area.innerHTML = `
             <p class="card-outcome-badge ${pendingCard.outcome}">${outcomeLabel}</p>
             ${answerReveal}

@@ -9,7 +9,7 @@ let gameResultDismissed = false;
 
 const SPECIAL_SPACE_DESCRIPTIONS = {
     "PARTIDA": "Cruzar a PARTIDA conclui a volta do ano e leva ao Fechamento do Exercício.",
-    "Sorte ou Revés": "Carta de Investigação (objetiva ou aberta), resolvida de forma individual ou colaborativa.",
+    "Sorte ou Revés": "Carta com situação do restaurante e uma questão de múltipla escolha.",
     "FESTA JUNINA": "Divide o ano: quando todos os jogadores ativos passarem por aqui, começa o segundo semestre.",
     "PRISÃO": "Quem estiver preso paga a fiança na próxima vez para voltar a jogar.",
     "VÁ PARA A PRISÃO": "Vai direto para a PRISÃO.",
@@ -48,7 +48,21 @@ function renderBoard() {
 
         const nameText = document.createElement("div");
         nameText.className = "space-name";
-        nameText.innerText = space.name;
+
+        if (definition) {
+            const code = document.createElement("span");
+            code.className = "space-factor-code";
+            code.textContent = definition.symbol;
+            nameText.appendChild(code);
+
+            const label = document.createElement("span");
+            label.className = "space-factor-label";
+            label.textContent = space.name;
+            nameText.appendChild(label);
+        } else {
+            nameText.textContent = space.name;
+        }
+
         spaceDiv.appendChild(nameText);
 
         if (definition) {
@@ -161,46 +175,23 @@ function refreshBoardOwnership() {
 }
 
 // ==========================================
-// PAINEL CENTRAL: FATORES EXTERNOS E CARTA DE FLUÊNCIA
+// PAINEL CENTRAL: CONDIÇÕES EXTERNAS FIXAS
 // ==========================================
 function renderMarketPanel() {
     const cardsElement = document.getElementById("market-cards");
     if (cardsElement) {
         cardsElement.innerHTML = EXTERNAL_KEYS.map(key => {
             const definition = RESTAURANT_RULESET.external[key];
-            const value = marketState.external[key];
-            const previous = marketState.previousExternal ? marketState.previousExternal[key] : undefined;
-            const changed = previous !== undefined && previous !== value;
-            const direction = changed ? (value > previous ? "up" : "down") : "";
-            const change = changed
-                ? `<span class="market-card-change">${direction === "up" ? "▲" : "▼"} antes ${formatExternalValue(key, previous)}</span>`
-                : "";
-            const title = `${definition.name} (${definition.symbol}): ${formatExternalValue(key, value)} ${definition.unit}\nValor-base: ${formatExternalValue(key, definition.base)}\nAlterado somente pelas Cartas de Fluência.`;
+            const value = definition.base;
+            const title = `${definition.name} (${definition.symbol}): ${formatExternalValue(key, value)} ${definition.unit}. Condição externa fixa.`;
             return `
-                <div class="market-card${direction ? ` is-${direction}` : ""}" title="${escapeHtml(title)}">
+                <div class="market-card" title="${escapeHtml(title)}">
                     <div class="market-card-head"><span class="market-card-name">${definition.name}</span><span class="market-card-symbol">${definition.symbol}</span></div>
                     <strong class="market-card-value">${formatExternalValue(key, value)}</strong>
                     <span class="market-card-unit">${definition.unit}</span>
-                    ${change}
                 </div>
             `;
         }).join("");
-    }
-
-    const nameElement = document.getElementById("restaurant-event-name");
-    const textElement = document.getElementById("restaurant-event-text");
-    const effectsElement = document.getElementById("restaurant-event-effects");
-    const card = marketState.activeCard;
-    if (nameElement && effectsElement) {
-        if (!card) {
-            nameElement.innerText = "Nenhuma carta ativa";
-            if (textElement) textElement.innerText = "";
-            effectsElement.innerText = "A primeira Carta de Fluência será sorteada ao fim do primeiro ciclo.";
-        } else {
-            nameElement.innerText = `${card.name} · ${semesterLabel(card.semester)}`;
-            if (textElement) textElement.innerText = `“${card.text}”`;
-            effectsElement.innerText = describeFluencyEffects(card).join(" · ");
-        }
     }
 
     const yearElement = document.getElementById("year-number");
@@ -232,9 +223,157 @@ function renderObjectiveCard(player) {
     const objective = calculateObjective(player.objective.id, marketState);
     if (!objective) return "🎯 Carta de Objetivo: a definir";
     const status = objective.fulfilled ? "✅ cumprido" : "⏳ não cumprido";
-    const factors = objective.factorValues.map(factor => `${factor.symbol} = ${factor.formatted}`).join(" · ");
+    const internalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.internal[factor.symbol]);
+    const externalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.external[factor.symbol]);
+    const internalText = internalFactors.map(factor => `${factor.symbol} = ${factor.formatted}`).join(" · ") || "Nenhum";
+    const externalText = externalFactors.map(factor => `${factor.symbol} = ${factor.formatted}`).join(" · ") || "Nenhuma";
     const title = objective.note ? ` title="${escapeHtml(objective.note)}"` : "";
-    return `<span${title}>🎯 <strong>${objective.name}</strong></span><br><small>Lei: ${objective.formula}<br>Fatores: ${factors}<br>Meta: ${objective.symbol} ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}<br>Atual: ${objective.symbol} = ${formatObjectiveValue(objective, objective.result)} · ${status}</small>`;
+    return `<span${title}>🎯 <strong>${objective.name}</strong></span><br><small>Lei: ${objective.formula}<br>Fatores sob gestão: ${internalText}<br>Condições externas: ${externalText}<br>Meta: ${objective.symbol} ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}<br>Atual: ${objective.symbol} = ${formatObjectiveValue(objective, objective.result)} · ${status}</small>`;
+}
+
+function buildSimulatedObjectiveResult(objective, editedValues = {}) {
+    const internal = getInternalValues(marketState);
+    const external = getBaseExternal();
+
+    objective.factors.forEach(symbol => {
+        const factorValue = editedValues[symbol];
+        if (factorValue === undefined || factorValue === "" || Number.isNaN(Number(factorValue))) return;
+
+        if (RESTAURANT_RULESET.internal[symbol]) {
+            internal[symbol] = Number(factorValue);
+        }
+    });
+
+    const card = findObjectiveCard(objective.id);
+    if (!card) return { result: objective.result, fulfilled: objective.fulfilled };
+
+    const result = card.evaluate(internal, external);
+    const fulfilled = card.operator === "<=" ? result <= card.target : result >= card.target;
+    return { result, fulfilled };
+}
+
+function renderCurrentPlayerObjectiveFocus() {
+    const focus = document.getElementById("current-player-objective");
+    if (!focus) return;
+
+    if (isMultiplayer) {
+        focus.innerHTML = "";
+        focus.classList.remove("is-visible");
+        return;
+    }
+
+    const player = players[currentPlayerIndex];
+    if (!player || !player.objective) {
+        focus.innerHTML = "";
+        focus.classList.remove("is-visible");
+        return;
+    }
+
+    const objective = calculateObjective(player.objective.id, marketState);
+    if (!objective) {
+        focus.innerHTML = "";
+        focus.classList.remove("is-visible");
+        return;
+    }
+
+    const status = objective.fulfilled ? "✅ cumprido" : "⏳ não cumprido";
+    const note = objective.note ? ` title="${escapeHtml(objective.note)}"` : "";
+    const internalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.internal[factor.symbol]);
+    const externalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.external[factor.symbol]);
+
+    focus.innerHTML = `
+        <div class="player-objective-card">
+            <div class="player-objective-label">Carta do jogador da vez</div>
+            <div class="player-objective-header">
+                <span class="player-objective-dot" style="background:${player.color};"></span>
+                <strong>${escapeHtml(player.name)}</strong>
+            </div>
+            <div class="player-objective-name"${note}>🎯 ${escapeHtml(objective.name)}</div>
+            <div class="player-objective-formula">${escapeHtml(objective.formula)}</div>
+            <div class="player-objective-meta">
+                <span><strong>Meta:</strong> ${objective.symbol} ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}</span>
+                <span><strong>Atual:</strong> ${objective.symbol} = ${formatObjectiveValue(objective, objective.result)} · ${status}</span>
+            </div>
+            <div class="strategy-panel">
+                <div class="strategy-panel-header">Simulador de estratégia</div>
+                <div class="strategy-factor-groups">
+                    <section class="strategy-factor-group">
+                        <h4>Fatores sob gestão</h4>
+                        <div class="strategy-grid">
+                            ${internalFactors.map(factor => {
+                                const symbol = factor.symbol;
+                                const definition = RESTAURANT_RULESET.internal[symbol];
+                                return `
+                                    <label class="strategy-factor">
+                                        <span class="strategy-factor-text">
+                                            <span class="strategy-factor-code">${escapeHtml(symbol)}</span>
+                                            <small>${escapeHtml(definition.name)}</small>
+                                        </span>
+                                        <span class="strategy-factor-type is-player">variável</span>
+                                        <input class="strategy-input" type="number" data-symbol="${escapeHtml(symbol)}" value="${Number(factor.value).toString()}" step="1" min="0" />
+                                    </label>
+                                `;
+                            }).join("")}
+                        </div>
+                    </section>
+                    ${externalFactors.length ? `
+                        <section class="strategy-factor-group is-external">
+                            <h4>Condições externas</h4>
+                            <div class="strategy-grid">
+                                ${externalFactors.map(factor => {
+                                    const definition = RESTAURANT_RULESET.external[factor.symbol];
+                                    return `
+                                        <div class="strategy-factor strategy-factor-fixed">
+                                            <span class="strategy-factor-text">
+                                                <span class="strategy-factor-code">${escapeHtml(factor.symbol)}</span>
+                                                <small>${escapeHtml(definition.name)}</small>
+                                            </span>
+                                            <span class="strategy-factor-type is-market">fixa</span>
+                                            <strong class="strategy-fixed-value">${escapeHtml(factor.formatted)}</strong>
+                                        </div>
+                                    `;
+                                }).join("")}
+                            </div>
+                        </section>
+                    ` : ""}
+                </div>
+                <div class="strategy-summary">
+                    <span>Resultado simulado</span>
+                    <strong class="strategy-result-value">${formatObjectiveValue(objective, objective.result)}</strong>
+                    <small class="strategy-status ${objective.fulfilled ? "is-met" : "is-pending"}">${objective.fulfilled ? "✅ meta alcançada" : "⏳ ainda não alcançada"}</small>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const inputs = focus.querySelectorAll(".strategy-input");
+    if (inputs.length) {
+        const resultValue = focus.querySelector(".strategy-result-value");
+        const strategyStatus = focus.querySelector(".strategy-status");
+
+        const updateSimulation = () => {
+            const editedValues = {};
+            inputs.forEach(input => {
+                const key = input.dataset.symbol;
+                const raw = input.value;
+                if (raw !== "") {
+                    editedValues[key] = Number(raw);
+                }
+            });
+
+            const simulation = buildSimulatedObjectiveResult(objective, editedValues);
+            const simulatedText = `${objective.symbol} = ${formatObjectiveValue(objective, simulation.result)}`;
+            resultValue.textContent = simulatedText;
+            const met = simulation.fulfilled;
+            strategyStatus.textContent = met ? "✅ meta alcançada com estes valores" : "⏳ ainda não alcançada";
+            strategyStatus.classList.toggle("is-met", met);
+            strategyStatus.classList.toggle("is-pending", !met);
+        };
+
+        inputs.forEach(input => input.addEventListener("input", updateSimulation));
+    }
+
+    focus.classList.add("is-visible");
 }
 
 function renderPawns() {
@@ -268,6 +407,7 @@ function updateUI() {
     if (!playersList) return;
     renderMarketPanel();
     refreshBoardOwnership();
+    renderCurrentPlayerObjectiveFocus();
     playersList.innerHTML = "";
 
     const currentPlayer = players[currentPlayerIndex];
@@ -281,7 +421,7 @@ function updateUI() {
         const isExpanded = expandedPlayerIds.has(p.id);
 
         const row = document.createElement("div");
-        row.className = `player-row${ownedSpaces.length ? " has-properties" : ""}`;
+        row.className = `player-row${ownedSpaces.length ? " has-properties" : ""}${!isMultiplayer && idx === currentPlayerIndex ? " is-current-player" : ""}`;
         if (idx === currentPlayerIndex) row.style.fontWeight = "bold";
         row.style.borderLeft = `5px solid ${p.color}`;
 

@@ -1,13 +1,19 @@
 const { describe, test } = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
 
 const rules = require('../js/rules.js');
+const gameSource = fs.readFileSync(require.resolve('../js/game.js'), 'utf8');
+const cardDeckMatch = gameSource.match(/const CARDS = (\[[\s\S]*?\n\]);/);
+const CARDS = cardDeckMatch ? vm.runInNewContext(cardDeckMatch[1]) : [];
 
 const {
   GAME_CONFIG,
   RESTAURANT_RULESET,
   EXTERNAL_KEYS,
   getInitialMarketState,
+  getBaseExternal,
   getInternalValues,
   calculateObjective,
   evaluateAllObjectives,
@@ -24,8 +30,6 @@ const {
   purchaseManagement,
   releaseManagements,
   applyMandatoryCharge,
-  applyFluencyCard,
-  drawFluencyCard,
   getCurrentSemester,
   stepPlayerForward,
   startNewYearMarket,
@@ -62,6 +66,21 @@ const objectiveResult = (ctx, id) => calculateObjective(id, ctx.market);
 function assertApproximately(actual, expected, tolerance = 1e-9) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `Esperado ${expected}, obtido ${actual}`);
 }
+
+describe('Baralho de Sorte ou Revés', () => {
+  test('contém exatamente 16 cartas de múltipla escolha com quatro opções e uma resposta correta', () => {
+    assert.equal(CARDS.length, 16);
+    CARDS.forEach((card, index) => {
+      assert.equal(card.id, index + 1);
+      assert.equal(card.type, 'objetiva');
+      assert.deepEqual(Object.keys(card.options).sort(), ['A', 'B', 'C', 'D']);
+      assert.ok(card.options[card.answer], `Carta ${card.id} sem alternativa correta`);
+      assert.ok(card.situation);
+      assert.ok(card.text);
+      assert.ok(card.pedagogicalReference);
+    });
+  });
+});
 
 describe('Teste A — Estado inicial', () => {
   test('as oito fórmulas começam com os valores da especificação e nenhuma está cumprida', () => {
@@ -266,9 +285,6 @@ describe('Teste D — Metas', () => {
     market.levels.S = 2;
     assert.equal(calculateObjective(4, market).result, 90);
     assert.equal(calculateObjective(4, market).fulfilled, true);
-    market.external.b = 6.2;
-    assertApproximately(calculateObjective(4, market).result, 91);
-    assert.equal(calculateObjective(4, market).fulfilled, false);
 
     const capital = getInitialMarketState();
     capital.levels.Ec = 0;
@@ -277,15 +293,20 @@ describe('Teste D — Metas', () => {
     assert.equal(calculateObjective(6, capital).fulfilled, true);
   });
 
-  test('a comparação usa o valor numérico antes do arredondamento de exibição', () => {
+  test('cada Carta de Objetivo usa no máximo um fator externo fixo', () => {
+    RESTAURANT_RULESET.objectiveCards.forEach(card => {
+      const externalFactors = card.factors.filter(symbol => EXTERNAL_KEYS.includes(symbol));
+      assert.ok(externalFactors.length <= 1, `${card.name} usa mais de um fator externo`);
+    });
+    assert.deepEqual(getBaseExternal(), { b: 6, a: 20, t: 0.10, j: 0.12 });
+  });
+
+  test('valores externos recebidos no estado não alteram as Cartas de Objetivo', () => {
     const market = getInitialMarketState();
-    market.levels.P = 3;
-    market.levels.I = 0;
-    market.external.a = 25.0001;
-    const card = calculateObjective(5, market);
-    assert.ok(card.result < 1300);
-    assert.equal(formatObjectiveValue(card, card.result), 'R$ 1.300');
-    assert.equal(card.fulfilled, false);
+    market.external.b = 1000;
+    const card = calculateObjective(4, market);
+    assert.equal(card.result, 150);
+    assert.equal(card.factorValues.find(factor => factor.symbol === 'b').value, 6);
   });
 });
 
@@ -321,45 +342,12 @@ describe('Teste E — Mercado', () => {
     assert.equal(GAME_CONFIG.multaVigilanciaSanitaria, 1000);
   });
 
-  test('um evento altera o indicador e os objetivos dependentes são recalculados', () => {
-    let market = getInitialMarketState();
-    market = applyFluencyCard(market, 'Combustíveis', 'primeiro');
-    assert.equal(market.external.b, 6.6);
-    assertApproximately(calculateObjective(4, market).result, 153);
-    assert.deepEqual(market.levels, getInitialMarketState().levels);
-  });
-
-  test('o novo evento substitui o anterior sem acumular percentuais', () => {
-    let market = applyFluencyCard(getInitialMarketState(), 'Combustíveis', 'primeiro');
-    market = applyFluencyCard(market, 'Combustíveis', 'segundo');
-    assert.equal(market.external.b, 6.9);
-    assert.equal(market.previousExternal.b, 6.6);
-    assertApproximately(calculateObjective(4, market).result, 154.5);
-
-    market = applyFluencyCard(market, 'Política monetária', 'segundo');
-    assert.equal(market.external.b, 6);
-    assert.equal(market.external.j, 0.11);
-  });
-
-  test('Economia (2º semestre) leva os juros a 13% e Política econômica muda o imposto', () => {
-    const economy = applyFluencyCard(getInitialMarketState(), 'Economia', 'segundo');
-    assert.equal(economy.external.j, 0.13);
-    assert.equal(economy.external.a, 22);
-    assertApproximately(calculateObjective(6, economy).result, 1040);
-
-    const tax = applyFluencyCard(getInitialMarketState(), 'Politica economica', 'primeiro');
-    assert.equal(tax.external.t, 0.09);
-    assertApproximately(calculateObjective(7, tax).result, 6 * 40 * 8 * 0.91);
-  });
-
-  test('nove Cartas de Fluência, cada uma com texto e efeito para os dois semestres', () => {
-    assert.equal(RESTAURANT_RULESET.fluencyCards.length, 9);
-    RESTAURANT_RULESET.fluencyCards.forEach(card => {
-      ['first', 'second'].forEach(semester => {
-        assert.ok(card[semester].text.length > 10, `${card.name} sem texto`);
-        assert.ok(Object.keys({ ...card[semester].percent, ...card[semester].set }).length > 0, `${card.name} sem efeito`);
-      });
-    });
+  test('os valores externos permanecem iguais ao iniciar um novo ano', () => {
+    const market = getInitialMarketState();
+    market.levels.C = 3;
+    const next = startNewYearMarket(market);
+    assert.deepEqual(next.external, { b: 6, a: 20, t: 0.10, j: 0.12 });
+    assert.equal(next.levels.C, 3);
   });
 });
 
@@ -390,18 +378,6 @@ describe('Teste F — Semestres', () => {
     assert.equal(player.passedFestaJunina, true);
   });
 
-  test('a carta ativa não muda retroativamente; o efeito do segundo semestre vale no sorteio seguinte', () => {
-    const { players } = setup();
-    let market = drawFluencyCard(getInitialMarketState(), players, () => 0);
-    assert.equal(market.activeCard.id, 'combustiveis');
-    assert.equal(market.activeCard.semester, 'primeiro');
-    players.forEach(player => { player.passedFestaJunina = true; });
-    assert.equal(market.activeCard.semester, 'primeiro');
-    assert.equal(market.external.b, 6.6);
-    market = drawFluencyCard(market, players, () => 0);
-    assert.equal(market.activeCard.semester, 'segundo');
-    assert.equal(market.external.b, 6.9);
-  });
 });
 
 describe('Teste G — Financeiro', () => {
@@ -502,7 +478,7 @@ describe('Teste G — Financeiro', () => {
 });
 
 describe('Teste H — Ano', () => {
-  test('quando o último jogador conclui o ano, o fechamento vem antes de qualquer nova Carta de Fluência', () => {
+  test('quando o último jogador conclui o ano, o fechamento vem antes do próximo ciclo', () => {
     const { players } = setup();
     players[0].finishedYear = true;
     players[1].finishedYear = true;
@@ -520,8 +496,7 @@ describe('Teste H — Ano', () => {
 
   test('cobrança anual de R$ 2.000 só acontece quando não há vencedor, e o imposto t não cobra dinheiro', () => {
     const noWinner = setup();
-    noWinner.market = applyFluencyCard(noWinner.market, 'Política econômica', 'segundo');
-    assert.equal(noWinner.market.external.t, 0.11);
+    assert.equal(noWinner.market.external.t, 0.10);
     assert.ok(noWinner.players.every(player => player.money === GAME_CONFIG.startingMoney));
     const outcome = resolveAnnualClosing(noWinner.players, noWinner.market);
     assert.equal(outcome.type, 'newYear');
@@ -556,13 +531,11 @@ describe('Teste H — Ano', () => {
     assert.equal(tieOutcome.winners.length, 2);
   });
 
-  test('no novo ano o mercado volta à base, o evento termina e os fatores internos mantêm os níveis', () => {
-    let market = getInitialMarketState();
+  test('no novo ano os fatores externos permanecem fixos e os fatores internos mantêm os níveis', () => {
+    const market = getInitialMarketState();
     market.levels.C = 3;
-    market = applyFluencyCard(market, 'Clima', 'segundo');
     const next = startNewYearMarket(market);
     assert.deepEqual(next.external, { b: 6, a: 20, t: 0.10, j: 0.12 });
-    assert.equal(next.activeCard, null);
     assert.equal(next.levels.C, 3);
   });
 
@@ -649,8 +622,6 @@ describe('Teste J — Multiplayer (simulação da lógica do Host; sem conexão 
     manager.fichasContinua = 1;
     host.currentPlayerId = manager.id;
     assert.ok(applyIntervention(host, manager.id, 'H', 1).ok);
-    host.market = applyFluencyCard(host.market, 'Turismo', 'segundo');
-
     const payload = JSON.stringify({ players: host.players, marketState: host.market });
     const clientA = JSON.parse(payload);
     const clientB = JSON.parse(payload);
