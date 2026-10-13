@@ -58,6 +58,18 @@ class ActionRouter {
                 }
                 break;
 
+            case "REQUEST_TEST_FACTOR":
+                if (isHost && typeof window.hostProcessFactorTest === "function") {
+                    window.hostProcessFactorTest(senderPeerId, payload ? payload.delta : null);
+                }
+                break;
+
+            case "REQUEST_CONTINUE_FACTOR_LANDING":
+                if (isHost && typeof window.hostProcessContinueFactorLanding === "function") {
+                    window.hostProcessContinueFactorLanding(senderPeerId);
+                }
+                break;
+
             case "REQUEST_INTERVENE_FACTOR":
                 if (isHost && typeof window.hostProcessInterveneFactor === "function") {
                     const delta = payload && payload.delta !== undefined ? payload.delta : (payload && payload.direction === "down" ? -1 : 1);

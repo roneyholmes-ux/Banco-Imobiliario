@@ -6,6 +6,105 @@
 
 let expandedPlayerIds = new Set();
 let gameResultDismissed = false;
+const GAME_ANIMATION_MULTIPLIERS = {
+    fast: 0.56,
+    normal: 0.8,
+    unit: 1,
+    medium: 1.2,
+    long: 2.8,
+    confirm: 2.48,
+    shine: 2.6,
+    toast: 0.72,
+    toastHold: 6.8,
+    setupFallback: 1.28
+};
+
+function applyGameAnimationTimingVariables() {
+    const style = document.documentElement.style;
+    Object.entries(GAME_ANIMATION_MULTIPLIERS).forEach(([name, multiplier]) => {
+        const cssName = name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+        style.setProperty(`--game-animation-${cssName}`, `${getAnimationDuration(multiplier)}ms`);
+    });
+}
+
+applyGameAnimationTimingVariables();
+
+let diceRollAudio = null;
+let managementBellAudio = null;
+let managementBellCutoffTimer = null;
+let managementBellPlaybackId = 0;
+
+function playDiceRollSound() {
+    if (!diceRollAudio) {
+        diceRollAudio = new Audio("assets/sounds/dice-roll.mp3?v=20261012-local-build-2");
+        diceRollAudio.preload = "auto";
+    }
+
+    diceRollAudio.pause();
+    diceRollAudio.currentTime = 0;
+    const playback = diceRollAudio.play();
+    if (playback) playback.catch(() => {});
+}
+
+function playManagementBellSound() {
+    if (!managementBellAudio) {
+        managementBellAudio = new Audio("assets/sounds/management-bell.mp3?v=20261012-bell-chime-2");
+        managementBellAudio.preload = "auto";
+    }
+
+    managementBellPlaybackId += 1;
+    const playbackId = managementBellPlaybackId;
+    window.clearTimeout(managementBellCutoffTimer);
+    managementBellAudio.pause();
+    managementBellAudio.currentTime = 0;
+
+    const playback = managementBellAudio.play();
+    if (playback) {
+        playback.then(() => {
+            if (playbackId !== managementBellPlaybackId) return;
+            managementBellCutoffTimer = window.setTimeout(() => {
+                if (playbackId === managementBellPlaybackId && !managementBellAudio.paused) {
+                    managementBellAudio.pause();
+                    managementBellAudio.currentTime = 0;
+                }
+            }, 4000);
+        }).catch(() => {});
+    }
+}
+
+function initGameNavbarAutoHide() {
+    const navbar = document.querySelector(".game-page .navbar");
+    if (!navbar || !window.matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+
+    let hideTimeout = null;
+    const reveal = () => {
+        window.clearTimeout(hideTimeout);
+        navbar.classList.add("is-revealed");
+    };
+    const hide = () => {
+        window.clearTimeout(hideTimeout);
+        if (!navbar.matches(":hover") && !navbar.contains(document.activeElement)) {
+            navbar.classList.remove("is-revealed");
+        }
+    };
+    const scheduleHide = () => {
+        window.clearTimeout(hideTimeout);
+        hideTimeout = window.setTimeout(hide, getAnimationDuration(1.6));
+    };
+
+    document.addEventListener("mousemove", event => {
+        if (event.clientY <= 16) reveal();
+        else if (!navbar.matches(":hover") && !navbar.contains(document.activeElement)) scheduleHide();
+    });
+    navbar.addEventListener("mouseenter", reveal);
+    navbar.addEventListener("mouseleave", scheduleHide);
+    navbar.addEventListener("focusin", reveal);
+    navbar.addEventListener("focusout", event => {
+        if (!navbar.contains(event.relatedTarget)) scheduleHide();
+    });
+}
+
+initGameNavbarAutoHide();
 
 const SPECIAL_SPACE_DESCRIPTIONS = {
     "PARTIDA": "Cruzar a PARTIDA conclui a volta do ano e leva ao Fechamento do Exercício.",
@@ -217,52 +316,63 @@ function requestFactorIntervention(factorKey, delta) {
     }
 }
 
-// Resultado sempre recalculado a partir do estado global atual.
+let privateInvestigationLogs = new Map();
+let localPendingFactorTest = null;
+let factorActionFeedbackTimeout = null;
+
+function clearPrivateInvestigationLog() {
+    privateInvestigationLogs = new Map();
+    localPendingFactorTest = null;
+}
+
+function showFactorActionFeedback(message) {
+    const boardColumn = document.querySelector(".board-column");
+    if (!boardColumn) return;
+
+    let feedback = document.getElementById("factor-action-feedback");
+    if (!feedback) {
+        feedback = document.createElement("div");
+        feedback.id = "factor-action-feedback";
+        feedback.className = "factor-action-feedback";
+        feedback.setAttribute("role", "status");
+        feedback.setAttribute("aria-live", "polite");
+        boardColumn.appendChild(feedback);
+    }
+
+    feedback.textContent = message;
+    feedback.classList.remove("is-visible");
+    void feedback.offsetWidth;
+    feedback.classList.add("is-visible");
+    window.clearTimeout(factorActionFeedbackTimeout);
+    factorActionFeedbackTimeout = window.setTimeout(() => feedback.classList.remove("is-visible"), getAnimationDuration(GAME_ANIMATION_MULTIPLIERS.toastHold));
+}
+
+function objectiveTargetText(objective) {
+    const comparison = objective.operator === "<=" ? "no máximo" : "pelo menos";
+    return `${comparison} ${formatObjectiveValue(objective, objective.target)}`;
+}
+
+// Objetivos são recalculados do estado global; detalhes de sua composição permanecem internos.
 function renderObjectiveCard(player) {
     if (!player.objective) return "🎯 Carta de Objetivo: a definir";
     const objective = calculateObjective(player.objective.id, marketState);
     if (!objective) return "🎯 Carta de Objetivo: a definir";
-    const status = objective.fulfilled ? "✅ cumprido" : "⏳ não cumprido";
-    const internalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.internal[factor.symbol]);
-    const externalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.external[factor.symbol]);
-    const internalText = internalFactors.map(factor => `${factor.symbol} = ${factor.formatted}`).join(" · ") || "Nenhum";
-    const externalText = externalFactors.map(factor => `${factor.symbol} = ${factor.formatted}`).join(" · ") || "Nenhuma";
-    const title = objective.note ? ` title="${escapeHtml(objective.note)}"` : "";
-    return `<span${title}>🎯 <strong>${objective.name}</strong></span><br><small>Lei: ${objective.formula}<br>Fatores sob gestão: ${internalText}<br>Condições externas: ${externalText}<br>Meta: ${objective.symbol} ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}<br>Atual: ${objective.symbol} = ${formatObjectiveValue(objective, objective.result)} · ${status}</small>`;
-}
-
-function buildSimulatedObjectiveResult(objective, editedValues = {}) {
-    const internal = getInternalValues(marketState);
-    const external = getBaseExternal();
-
-    objective.factors.forEach(symbol => {
-        const factorValue = editedValues[symbol];
-        if (factorValue === undefined || factorValue === "" || Number.isNaN(Number(factorValue))) return;
-
-        if (RESTAURANT_RULESET.internal[symbol]) {
-            internal[symbol] = Number(factorValue);
-        }
-    });
-
-    const card = findObjectiveCard(objective.id);
-    if (!card) return { result: objective.result, fulfilled: objective.fulfilled };
-
-    const result = card.evaluate(internal, external);
-    const fulfilled = card.operator === "<=" ? result <= card.target : result >= card.target;
-    return { result, fulfilled };
+    const status = objective.fulfilled ? "✅ Alcançada" : "⏳ Não alcançada";
+    return `<strong>🎯 ${escapeHtml(objective.name)}</strong><br><small>Atual: ${formatObjectiveValue(objective, objective.result)}<br>Meta: ${objectiveTargetText(objective)}<br>${status}</small>`;
 }
 
 function renderCurrentPlayerObjectiveFocus() {
     const focus = document.getElementById("current-player-objective");
     if (!focus) return;
 
-    if (isMultiplayer) {
+    const player = players[currentPlayerIndex];
+    const myPeerId = window.Network ? window.Network.myPeerId : null;
+    if (!player || (isMultiplayer && player.peerId !== myPeerId)) {
         focus.innerHTML = "";
         focus.classList.remove("is-visible");
         return;
     }
 
-    const player = players[currentPlayerIndex];
     if (!player || !player.objective) {
         focus.innerHTML = "";
         focus.classList.remove("is-visible");
@@ -276,10 +386,67 @@ function renderCurrentPlayerObjectiveFocus() {
         return;
     }
 
-    const status = objective.fulfilled ? "✅ cumprido" : "⏳ não cumprido";
-    const note = objective.note ? ` title="${escapeHtml(objective.note)}"` : "";
-    const internalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.internal[factor.symbol]);
-    const externalFactors = objective.factorValues.filter(factor => RESTAURANT_RULESET.external[factor.symbol]);
+    const status = objective.fulfilled ? "✅ Alcançada" : "⏳ Não alcançada";
+    const pending = pendingFactorTest && pendingFactorTest.playerId === player.id ? pendingFactorTest : null;
+    const space = pending ? boardSpaces[pending.spaceId] : null;
+    const factorKey = space && space.factorKey;
+    const definition = factorKey && RESTAURANT_RULESET.internal[factorKey];
+    const logKey = `${yearNumber}:${player.id}:${objective.id}`;
+    const records = privateInvestigationLogs.get(logKey) || [];
+    const currentTestRecorded = Boolean(pending && records.some(record => record.id === pending.testId));
+    const localDelta = pending && localPendingFactorTest && localPendingFactorTest.testId === pending.testId
+        ? localPendingFactorTest.delta
+        : null;
+    const testResult = pending && pending.tested && localDelta
+        ? simulateObjectiveFactorChange(objective.id, marketState, factorKey, localDelta)
+        : null;
+    const formattedResult = value => formatObjectiveValue(objective, value);
+    const testPanel = pending && definition ? (pending.tested && testResult ? `
+        <section class="factor-test-panel" aria-live="polite">
+            <div class="factor-test-heading">Teste realizado</div>
+            <div class="factor-test-observation">
+                <strong>${escapeHtml(definition.name)}</strong>
+                <span>${formatInternalValue(factorKey, testResult.fromValue)} → ${formatInternalValue(factorKey, testResult.toValue)}</span>
+            </div>
+            <div class="factor-test-result">
+                <span>Resultado do seu objetivo</span>
+                <strong>${formattedResult(testResult.beforeResult)} → ${formattedResult(testResult.afterResult)}</strong>
+            </div>
+            <div class="factor-test-actions">
+                <button id="btn-record-factor-test" class="factor-test-button${currentTestRecorded ? " is-confirmed" : ""}" ${currentTestRecorded ? "disabled aria-label=\"Teste anotado no registro\"" : ""}>${currentTestRecorded ? "Teste anotado" : "Anotar este teste"}</button>
+                <button id="btn-continue-factor-landing" class="factor-test-button is-secondary">Continuar para a casa</button>
+            </div>
+            ${currentTestRecorded ? `<p class="investigation-log-feedback" role="status">Observação adicionada ao Registro de investigação.</p>` : ""}
+        </section>
+    ` : `
+        <section class="factor-test-panel">
+            <div class="factor-test-heading">Testar fator · ${escapeHtml(definition.name)}</div>
+            <div class="factor-test-current">Valor atual: <strong>${formatInternalValue(factorKey, getFactorValue(marketState, factorKey))}</strong></div>
+            <div class="factor-test-actions">
+                ${[1, -1].map(delta => {
+                    const currentLevel = marketState.levels[factorKey];
+                    const nextLevel = currentLevel + delta;
+                    if (nextLevel < MIN_FACTOR_LEVEL || nextLevel > MAX_FACTOR_LEVEL) return "";
+                    const currentValue = definition.values[currentLevel];
+                    const nextValue = definition.values[nextLevel];
+                    return `<button class="factor-test-button" data-factor-test-delta="${delta}">Testar ${formatInternalValue(factorKey, currentValue)} → ${formatInternalValue(factorKey, nextValue)}</button>`;
+                }).join("")}
+                <button id="btn-continue-factor-landing" class="factor-test-button is-secondary">Continuar sem testar</button>
+            </div>
+        </section>
+    `) : "";
+
+    const recordTable = records.length ? `
+        <section class="investigation-log">
+            <h4>Registro de investigação</h4>
+            <div class="investigation-log-scroll">
+                <table>
+                    <thead><tr><th>Fator testado</th><th>Valor antes</th><th>Valor testado</th><th>Resultado antes</th><th>Resultado depois</th></tr></thead>
+                    <tbody>${records.map(record => `<tr><td>${escapeHtml(record.factorName)}</td><td>${escapeHtml(record.beforeFactor)}</td><td>${escapeHtml(record.testedFactor)}</td><td>${escapeHtml(record.beforeResult)}</td><td>${escapeHtml(record.afterResult)}</td></tr>`).join("")}</tbody>
+                </table>
+            </div>
+        </section>
+    ` : `<section class="investigation-log"><h4>Registro de investigação</h4><p>Nenhum teste anotado.</p></section>`;
 
     focus.innerHTML = `
         <div class="player-objective-card">
@@ -288,90 +455,63 @@ function renderCurrentPlayerObjectiveFocus() {
                 <span class="player-objective-dot" style="background:${player.color};"></span>
                 <strong>${escapeHtml(player.name)}</strong>
             </div>
-            <div class="player-objective-name"${note}>🎯 ${escapeHtml(objective.name)}</div>
-            <div class="player-objective-formula">${escapeHtml(objective.formula)}</div>
+            <div class="player-objective-name">🎯 ${escapeHtml(objective.name)}</div>
             <div class="player-objective-meta">
-                <span><strong>Meta:</strong> ${objective.symbol} ${formatOperator(objective.operator)} ${formatObjectiveValue(objective, objective.target)}</span>
-                <span><strong>Atual:</strong> ${objective.symbol} = ${formatObjectiveValue(objective, objective.result)} · ${status}</span>
+                <span><strong>Atual:</strong> ${formattedResult(objective.result)}</span>
+                <span><strong>Meta:</strong> ${objectiveTargetText(objective)}</span>
+                <span>${status}</span>
             </div>
-            <div class="strategy-panel">
-                <div class="strategy-panel-header">Simulador de estratégia</div>
-                <div class="strategy-factor-groups">
-                    <section class="strategy-factor-group">
-                        <h4>Fatores sob gestão</h4>
-                        <div class="strategy-grid">
-                            ${internalFactors.map(factor => {
-                                const symbol = factor.symbol;
-                                const definition = RESTAURANT_RULESET.internal[symbol];
-                                return `
-                                    <label class="strategy-factor">
-                                        <span class="strategy-factor-text">
-                                            <span class="strategy-factor-code">${escapeHtml(symbol)}</span>
-                                            <small>${escapeHtml(definition.name)}</small>
-                                        </span>
-                                        <span class="strategy-factor-type is-player">variável</span>
-                                        <input class="strategy-input" type="number" data-symbol="${escapeHtml(symbol)}" value="${Number(factor.value).toString()}" step="1" min="0" />
-                                    </label>
-                                `;
-                            }).join("")}
-                        </div>
-                    </section>
-                    ${externalFactors.length ? `
-                        <section class="strategy-factor-group is-external">
-                            <h4>Condições externas</h4>
-                            <div class="strategy-grid">
-                                ${externalFactors.map(factor => {
-                                    const definition = RESTAURANT_RULESET.external[factor.symbol];
-                                    return `
-                                        <div class="strategy-factor strategy-factor-fixed">
-                                            <span class="strategy-factor-text">
-                                                <span class="strategy-factor-code">${escapeHtml(factor.symbol)}</span>
-                                                <small>${escapeHtml(definition.name)}</small>
-                                            </span>
-                                            <span class="strategy-factor-type is-market">fixa</span>
-                                            <strong class="strategy-fixed-value">${escapeHtml(factor.formatted)}</strong>
-                                        </div>
-                                    `;
-                                }).join("")}
-                            </div>
-                        </section>
-                    ` : ""}
-                </div>
-                <div class="strategy-summary">
-                    <span>Resultado simulado</span>
-                    <strong class="strategy-result-value">${formatObjectiveValue(objective, objective.result)}</strong>
-                    <small class="strategy-status ${objective.fulfilled ? "is-met" : "is-pending"}">${objective.fulfilled ? "✅ meta alcançada" : "⏳ ainda não alcançada"}</small>
-                </div>
-            </div>
+            ${testPanel}
+            ${recordTable}
         </div>
     `;
 
-    const inputs = focus.querySelectorAll(".strategy-input");
-    if (inputs.length) {
-        const resultValue = focus.querySelector(".strategy-result-value");
-        const strategyStatus = focus.querySelector(".strategy-status");
+    focus.querySelectorAll("[data-factor-test-delta]").forEach(button => {
+        button.onclick = () => {
+            if (button.disabled) return;
+            button.disabled = true;
+            button.classList.add("is-testing");
 
-        const updateSimulation = () => {
-            const editedValues = {};
-            inputs.forEach(input => {
-                const key = input.dataset.symbol;
-                const raw = input.value;
-                if (raw !== "") {
-                    editedValues[key] = Number(raw);
-                }
-            });
+            let testRequested = false;
+            const finishTest = event => {
+                if (event && event.animationName !== "factor-button-shine") return;
+                if (testRequested) return;
+                testRequested = true;
+                window.clearTimeout(animationFallback);
+                button.removeEventListener("animationend", finishTest);
+                localPendingFactorTest = { testId: pending.testId, delta: Number(button.dataset.factorTestDelta) };
+                requestFactorTest(localPendingFactorTest.delta);
+            };
 
-            const simulation = buildSimulatedObjectiveResult(objective, editedValues);
-            const simulatedText = `${objective.symbol} = ${formatObjectiveValue(objective, simulation.result)}`;
-            resultValue.textContent = simulatedText;
-            const met = simulation.fulfilled;
-            strategyStatus.textContent = met ? "✅ meta alcançada com estes valores" : "⏳ ainda não alcançada";
-            strategyStatus.classList.toggle("is-met", met);
-            strategyStatus.classList.toggle("is-pending", !met);
+            button.addEventListener("animationend", finishTest);
+            const animationFallback = window.setTimeout(
+                finishTest,
+                getAnimationDuration(GAME_ANIMATION_MULTIPLIERS.shine) + 80
+            );
         };
-
-        inputs.forEach(input => input.addEventListener("input", updateSimulation));
+    });
+    const recordButton = focus.querySelector("#btn-record-factor-test");
+    if (recordButton && testResult && !records.some(record => record.id === pending.testId)) {
+        recordButton.onclick = () => {
+            const log = privateInvestigationLogs.get(logKey) || [];
+            log.push({
+                id: pending.testId,
+                factorName: definition.name,
+                beforeFactor: formatInternalValue(factorKey, testResult.fromValue),
+                testedFactor: formatInternalValue(factorKey, testResult.toValue),
+                beforeResult: formattedResult(testResult.beforeResult),
+                afterResult: formattedResult(testResult.afterResult)
+            });
+            privateInvestigationLogs.set(logKey, log);
+            updateUI();
+            showFactorActionFeedback("Observação adicionada ao registro.");
+        };
     }
+    const continueButton = focus.querySelector("#btn-continue-factor-landing");
+    if (continueButton) continueButton.onclick = () => {
+        showFactorActionFeedback("Seguindo para a ação normal da casa.");
+        continueFactorLanding();
+    };
 
     focus.classList.add("is-visible");
 }
@@ -412,7 +552,7 @@ function updateUI() {
 
     const currentPlayer = players[currentPlayerIndex];
     const myPeerId = window.Network ? window.Network.myPeerId : null;
-    const canProposeTradeNow = !isMoving && !awaitingDecision && !pendingTrade && !pendingCard && !gameOver;
+    const canProposeTradeNow = !isMoving && !awaitingDecision && !pendingFactorTest && !pendingTrade && !pendingCard && !gameOver;
     const rulesContext = getRulesContext();
 
     players.forEach((p, idx) => {
@@ -522,7 +662,7 @@ function updateUI() {
             rollBtn.title = "Mostrar o resultado da partida";
         } else {
             rollBtn.innerText = "🎲 Jogar Dado";
-            rollBtn.disabled = isMoving || awaitingDecision || !!pendingTrade || !!pendingCard || gameOver || (activePlayer ? activePlayer.isBankrupt || activePlayer.finishedYear : false);
+            rollBtn.disabled = isMoving || awaitingDecision || !!pendingFactorTest || !!pendingTrade || !!pendingCard || gameOver || (activePlayer ? activePlayer.isBankrupt || activePlayer.finishedYear : false);
             rollBtn.title = activePlayer && activePlayer.finishedYear ? "Este jogador já está no Fechamento do Exercício." : "Rolar dados";
         }
     }
@@ -584,10 +724,25 @@ function openPlayerSetupModalUI(onChoose) {
     `;
     document.body.appendChild(overlay);
 
+    let isClosing = false;
     overlay.querySelectorAll(".player-count-btn").forEach(button => {
         button.onclick = () => {
-            overlay.remove();
-            onChoose(Number(button.dataset.count));
+            if (isClosing) return;
+            isClosing = true;
+            const selectedCount = Number(button.dataset.count);
+            const finish = () => {
+                if (!overlay.isConnected) return;
+                window.clearTimeout(exitFallback);
+                overlay.removeEventListener("transitionend", handleExitTransition);
+                overlay.remove();
+                onChoose(selectedCount);
+            };
+            const handleExitTransition = event => {
+                if (event.target === overlay && event.propertyName === "opacity") finish();
+            };
+            const exitFallback = window.setTimeout(finish, getAnimationDuration(GAME_ANIMATION_MULTIPLIERS.setupFallback));
+            overlay.addEventListener("transitionend", handleExitTransition);
+            overlay.classList.add("is-leaving");
         };
     });
     document.getElementById("btn-player-setup-back").onclick = () => { window.location.href = "index.html"; };

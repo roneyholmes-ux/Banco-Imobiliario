@@ -10,12 +10,14 @@ const CARDS = cardDeckMatch ? vm.runInNewContext(cardDeckMatch[1]) : [];
 
 const {
   GAME_CONFIG,
+  getAnimationDuration,
   RESTAURANT_RULESET,
   EXTERNAL_KEYS,
   getInitialMarketState,
   getBaseExternal,
   getInternalValues,
   calculateObjective,
+  simulateObjectiveFactorChange,
   evaluateAllObjectives,
   formatObjectiveValue,
   formatExternalValue,
@@ -66,6 +68,17 @@ const objectiveResult = (ctx, id) => calculateObjective(id, ctx.market);
 function assertApproximately(actual, expected, tolerance = 1e-9) {
   assert.ok(Math.abs(actual - expected) <= tolerance, `Esperado ${expected}, obtido ${actual}`);
 }
+
+describe('Tempos de animação', () => {
+  test('mantém a base de 250 ms e acelera os peões em 30%', () => {
+    assert.equal(GAME_CONFIG.animationTimeMs, 250);
+    assert.equal(getAnimationDuration(), 250);
+    assert.equal(getAnimationDuration(2), 500);
+    const pawnStepMs = getAnimationDuration(2 / GAME_CONFIG.pawnMovementSpeedMultiplier);
+    assert.equal(pawnStepMs, 385);
+    assert.ok(Math.abs(500 / pawnStepMs - GAME_CONFIG.pawnMovementSpeedMultiplier) < 0.002);
+  });
+});
 
 describe('Baralho de Sorte ou Revés', () => {
   test('contém exatamente 16 cartas de múltipla escolha com quatro opções e uma resposta correta', () => {
@@ -307,6 +320,22 @@ describe('Teste D — Metas', () => {
     const card = calculateObjective(4, market);
     assert.equal(card.result, 150);
     assert.equal(card.factorValues.find(factor => factor.symbol === 'b').value, 6);
+  });
+
+  test('teste de fator muda somente uma cópia em um nível e rejeita limites e fatores inválidos', () => {
+    const market = getInitialMarketState();
+    const original = structuredClone(market);
+    const up = simulateObjectiveFactorChange(1, market, 'C', 1);
+    assert.equal(up.fromValue, 3);
+    assert.equal(up.toValue, 4);
+    assert.equal(up.beforeResult, 72);
+    assert.equal(up.afterResult, 96);
+    assert.deepEqual(market, original);
+    assert.equal(simulateObjectiveFactorChange(1, market, 'C', 2), null);
+    assert.equal(simulateObjectiveFactorChange(1, market, 'b', 1), null);
+
+    market.levels.C = 3;
+    assert.equal(simulateObjectiveFactorChange(1, market, 'C', 1), null);
   });
 });
 

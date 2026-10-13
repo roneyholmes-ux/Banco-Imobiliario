@@ -13,6 +13,8 @@
  */
 
 const GAME_CONFIG = {
+    animationTimeMs: 250,          // unidade de tempo compartilhada pelas animações
+    pawnMovementSpeedMultiplier: 1.3,
     maxJogadores: 4,               // limite de jogadores, no modo local e no online
     startingMoney: 25000,
     fichasIniciaisContinua: 0,     // fichas contínuas de cada jogador no início da partida
@@ -27,10 +29,12 @@ const GAME_CONFIG = {
     fichasReducaoNivel: 1,
     acrescimoTaxaPorNivel: 0.5,    // cada nível acima do inicial soma 50% da taxa inicial
     pisoTaxaVisita: 0.5,           // abaixo do nível inicial a taxa cai para 50% da inicial (piso)
-    pawnMoveStepDelay: 250,        // 200ms originais / 0.8 = 80% da velocidade
-    diceRollAnimationDuration: 750,
     cardFichaPenalty: 500
 };
+
+function getAnimationDuration(multiplier = 1) {
+    return Math.round(GAME_CONFIG.animationTimeMs * multiplier);
+}
 
 const PRESETS = {
     standard: { name: "Padrão", startingMoney: 25000, taxaTroca: 200 },
@@ -232,6 +236,35 @@ function calculateObjective(cardIdOrName, market) {
         };
     });
     return { id: card.id, name: card.name, symbol: card.symbol, formula: card.formula, factors: [...card.factors], target: card.target, operator: card.operator, format: card.format, unit: card.unit, note: card.note || "", result, fulfilled, factorValues };
+}
+
+function simulateObjectiveFactorChange(cardIdOrName, market, factorKey, delta) {
+    const definition = RESTAURANT_RULESET.internal[factorKey];
+    if (!definition || ![-1, 1].includes(delta)) return null;
+
+    const currentLevel = market.levels[factorKey];
+    const testedLevel = currentLevel + delta;
+    if (testedLevel < MIN_FACTOR_LEVEL || testedLevel > MAX_FACTOR_LEVEL) return null;
+
+    const before = calculateObjective(cardIdOrName, market);
+    if (!before) return null;
+
+    const simulatedMarket = {
+        ...market,
+        levels: { ...market.levels, [factorKey]: testedLevel }
+    };
+    const after = calculateObjective(cardIdOrName, simulatedMarket);
+    if (!after) return null;
+
+    return {
+        factorKey,
+        fromLevel: currentLevel,
+        toLevel: testedLevel,
+        fromValue: definition.values[currentLevel],
+        toValue: definition.values[testedLevel],
+        beforeResult: before.result,
+        afterResult: after.result
+    };
 }
 
 function evaluateAllObjectives(market) {
@@ -530,6 +563,7 @@ function createRequestDeduper(limit = 500) {
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         GAME_CONFIG,
+        getAnimationDuration,
         PRESETS,
         MIN_FACTOR_LEVEL,
         MAX_FACTOR_LEVEL,
@@ -556,6 +590,7 @@ if (typeof module !== "undefined" && module.exports) {
         createObjectiveDeck,
         assignObjectiveCards,
         calculateObjective,
+        simulateObjectiveFactorChange,
         evaluateAllObjectives,
         getCurrentSemester,
         semesterLabel,

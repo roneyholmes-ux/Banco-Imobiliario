@@ -44,6 +44,7 @@ let players = [];
 let currentPlayerIndex = 0;
 let isMoving = false;
 let awaitingDecision = false;
+let pendingFactorTest = null;
 let isMultiplayer = false;
 let gameOver = false;
 let gameResult = null; // resultado final exibido em destaque (vencedor, empate ou sem vencedor)
@@ -66,7 +67,7 @@ function getRulesContext() {
         players,
         boardSpaces,
         currentPlayerId: currentPlayer ? currentPlayer.id : null,
-        turnLocked: isMoving || awaitingDecision || !!pendingTrade || !!pendingCard || gameOver
+        turnLocked: isMoving || awaitingDecision || !!pendingFactorTest || !!pendingTrade || !!pendingCard || gameOver
     };
 }
 
@@ -137,7 +138,9 @@ function resetBoardState() {
     pendingTrade = null;
     closeTradeModal();
     pendingCard = null;
+    pendingFactorTest = null;
     closeCardModal();
+    if (typeof clearPrivateInvestigationLog === "function") clearPrivateInvestigationLog();
     renderBoard();
     renderPawns();
     if (players.length > 0) beginYearTurns();
@@ -163,7 +166,7 @@ function rollDice() {
         showGameResultAgain();
         return;
     }
-    if (isMoving || awaitingDecision) return;
+    if (isMoving || awaitingDecision || pendingFactorTest) return;
     const player = players[currentPlayerIndex];
     if (!player || player.isBankrupt || player.finishedYear) return;
 
@@ -190,7 +193,7 @@ function rollDice() {
 
 async function executeRollDice() {
     const player = players[currentPlayerIndex];
-    if (!player || player.isBankrupt || player.finishedYear || isMoving || awaitingDecision || gameOver || pendingTrade || pendingCard) return;
+    if (!player || player.isBankrupt || player.finishedYear || isMoving || awaitingDecision || pendingFactorTest || gameOver || pendingTrade || pendingCard) return;
 
     isMoving = true;
     updateUI();
@@ -220,7 +223,7 @@ async function executeRollDice() {
     const diceText = `🎲 ${d1} + ${d2} = ${total}`;
 
     animateDiceCubes(d1, d2);
-    await new Promise(resolve => setTimeout(resolve, GAME_CONFIG.diceRollAnimationDuration));
+    await new Promise(resolve => setTimeout(resolve, getAnimationDuration()));
 
     const diceDisplay = document.getElementById("dice-display");
     if (diceDisplay) diceDisplay.innerText = diceText;
@@ -267,12 +270,13 @@ function rollDieCube(dieEl, stateObj, value) {
     stateObj.x = nextDieRotation(stateObj.x, target.x);
     stateObj.y = nextDieRotation(stateObj.y, target.y);
     if (dieEl) {
-        dieEl.style.transitionDuration = `${GAME_CONFIG.diceRollAnimationDuration}ms`;
+        dieEl.style.transitionDuration = `${getAnimationDuration()}ms`;
         dieEl.style.transform = `rotateX(${stateObj.x}deg) rotateY(${stateObj.y}deg)`;
     }
 }
 
 function animateDiceCubes(d1, d2) {
+    if (typeof playDiceRollSound === "function") playDiceRollSound();
     rollDieCube(document.getElementById("die-1"), diceCubeState.die1, d1);
     rollDieCube(document.getElementById("die-2"), diceCubeState.die2, d2);
 }
@@ -308,7 +312,7 @@ async function movePlayer(playerIndex, steps) {
         }
         renderPawns();
         syncGameState();
-        await new Promise(resolve => setTimeout(resolve, GAME_CONFIG.pawnMoveStepDelay));
+        await new Promise(resolve => setTimeout(resolve, getAnimationDuration(2 / GAME_CONFIG.pawnMovementSpeedMultiplier)));
     }
 
     isMoving = false;
@@ -316,6 +320,20 @@ async function movePlayer(playerIndex, steps) {
 }
 
 function handleLanding(player) {
+    const space = boardSpaces[player.position];
+    if (space.factorKey) {
+        pendingFactorTest = { playerId: player.id, spaceId: space.id, testId: `${yearNumber}-${player.id}-${space.id}-${Date.now()}`, tested: false };
+        updateUI();
+        const msg = `${player.name} parou em ${space.name} e pode testar uma alteração de um nível antes de continuar.`;
+        updateStatus(msg);
+        syncGameState(msg);
+        return;
+    }
+
+    continueLanding(player);
+}
+
+function continueLanding(player) {
     const space = boardSpaces[player.position];
     let landingMessage = "";
 
@@ -476,7 +494,25 @@ function showPurchaseModalUI(player, space, errorMessage = "") {
     };
 }
 
-// drawCard(player) e todo o fluxo das Cartas Objetivas/de Investigação estão em js/cards.js
+function requestFactorTest(delta) {
+    if (!pendingFactorTest || pendingFactorTest.tested) return;
+    if (isMultiplayer && window.Network && !window.Network.isHost) {
+        sendNetworkAction("REQUEST_TEST_FACTOR", { delta });
+    } else {
+        hostProcessFactorTest(window.Network ? window.Network.myPeerId : null, delta);
+    }
+}
+
+function continueFactorLanding() {
+    if (!pendingFactorTest) return;
+    if (isMultiplayer && window.Network && !window.Network.isHost) {
+        sendNetworkAction("REQUEST_CONTINUE_FACTOR_LANDING");
+    } else {
+        hostProcessContinueFactorLanding(window.Network ? window.Network.myPeerId : null);
+    }
+}
+
+// drawCard(player) and card actions live in js/cards.js.
 
 // Jogador eliminado por saldo negativo: applyMandatoryCharge já liberou as gerências (os fatores mantêm seus níveis).
 function announceElimination(player, reason) {
@@ -619,6 +655,7 @@ function hostProcessBuyProperty(senderPeerId) {
     }
 
     refreshBoardOwnership();
+    if (space.factorKey && typeof playManagementBellSound === "function") playManagementBellSound();
     const msg = `🎉 ${player.name} assumiu a gerência de ${space.name}!`;
     updateStatus(msg);
     awaitingDecision = false;
@@ -640,6 +677,34 @@ function hostProcessPassProperty(senderPeerId) {
     awaitingDecision = false;
     syncGameState(msg);
     nextTurn(msg);
+}
+
+function hostProcessFactorTest(senderPeerId, delta) {
+    if (isMultiplayer && window.Network && !window.Network.isHost) return;
+    const player = players[currentPlayerIndex];
+    if (!pendingFactorTest || pendingFactorTest.tested || !player || pendingFactorTest.playerId !== player.id) return;
+    if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
+
+    const space = boardSpaces[pendingFactorTest.spaceId];
+    const test = simulateObjectiveFactorChange(player.objective && player.objective.id, marketState, space && space.factorKey, Number(delta));
+    if (!test) return;
+
+    pendingFactorTest = { ...pendingFactorTest, tested: true };
+    const msg = `${player.name} realizou um teste em ${space.name}.`;
+    updateStatus(msg);
+    updateUI();
+    syncGameState(msg);
+}
+
+function hostProcessContinueFactorLanding(senderPeerId) {
+    if (isMultiplayer && window.Network && !window.Network.isHost) return;
+    const player = players[currentPlayerIndex];
+    if (!pendingFactorTest || !player || pendingFactorTest.playerId !== player.id) return;
+    if (isMultiplayer && senderPeerId && player.peerId !== senderPeerId) return;
+
+    pendingFactorTest = null;
+    localPendingFactorTest = null;
+    continueLanding(player);
 }
 
 // delta: +1 sobe um nível, -1 reduz um nível (valores maiores cobram todos os níveis intermediários).
@@ -688,6 +753,7 @@ function syncGameState(statusMessage = null, diceDisplay = null, diceValues = nu
         currentPlayerIndex: currentPlayerIndex,
         isMoving: isMoving,
         awaitingDecision: awaitingDecision,
+        pendingFactorTest: pendingFactorTest,
         pendingTrade: pendingTrade,
         pendingCard: pendingCard,
         statusMessage: statusMessage || (document.getElementById("game-status") ? document.getElementById("game-status").innerText : ""),
@@ -703,14 +769,19 @@ function applyGameStateSync(payload) {
 
     if (payload.players) players = payload.players;
     if (payload.boardSpaces) {
+        let factorManagementAcquired = false;
         payload.boardSpaces.forEach(syncSpace => {
             const localSpace = boardSpaces.find(s => s.id === syncSpace.id);
             if (localSpace) {
+                if (localSpace.factorKey && localSpace.owner === null && syncSpace.owner !== null) {
+                    factorManagementAcquired = true;
+                }
                 localSpace.owner = syncSpace.owner;
                 localSpace.houses = syncSpace.houses;
                 localSpace.lastIntervention = syncSpace.lastIntervention || "";
             }
         });
+        if (factorManagementAcquired && typeof playManagementBellSound === "function") playManagementBellSound();
     }
 
     if (payload.marketState) marketState = { ...payload.marketState, external: getBaseExternal() };
@@ -723,6 +794,7 @@ function applyGameStateSync(payload) {
     if (payload.currentPlayerIndex !== undefined) currentPlayerIndex = payload.currentPlayerIndex;
     if (payload.isMoving !== undefined) isMoving = payload.isMoving;
     if (payload.awaitingDecision !== undefined) awaitingDecision = payload.awaitingDecision;
+    if (payload.pendingFactorTest !== undefined) pendingFactorTest = payload.pendingFactorTest;
     if (payload.pendingTrade !== undefined) pendingTrade = payload.pendingTrade;
     if (payload.pendingCard !== undefined) pendingCard = payload.pendingCard;
     refreshBoardOwnership();
@@ -796,6 +868,8 @@ if (typeof window !== "undefined") {
     window.hostProcessRollDice = hostProcessRollDice;
     window.hostProcessBuyProperty = hostProcessBuyProperty;
     window.hostProcessPassProperty = hostProcessPassProperty;
+    window.hostProcessFactorTest = hostProcessFactorTest;
+    window.hostProcessContinueFactorLanding = hostProcessContinueFactorLanding;
     window.hostProcessInterveneFactor = hostProcessInterveneFactor;
     window.applyGameStateSync = applyGameStateSync;
 }
